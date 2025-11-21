@@ -7,25 +7,27 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id              String    @id
+  id              String     @id
   name            String
   email           String
-  emailVerified   Boolean   @default(false)
+  emailVerified   Boolean    @default(false)
   image           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
   username        String?
   displayUsername String?
   role            String?
-  banned          Boolean?  @default(false)
+  banned          Boolean?   @default(false)
   banReason       String?
   banExpires      DateTime?
   sessions        Session[]
   accounts        Account[]
+  customers       Customer[]
 
   @@unique([email])
   @@unique([username])
@@ -87,7 +89,26 @@ model Jwks {
   @@map("jwks")
 }
 
+model Customer {
+  id                   String         @id @default(cuid())
+  name                 String
+  identificationNumber String
+  dateOfBirth          DateTime
+  gender               CustomerGender
+  address              String
+  phonenNumber         String
+  email                String
 
-model Person {
-  id String @id @default(cuid())
+  createdById String? // Staff created customer
+  createdBy   User?   @relation(fields: [createdById], onDelete: Restrict, references: [id])
+
+  voided    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CustomerGender {
+  MALE
+  FEMALE
+  UNKNOWN
 }

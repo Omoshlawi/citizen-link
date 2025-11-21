@@ -8,16 +8,16 @@ import {
 
 export const adminPluginAcl = createAccessControl({
   ...defaultAdminStatements,
-  person: ['create', 'list', 'update', 'delete'],
+  customer: ['create', 'list', 'update', 'delete'],
 });
 
 const adminRole = adminPluginAcl.newRole({
-  person: ['create', 'delete', 'list', 'update'],
+  customer: ['create', 'delete', 'list', 'update'],
   ...adminAc.statements,
 });
 
 const userRole = adminPluginAcl.newRole({
-  person: ['list'],
+  customer: ['list'],
   ...userAc.statements,
 });
 

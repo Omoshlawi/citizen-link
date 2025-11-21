@@ -10,6 +10,7 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { RequireSystemPermissionsGuard } from './auth/auth.guards';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { ZodValidationExceptionFilter } from './app.exceptionfilter';
+import { CustomerModule } from './customer/customer.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ZodValidationExceptionFilter } from './app.exceptionfilter';
     QueryBuilderModule.register({ global: true }),
     ScheduleModule.forRoot(),
     AuthModule.forRoot(),
+    CustomerModule,
   ],
   controllers: [AppController],
   providers: [
