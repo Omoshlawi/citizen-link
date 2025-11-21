@@ -32,14 +32,25 @@ export const CustomerSchema = z.object({
   email: z.email().optional(),
 });
 
+export const CustomerSelfRegistrationSchema = CustomerSchema.extend({
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
+  confirmPassword: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+});
 
-// export const customerSelfRegistrationSchema =
-
+export class CustomerSelfRegistrationDto extends createZodDto(
+  CustomerSelfRegistrationSchema,
+) {}
 export class FindCustomersDto extends createZodDto(FindCustomersSchema) {}
 export class CreatCustomerDto extends createZodDto(CustomerSchema) {}
 export class UpdateCustomerDto extends CreatCustomerDto {}
 
 export class GetCustomerResponseDto implements Customer {
+  @ApiProperty({ nullable: true, type: 'string' })
+  userId: string | null;
   @ApiProperty()
   name: string;
   @ApiProperty()

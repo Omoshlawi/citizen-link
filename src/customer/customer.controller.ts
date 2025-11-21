@@ -14,6 +14,7 @@ import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
 import {
   CreatCustomerDto,
+  CustomerSelfRegistrationDto,
   FindCustomerResponseDto,
   FindCustomersDto,
   GetCustomerResponseDto,
@@ -25,7 +26,7 @@ import {
   OriginalUrl,
 } from '../query-builder';
 import { RequireSystemPermission } from '../auth/auth.decorators';
-import { Session } from '@thallesp/nestjs-better-auth';
+import { Session, AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { UserSession } from '../auth/auth.types';
 import { NotificationService } from '../notification/notification.service';
 
@@ -76,8 +77,15 @@ export class CustomerController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() session: UserSession,
   ) {
-    const customer = await this.customerService.create(body, query, session.user.id);
-    await this.notificationService.sendWelcomeSms(customer.phonenNumber, customer);
+    const customer = await this.customerService.create(
+      body,
+      query,
+      session.user.id,
+    );
+    await this.notificationService.sendWelcomeSms(
+      customer.phonenNumber,
+      customer,
+    );
     return customer;
   }
 
@@ -119,5 +127,19 @@ export class CustomerController {
     @Query() query: CustomRepresentationQueryDto,
   ) {
     return this.customerService.restore(id, query);
+  }
+
+  @Post('/self-register')
+  @AllowAnonymous()
+  @ApiOperation({ summary: 'Self register customer' })
+  @ApiOkResponse({ type: GetCustomerResponseDto })
+  @ApiErrorsResponse()
+  async selfRegisterCustomer(@Body() body: CustomerSelfRegistrationDto) {
+    const customer = await this.customerService.selfRegister(body);
+    await this.notificationService.sendWelcomeSms(
+      customer.phonenNumber,
+      customer,
+    );
+    return customer;
   }
 }

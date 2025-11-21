@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
@@ -10,12 +14,15 @@ import {
 } from '../query-builder';
 import {
   CreatCustomerDto,
+  CustomerSelfRegistrationDto,
   FindCustomersDto,
   UpdateCustomerDto,
 } from './customer.dto';
 import { pick } from 'lodash';
 import { Customer, CustomerGender } from '../../generated/prisma/browser';
 import dayjs from 'dayjs';
+import { AuthService } from '@thallesp/nestjs-better-auth';
+import { BetterAuthWithPlugins } from '../auth/auth.types';
 
 @Injectable()
 export class CustomerService {
@@ -24,6 +31,7 @@ export class CustomerService {
     private readonly sortService: SortService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
+    private authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   async findCustomers(findCustomersDto: FindCustomersDto, originalUrl: string) {
@@ -147,5 +155,36 @@ export class CustomerService {
     return data;
   }
 
-  
+  async selfRegister(data: CustomerSelfRegistrationDto) {
+    // Check if email is available
+    const userWithEmail = await this.prismaService.user.findFirst({
+      where: {
+        email: data.email!,
+      },
+    });
+    if (userWithEmail) {
+      throw new BadRequestException('Email is already in use');
+    }
+    const user = await this.authService.api.createUser({
+      body: {
+        email: data.email!,
+        name: data.name,
+        password: data.password,
+        role: 'user',
+      },
+    });
+    const customer = await this.prismaService.customer.create({
+      data: {
+        address: data.address!,
+        dateOfBirth: dayjs(data.dateOfBirth).toDate(),
+        email: data.email!,
+        gender: data.gender as CustomerGender,
+        identificationNumber: data.identificationNumber!,
+        name: data.name,
+        phonenNumber: data.phonenNumber!,
+        userId: user.user.id,
+      },
+    });
+    return customer;
+  }
 }

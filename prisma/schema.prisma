@@ -27,7 +27,8 @@ model User {
   banExpires      DateTime?
   sessions        Session[]
   accounts        Account[]
-  customers       Customer[]
+  staffCreatedCustomers Customer[] @relation("StaffCreatedCustomers")
+  selfRegisteredCustomers Customer[] @relation("SelfRegisteredCustomers")
 
   @@unique([email])
   @@unique([username])
@@ -99,13 +100,14 @@ model Customer {
   phonenNumber         String
   email                String
 
-  createdById String? // Staff created customer
-  createdBy   User?   @relation(fields: [createdById], onDelete: Restrict, references: [id])
-
+  createdById      String? // Staff created customer
+  createdBy        User?             @relation("StaffCreatedCustomers", fields: [createdById], references: [id], onDelete: Restrict)
   voided           Boolean           @default(false)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   smsnotifications SMSNotification[]
+  user             User?             @relation("SelfRegisteredCustomers", fields: [userId], references: [id])
+  userId           String?           @unique
 }
 
 enum CustomerGender {
@@ -114,11 +116,11 @@ enum CustomerGender {
   UNKNOWN
 }
 
-// Using SMS NOTIFIATION DIRECTLY FOR SIMPLICITY, Coul have used email notification as well and others, also using minimal possible fields for simplicity
+// Using SMS NOTIFIATION DIRECTLY FOR SIMPLICITY, Could have used email notification as well and others, also using minimal possible fields for simplicity
 model SMSNotification {
   id         String             @id @default(cuid())
   customerId String
-  customer   Customer?          @relation(fields: [customerId], onDelete: Restrict, references: [id])
+  customer   Customer?          @relation(fields: [customerId], references: [id], onDelete: Restrict)
   to         String // Phone number
   message    String
   status     NotificationStatus
