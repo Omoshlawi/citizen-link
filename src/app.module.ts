@@ -11,6 +11,7 @@ import { RequireSystemPermissionsGuard } from './auth/auth.guards';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { ZodValidationExceptionFilter } from './app.exceptionfilter';
 import { CustomerModule } from './customer/customer.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [

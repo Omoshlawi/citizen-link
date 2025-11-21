@@ -27,10 +27,14 @@ import {
 import { RequireSystemPermission } from '../auth/auth.decorators';
 import { Session } from '@thallesp/nestjs-better-auth';
 import { UserSession } from '../auth/auth.types';
+import { NotificationService } from '../notification/notification.service';
 
 @Controller('customer')
 export class CustomerController {
-  constructor(private readonly customerService: CustomerService) {}
+  constructor(
+    private readonly customerService: CustomerService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   @Get('/')
   @RequireSystemPermission({
@@ -67,12 +71,14 @@ export class CustomerController {
   @ApiOperation({ summary: 'Create customer' })
   @ApiOkResponse({ type: GetCustomerResponseDto })
   @ApiErrorsResponse({ badRequest: true })
-  createCustomer(
+  async createCustomer(
     @Body() body: CreatCustomerDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() session: UserSession,
   ) {
-    return this.customerService.create(body, query, session.user.id);
+    const customer = await this.customerService.create(body, query, session.user.id);
+    await this.notificationService.sendWelcomeSms(customer.phonenNumber, customer);
+    return customer;
   }
 
   @Put('/:id')

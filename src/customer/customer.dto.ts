@@ -17,7 +17,6 @@ export const FindCustomersSchema = z.object({
     .default(false),
 });
 
-// Amenity
 export const CustomerSchema = z.object({
   name: z.string().min(1, 'Required'),
   identificationNumber: z.string().optional(),
@@ -32,6 +31,8 @@ export const CustomerSchema = z.object({
   phonenNumber: z.string().regex(PHONE_NUMBER_REGEX).optional(),
   email: z.email().optional(),
 });
+
+// TODO: implement self registration flow
 
 export class FindCustomersDto extends createZodDto(FindCustomersSchema) {}
 export class CreatCustomerDto extends createZodDto(CustomerSchema) {}
