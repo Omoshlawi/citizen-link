@@ -1,19 +1,32 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Customer, NotificationStatus } from '../../generated/prisma/browser';
 import { NotificationConfig } from '../config/notification.config';
 import { PrismaService } from '../prisma/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { NOTIFICATION_OPTIONS_TOKEN } from './notofication.utils';
+import { NotificationModuleOptions } from './notification.module';
 
 @Injectable()
-export class NotificationService {
+export class NotificationService implements OnModuleInit {
   private readonly logger: Logger = new Logger(NotificationService.name);
   constructor(
     private readonly prismaService: PrismaService,
     private readonly notificationConfig: NotificationConfig,
+    @Inject(NOTIFICATION_OPTIONS_TOKEN)
+    private readonly notificationOptions: NotificationModuleOptions,
   ) {}
 
+  async onModuleInit() {
+    this.logger.debug('Notification module initialized');
+    this.logger.debug('Notification options', this.notificationOptions);
+    // TODO: initialize sms config based on provider
+  }
+
   async sendWelcomeSms(to: string, customer: Customer) {
-    this.logger.debug("Template String", this.notificationConfig.welcomeSmsTemplate);
+    this.logger.debug(
+      'Template String',
+      this.notificationConfig.welcomeSmsTemplate,
+    );
     const message = this.parseMessage(
       {
         name: customer.name,

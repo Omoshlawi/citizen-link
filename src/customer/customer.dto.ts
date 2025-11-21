@@ -32,7 +32,8 @@ export const CustomerSchema = z.object({
   email: z.email().optional(),
 });
 
-// TODO: implement self registration flow
+
+// export const customerSelfRegistrationSchema =
 
 export class FindCustomersDto extends createZodDto(FindCustomersSchema) {}
 export class CreatCustomerDto extends createZodDto(CustomerSchema) {}

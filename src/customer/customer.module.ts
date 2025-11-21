@@ -4,7 +4,14 @@ import { CustomerService } from './customer.service';
 import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [NotificationModule],
+  imports: [
+    // Sample notification configuration
+    NotificationModule.register({
+      apiKey: process.env.SMS_API_KEY || '',
+      apiSecret: process.env.SMS_API_SECRET || '',
+      provider: process.env.SMS_PROVIDER || '',
+    }),
+  ],
   controllers: [CustomerController],
   providers: [CustomerService],
 })
