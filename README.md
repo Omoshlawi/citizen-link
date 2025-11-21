@@ -1,98 +1,222 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Customer Registration Service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS-based microservice for managing customer registration with authentication, authorization, and SMS notification capabilities.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- 🔐 **Authentication & Authorization**: Built with Better Auth, supporting user sessions, roles, and permissions
+- 👥 **Customer Management**: Full CRUD operations for customer records
+- 📝 **Self-Registration**: Public endpoint for customers to register themselves
+- 📱 **SMS Notifications**: Automated welcome SMS notifications for new customers
+- 🔍 **Advanced Querying**: Flexible query builder with pagination, sorting, and filtering
+- 📚 **API Documentation**: Swagger/OpenAPI documentation with Scalar UI
+- 🐳 **Docker Support**: Containerized development and production environments
+- 🗄️ **Database**: PostgreSQL with Prisma ORM
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Tech Stack
 
-## Project setup
+- **Framework**: NestJS 11
+- **Language**: TypeScript
+- **Database**: PostgreSQL 16
+- **ORM**: Prisma 6
+- **Authentication**: Better Auth
+- **Package Manager**: pnpm
+- **API Documentation**: Swagger/OpenAPI with Scalar
+- **Validation**: Zod
 
+## Prerequisites
+
+- Node.js 20 or higher
+- pnpm (package manager)
+- PostgreSQL 16 (or use Docker)
+- Docker and Docker Compose (optional, for containerized setup)
+
+## Installation
+
+1. Clone the repository:
 ```bash
-$ pnpm install
+git clone <repository-url>
+cd customer-registration-service
 ```
 
-## Compile and run the project
-
+2. Install dependencies:
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm install
 ```
 
-## Run tests
-
-```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+3. Set up environment variables:
+Create a `.env` file in the root directory:
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/customer_registration
+PORT=2000
+BETTER_AUTH_URL=http://localhost:2000
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+4. Generate Prisma Client:
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm prisma generate
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+5. Run database migrations:
+```bash
+pnpm prisma migrate dev
+```
 
-## Resources
+## Running the Application
 
-Check out a few resources that may come in handy when working with NestJS:
+### Development Mode
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+#### Option 1: Using Docker Compose (Recommended)
+```bash
+docker-compose -f docker-compose.dev.yml up
+```
 
-## Support
+This will start:
+- PostgreSQL database on port `5432`
+- NestJS application on port `2000` with hot reload
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+#### Option 2: Local Development
+1. Start PostgreSQL database (or use Docker):
+```bash
+docker run -d \
+  --name customer-registration-db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=customer_registration \
+  -p 5432:5432 \
+  postgres:16-alpine
+```
 
-## Stay in touch
+2. Run database migrations:
+```bash
+pnpm prisma migrate dev
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+3. Start the application:
+```bash
+pnpm start:dev
+```
+
+The application will be available at `http://localhost:2000`
+
+### Production Mode
+
+#### Using Docker Compose
+```bash
+docker-compose up -d
+```
+
+#### Manual Build
+```bash
+pnpm build
+pnpm start:prod
+```
+
+## API Documentation
+
+Once the application is running, access the API documentation at:
+- **Swagger UI**: `http://localhost:2000/api-doc`
+- **OpenAPI JSON**: `http://localhost:2000/api-json`
+
+The API is prefixed with `/api`, so all endpoints are available under `http://localhost:2000/api/*`
+
+## Database Schema
+
+The application uses the following main models:
+
+- **User**: Authentication and user management
+- **Customer**: Customer registration data with support for staff-created and self-registered customers
+- **SMSNotification**: SMS notification tracking
+- **Session**: User session management
+- **Account**: OAuth and authentication accounts
+
+See `prisma/schema.prisma` for the complete schema definition.
+
+## Available Scripts
+
+- `pnpm start` - Start the application
+- `pnpm start:dev` - Start in development mode with watch
+- `pnpm start:debug` - Start in debug mode
+- `pnpm start:prod` - Start in production mode
+- `pnpm build` - Build the application
+- `pnpm test` - Run unit tests
+- `pnpm test:watch` - Run tests in watch mode
+- `pnpm test:cov` - Run tests with coverage
+- `pnpm test:e2e` - Run end-to-end tests
+- `pnpm lint` - Lint the codebase
+- `pnpm format` - Format code with Prettier
+- `pnpm db` - Prisma CLI shortcut
+- `pnpm auth:gen` - Generate Better Auth types
+
+## API Endpoints
+
+### Authentication
+All authentication endpoints are managed by Better Auth and available under `/api/auth/*`
+
+### Customer Management
+- `GET /api/customer` - List customers (requires `customer:list` permission)
+- `GET /api/customer/:id` - Get customer by ID (requires `customer:list` permission)
+- `POST /api/customer` - Create customer (requires `customer:create` permission)
+- `PUT /api/customer/:id` - Update customer (requires `customer:update` permission)
+- `DELETE /api/customer/:id` - Delete customer (requires `customer:delete` permission)
+- `PATCH /api/customer/:id/restore` - Restore deleted customer (requires `customer:restore` permission)
+- `POST /api/customer/self-register` - Self-register customer (public endpoint)
+
+## Project Structure
+
+```
+src/
+├── auth/              # Authentication and authorization module
+├── config/            # Application configuration
+├── customer/          # Customer management module
+├── notification/      # SMS notification service
+├── prisma/            # Prisma service and module
+├── query-builder/     # Query builder utilities
+├── app.module.ts      # Root application module
+└── main.ts            # Application entry point
+```
+
+## Docker
+
+### Development
+The `docker-compose.dev.yml` file sets up a development environment with:
+- Hot reload enabled
+- Source code mounted as volumes
+- PostgreSQL database with health checks
+
+### Production
+The `Dockerfile` uses a multi-stage build for optimized production images.
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | Required |
+| `PORT` | Application port | `2000` |
+| `BETTER_AUTH_URL` | Base URL for Better Auth | `http://localhost:2000` |
+| `NODE_ENV` | Environment mode | `development` |
+
+## Testing
+
+Run unit tests:
+```bash
+pnpm test
+```
+
+Run tests with coverage:
+```bash
+pnpm test:cov
+```
+
+Run end-to-end tests:
+```bash
+pnpm test:e2e
+```
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED
+
+## Author
+
+See package.json for author information.
