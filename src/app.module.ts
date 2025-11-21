@@ -6,6 +6,10 @@ import { ConfigifyModule } from '@itgorillaz/configify';
 import { PrismaModule } from './prisma/prisma.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { QueryBuilderModule } from './query-builder';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { RequireSystemPermissionsGuard } from './auth/auth.guards';
+import { ZodValidationPipe } from 'nestjs-zod';
+import { ZodValidationExceptionFilter } from './app.exceptionfilter';
 
 @Module({
   imports: [
@@ -16,6 +20,17 @@ import { QueryBuilderModule } from './query-builder';
     AuthModule.forRoot(),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: RequireSystemPermissionsGuard },
+    {
+      provide: APP_PIPE,
+      useClass: ZodValidationPipe,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: ZodValidationExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}
