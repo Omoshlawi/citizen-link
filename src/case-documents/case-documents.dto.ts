@@ -17,6 +17,9 @@ export const QueryCaseDocumentSchema = z.object({
   placeOfIssue: z.string().optional(),
   gender: z.enum(['Male', 'Female', 'Unknown']).optional(),
   nationality: z.string().optional(),
+  typeId: z.string().optional(),
+  issuanceDate: z.iso.date().optional(),
+  expiryDate: z.iso.date().optional(),
   includeVoided: z
     .stringbool({
       truthy: ['true', '1'],
