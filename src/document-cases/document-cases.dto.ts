@@ -1,7 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
-import { DocumentSchema } from '../documents/documents.dto';
+import { CaseDocumentSchema } from '../case-documents/case-documents.dto';
 import { QueryAddressSchema } from '../address/address.dto';
 import { ApiProperty } from '@nestjs/swagger';
 import {
@@ -89,7 +89,7 @@ const _ReportDocumentCaseSchema = DocumentCaseSchema.omit({
   status: true,
 }).extend({
   type: z.enum(['LOST', 'FOUND']),
-  document: DocumentSchema,
+  document: CaseDocumentSchema,
   lost: LostDocumentCaseSchema.omit({ reportId: true }).optional(),
   found: FoundDocumentCaseSchema.omit({ reportId: true }).optional(),
 });

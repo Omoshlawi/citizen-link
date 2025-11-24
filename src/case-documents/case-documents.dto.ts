@@ -1,10 +1,10 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
-import { Document } from '../../generated/prisma/browser';
 import { ApiProperty } from '@nestjs/swagger';
+import { Document } from '../../generated/prisma/client';
 
-export const QueryDocumentSchema = z.object({
+export const QueryCaseDocumentSchema = z.object({
   ...QueryBuilderSchema.shape,
   search: z.string().optional(),
   documentNumber: z.string().optional(),
@@ -26,7 +26,7 @@ export const QueryDocumentSchema = z.object({
     .default(false),
 });
 
-export const DocumentImageSchema = z
+export const CaseDocumentImageSchema = z
   .object({
     url: z.string().min(1, 'Required'),
     imageType: z.enum(['FRONT', 'BACK', 'FULL']).optional(),
@@ -34,13 +34,13 @@ export const DocumentImageSchema = z
   })
   .array();
 
-export const DocumentFieldSchema = z.object({
+export const CaseDocumentFieldSchema = z.object({
   documentId: z.string().uuid(),
   fieldName: z.string().min(1, 'Required'),
   fieldValue: z.string().min(1, 'Required'), // All values stored as strings and converted as needed
 });
 
-export const DocumentSchema = z.object({
+export const CaseDocumentSchema = z.object({
   serialNumber: z.string().optional(), // Secondary identifier like serial number if present
   documentNumber: z.string().optional(), // Generic document number (ID number, passport number, etc.)
   batchNumber: z.string().optional(), // Batch number if available
@@ -55,19 +55,23 @@ export const DocumentSchema = z.object({
   typeId: z.string().min(1, 'Type required'),
   issuanceDate: z.iso.date().optional(),
   expiryDate: z.iso.date().optional(),
-  images: DocumentImageSchema.optional(),
-  additionalFields: DocumentFieldSchema.omit({ documentId: true })
+  images: CaseDocumentImageSchema.optional(),
+  additionalFields: CaseDocumentFieldSchema.omit({ documentId: true })
     .array()
     .optional(),
 });
 
-export class CreateDocumentDto extends createZodDto(DocumentSchema) {}
+export class CreateCaseDocumentDto extends createZodDto(CaseDocumentSchema) {}
 
-export class UpdateDocumentDto extends createZodDto(DocumentSchema.partial()) {}
+export class UpdateCaseDocumentDto extends createZodDto(
+  CaseDocumentSchema.partial(),
+) {}
 
-export class QueryDocumentDto extends createZodDto(QueryDocumentSchema) {}
+export class QueryCaseDocumentDto extends createZodDto(
+  QueryCaseDocumentSchema,
+) {}
 
-export class GetDocumentResponseDto implements Document {
+export class GetCaseDocumentResponseDto implements Document {
   @ApiProperty()
   caseId: string;
   @ApiProperty()
@@ -108,9 +112,9 @@ export class GetDocumentResponseDto implements Document {
   voided: boolean;
 }
 
-export class QueryDocumentResponseDto {
-  @ApiProperty({ isArray: true, type: GetDocumentResponseDto })
-  results: GetDocumentResponseDto[];
+export class QueryCaseDocumentResponseDto {
+  @ApiProperty({ isArray: true, type: GetCaseDocumentResponseDto })
+  results: GetCaseDocumentResponseDto[];
 
   @ApiProperty()
   totalCount: number;
