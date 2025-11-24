@@ -10,11 +10,11 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: customer_registration
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,7 +29,7 @@ services:
     container_name: customer-registration-app
     restart: unless-stopped
     ports:
-      - "2000:2000"
+      - '2000:2000'
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/customer_registration
       PORT: 2000
@@ -48,4 +48,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-

@@ -12,43 +12,55 @@ datasource db {
 }
 
 model User {
-  id              String     @id
-  name            String
-  email           String
-  emailVerified   Boolean    @default(false)
-  image           String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @default(now()) @updatedAt
+  id            String         @id
+  name          String
+  email         String
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  voided        Boolean        @default(false)
+  sessions      Session[]
+  accounts      Account[]
+  notifications Notification[]
+  messages      Message[]
+
+  ratings          Rating[]
+  givenFeedback    Feedback[] @relation("GivenFeedback")
+  receivedFeedback Feedback[] @relation("ReceivedFeedback")
+  reports          Report[]
+  addresses        Address[]
+
+  role       String?
+  banned     Boolean?
+  banReason  String?
+  banExpires DateTime?
+
   username        String?
   displayUsername String?
-  role            String?
-  banned          Boolean?   @default(false)
-  banReason       String?
-  banExpires      DateTime?
-  sessions        Session[]
-  accounts        Account[]
-  staffCreatedCustomers Customer[] @relation("StaffCreatedCustomers")
-  selfRegisteredCustomers Customer[] @relation("SelfRegisteredCustomers")
 
   @@unique([email])
-  @@unique([username])
   @@map("user")
+  @@unique([username])
 }
 
 model Session {
-  id             String   @id
-  expiresAt      DateTime
-  token          String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  ipAddress      String?
-  userAgent      String?
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voided    Boolean  @default(false)
+
   impersonatedBy String?
 
   @@unique([token])
   @@map("session")
+  @@index([userId])
 }
 
 model Account {
@@ -64,23 +76,26 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime
+  updatedAt             DateTime
+  voided                Boolean   @default(false)
 
   @@map("account")
+  @@index([userId])
 }
 
 model Verification {
-  id         String   @id
+  id         String    @id
   identifier String
   value      String
   expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+  createdAt  DateTime?
+  updatedAt  DateTime?
+  voided     Boolean   @default(false)
 
   @@map("verification")
+  @@index([identifier])
 }
-
 model Jwks {
   id         String   @id
   publicKey  String
@@ -90,46 +105,419 @@ model Jwks {
   @@map("jwks")
 }
 
-model Customer {
-  id                   String         @id @default(cuid())
-  name                 String
-  identificationNumber String
-  dateOfBirth          DateTime
-  gender               CustomerGender
-  address              String
-  phonenNumber         String
-  email                String
+// Universal Address Model with Hierarchical Support
+model Address {
+  id String @id @default(uuid())
 
-  createdById      String? // Staff created customer
-  createdBy        User?             @relation("StaffCreatedCustomers", fields: [createdById], references: [id], onDelete: Restrict)
-  voided           Boolean           @default(false)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  smsnotifications SMSNotification[]
-  user             User?             @relation("SelfRegisteredCustomers", fields: [userId], references: [id])
-  userId           String?           @unique
+  // Polymorphic ownership
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Address metadata
+  type  AddressType @default(OTHER)
+  label String? // e.g., "Home", "Office", "Billing"
+
+  // Street-level details
+  address1 String // Building/house number and street
+  address2 String? // Apartment, suite, floor, etc.
+  landmark String? // Nearby landmark or directions
+
+  // Administrative Hierarchy (flexible for any country)
+  // These fields adapt to local naming conventions
+  level1 String // County (Kenya), State (US), Province (Canada)
+  level2 String? // Sub-County (Kenya), City (US), District
+  level3 String? // Ward (Kenya), Borough, Municipality  
+  level4 String? // Village/Estate (Kenya), Neighborhood
+  level5 String? // Additional granularity if needed
+
+  // Legacy/common fields (for backward compatibility)
+  cityVillage   String? // Maps to appropriate level
+  stateProvince String? // Maps to appropriate level
+
+  country    String // ISO 3166-1 alpha-2 code (KE, US, etc.)
+  postalCode String?
+
+  // Geolocation
+  latitude  Decimal?
+  longitude Decimal?
+  plusCode  String? // Google Plus Code for precise location
+
+  // Temporal tracking
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+
+  // Metadata
+  preferred Boolean @default(false)
+  formatted String? // Cached formatted address
+
+  // Locale-specific configuration
+  localeFormat Json? // Store hierarchy labels: {"level1": "County", "level2": "Sub-County"}
+
+  reports Report[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  voided Boolean @default(false)
+
+  @@index([userId])
+  @@index([userId, preferred])
+  @@index([country])
+  @@index([level1, level2, level3]) // For hierarchical queries
 }
 
-enum CustomerGender {
-  MALE
-  FEMALE
-  UNKNOWN
+enum AddressType {
+  HOME
+  WORK
+  BILLING
+  SHIPPING
+  OFFICE
+  BRANCH
+  WAREHOUSE
+  OTHER
+
 }
 
-// Using SMS NOTIFIATION DIRECTLY FOR SIMPLICITY, Could have used email notification as well and others, also using minimal possible fields for simplicity
-model SMSNotification {
-  id         String             @id @default(cuid())
-  customerId String
-  customer   Customer?          @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  to         String // Phone number
-  message    String
-  status     NotificationStatus
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+// Optional: Address Hierarchy Configuration (for dropdowns/autocomplete)
+model AddressHierarchy {
+  id       String             @id @default(uuid())
+  country  String // ISO country code
+  level    Int // 1, 2, 3, 4, 5
+  parentId String? // Reference to parent level
+  parent   AddressHierarchy?  @relation("Hierarchy", fields: [parentId], references: [id])
+  children AddressHierarchy[] @relation("Hierarchy")
+
+  code      String // Unique code (e.g., "KE-30" for Nairobi County)
+  name      String // Display name
+  nameLocal String? // Local language name
+
+  voided Boolean @default(false)
+
+  @@unique([country, code])
+  @@index([country, level])
+  @@index([parentId])
 }
 
-enum NotificationStatus {
+// Document Types Enum - referenced by DocumentType model
+
+enum DocumentCategory {
+  IDENTITY // National IDs, Passports, Alien Cards, etc.
+  ACADEMIC // Student IDs, Certificates, Transcripts
+  PROFESSIONAL // Professional Licenses, Work Permits, etc.
+  VEHICLE // Driver's Licenses, Vehicle Registration, etc.
+  FINANCIAL // Bank Cards, Insurance Cards, etc.
+  MEDICAL // NHIF Cards, Health Records, Vaccination Cards
+  LEGAL // Title Deeds, Marriage Certificates, etc.
+  OTHER // Any other documents
+}
+
+model DocumentType {
+  id                      String           @id @default(uuid())
+  name                    String           @unique // e.g., "National ID", "Passport", "Driver's License"
+  category                DocumentCategory
+  description             String?
+  icon                    String?
+  loyaltyPoints           Int // Points to award user who finds an post the document
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  replacementInstructions String?
+  averageReplacementCost  Float?
+  documents               Document[]
+  voided                  Boolean          @default(false)
+}
+
+model Document {
+  id             String  @id @default(uuid())
+  // Common Document Identifiers
+  documentNumber String? // Generic document number (ID number, passport number, etc.)
+  serialNumber   String? // Secondary identifier like serial number if present
+  batchNumber    String? // Batch number if available
+
+  // Owner Personal Details (as they appear on document)
+  dateOfBirth  DateTime? // Owner's date of birth
+  placeOfBirth String? // Owner's place of birth
+  gender       String? // Owner's gender
+  nationality  String? // Owner's nationality
+  ownerName    String
+
+  issuer       String?
+  // Document Type Information
+  typeId       String
+  type         DocumentType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  reportId     String       @unique
+  report       Report       @relation(fields: [reportId], onDelete: Cascade, references: [id])
+  issuanceDate DateTime?
+  placeOfIssue String?
+  expiryDate   DateTime?
+  note         String? // Additional notes
+
+  createdAt        DateTime        @default(now())
+  voided           Boolean         @default(false)
+  images           Image[]
+  additionalFields DocumentField[]
+}
+
+// Dynamic Field Values - stores actual values for document-specific fields
+
+model DocumentField {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fieldName  String
+  fieldValue String // All values stored as strings and converted as needed
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([documentId, fieldName])
+}
+
+model Image {
+  id         String    @id @default(uuid())
+  url        String
+  documentId String?
+  imageType  String? // Front, Back, Full, etc.
+  ocrText    String? // Raw OCR text extracted from this image
+  metadata   Json? // Additional metadata (size, format, etc.)
+  document   Document? @relation(fields: [documentId], references: [id])
+  createdAt  DateTime  @default(now())
+}
+
+model Report {
+  id              String    @id @default(uuid())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  eventDate DateTime // Lost or found date
+  // Location information
+  addressId String
+  address   Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  tags        Json         @default("[]") // array of key words
+  description String?
+  status      ReportStatus @default(ACTIVE)
+
+  // Relationship fields
+  lostReport    LostReport?
+  foundReport   FoundReport?
+  document      Document?
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  voided    Boolean  @default(false)
+
+  // images         Image[]
+  // notifications  Notification[]
+  @@index([eventDate])
+}
+
+// Lost Report model for documents reported lost
+
+model LostReport {
+  id                String            @id @default(uuid())
+  reportId          String            @unique
+  report            Report            @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  matches Match[]
+}
+
+// Found Report model for documents that were found
+
+model FoundReport {
+  id                 String             @id @default(uuid())
+  reportId           String             @unique
+  report             Report             @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  pointAwarded       Int                @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
+  securityQuestion   String?
+  securityAnswer     String?
+  matches            Match[]
+}
+
+enum ReportStatus {
+  DRAFT
+  ACTIVE
+  MATCHED
+  RETURNED
+  EXPIRED
+  CLAIMED
+  PENDING_VERIFICATION
+  ARCHIVED
+}
+// Match model for potential matches between lost and found reports
+
+model Match {
+  id            String      @id @default(uuid())
+  lostReportId  String
+  foundReportId String
+  lostReport    LostReport  @relation(fields: [lostReportId], references: [id], onDelete: Cascade)
+  foundReport   FoundReport @relation(fields: [foundReportId], references: [id], onDelete: Cascade)
+
+  matchScore       Float
+  status           MatchStatus @default(PENDING)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  adminVerified    Boolean     @default(false)
+  verifiedBy       String?
+  handoverDate     DateTime?
+  handoverLocation String?
+  handoverCode     String?
+  feedbacks        Feedback[]
+  voided           Boolean     @default(false)
+
+  // Potential AI metadata fields
+  aiModelVersion String?
+  aiMatchReasons Json?
+
+  @@index([status])
+}
+
+enum MatchStatus {
   PENDING
-  SENT
-  FAILED
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  DISPUTED
 }
+
+// Notification model for user alerts
+
+model Notification {
+  id        String           @id @default(uuid())
+  user      User             @relation(fields: [userId], references: [id])
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  report    Report?          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId  String?
+  link      String?
+  voided    Boolean          @default(false)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+}
+
+enum NotificationType {
+  POTENTIAL_MATCH
+  MATCH_ACCEPTED
+  MATCH_REJECTED
+  DOCUMENT_RETURNED
+  NEW_MESSAGE
+  SYSTEM
+  REWARD_OFFERED
+  LOCATION_ALERT
+}
+
+// Message model for communication between users
+
+model Message {
+  id            String   @id @default(uuid())
+  sender        User     @relation(fields: [senderId], references: [id])
+  senderId      String
+  content       String
+  attachmentUrl String?
+  createdAt     DateTime @default(now())
+  isRead        Boolean  @default(false)
+  voided        Boolean  @default(false)
+
+  conversationId String
+
+  @@index([senderId])
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// Conversation model for grouping messages
+
+model Conversation {
+  id            String    @id @default(uuid())
+  participants  String // Array of user IDs
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastMessageAt DateTime?
+  title         String?
+  voided        Boolean   @default(false)
+
+  @@index([participants])
+}
+
+// Feedback model for ratings after document return
+
+model Feedback {
+  id         String   @id @default(uuid())
+  giver      User     @relation("GivenFeedback", fields: [giverId], references: [id])
+  giverId    String
+  receiver   User     @relation("ReceivedFeedback", fields: [receiverId], references: [id])
+  receiverId String
+  rating     Int // 1-5
+  comment    String?
+  match      Match    @relation(fields: [matchId], references: [id])
+  matchId    String
+  createdAt  DateTime @default(now())
+  voided     Boolean  @default(false)
+
+  @@unique([giverId, matchId])
+  @@index([receiverId])
+}
+
+// Rating model for document condition
+
+model Rating {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  score     Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  voided    Boolean  @default(false)
+
+  @@index([userId])
+}
+
+// FAQ model
+
+model FAQ {
+  id       String  @id @default(uuid())
+  question String
+  answer   String
+  category String
+  order    Int
+  isActive Boolean @default(true)
+  voided   Boolean @default(false)
+}
+
+// Statistics for analytics
+
+model Statistic {
+  id                String   @id @default(uuid())
+  date              DateTime @default(now())
+  lostReportsCount  Int      @default(0)
+  foundReportsCount Int      @default(0)
+  matchesCount      Int      @default(0)
+  returnedCount     Int      @default(0)
+  activeUsers       Int      @default(0)
+  newUsers          Int      @default(0)
+  voided            Boolean  @default(false)
+
+  @@unique([date])
+}
+
+// System Settings
+
+model Setting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  voided      Boolean  @default(false)
+}
+
