@@ -13,6 +13,8 @@ import { ZodValidationExceptionFilter } from './app.exceptionfilter';
 import { AddressHierarchyModule } from './address-hierarchy/address-hierarchy.module';
 import { AddressModule } from './address/address.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
+import { DocumentsModule } from './documents/documents.module';
+import { DocumentCasesModule } from './document-cases/document-cases.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { DocumentTypesModule } from './document-types/document-types.module';
     AddressHierarchyModule,
     AddressModule,
     DocumentTypesModule,
+    DocumentsModule,
+    DocumentCasesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -26,7 +26,7 @@ import {
 import { DocumentTypesService } from './document-types.service';
 import { RequireSystemPermission } from '../auth/auth.decorators';
 
-@Controller('types')
+@Controller('documents/types')
 export class DocumentTypesController {
   constructor(private readonly documentTypesService: DocumentTypesService) {}
 

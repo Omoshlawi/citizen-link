@@ -1,0 +1,373 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  CreateDocumentCaseDto,
+  QueryDocumentCaseDto,
+  UpdateDocumentCaseDto,
+} from './document-cases.dto';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  CustomRepresentationQueryDto,
+  DeleteQueryDto,
+  FunctionFirstArgument,
+  PaginationService,
+} from '../query-builder';
+import { CustomRepresentationService } from '../query-builder';
+import { SortService } from '../query-builder';
+import dayjs from 'dayjs';
+import { pick } from 'lodash';
+import { DocumentCase } from '../../generated/prisma/client';
+
+@Injectable()
+export class DocumentCasesService {
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly paginationService: PaginationService,
+    private readonly representationService: CustomRepresentationService,
+    private readonly sortService: SortService,
+  ) {}
+  create(
+    createDocumentCaseDto: CreateDocumentCaseDto,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+  ) {
+    const { lost, found, type, document, eventDate, ...caseData } =
+      createDocumentCaseDto;
+    const { images, additionalFields, ...documentpayload } = document;
+
+    return this.prismaService.documentCase.create({
+      data: {
+        ...caseData,
+        eventDate: dayjs(eventDate).toDate(),
+        foundDocumentCase: type === 'FOUND' ? { create: found } : undefined,
+        lostDocumentCase: type === 'LOST' ? { create: lost } : undefined,
+        userId,
+        document: {
+          create: {
+            ...documentpayload,
+            images: images?.length
+              ? {
+                  createMany: {
+                    data: images,
+                  },
+                }
+              : undefined,
+            additionalFields: additionalFields?.length
+              ? {
+                  createMany: {
+                    data: additionalFields,
+                  },
+                }
+              : undefined,
+          },
+        },
+      },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
+
+  async findAll(
+    query: QueryDocumentCaseDto,
+    userId: string,
+    originalUrl: string,
+  ) {
+    const dbQuery: FunctionFirstArgument<
+      typeof this.prismaService.documentCase.findMany
+    > = {
+      where: {
+        AND: [
+          {
+            voided: query?.includeVoided ? undefined : false,
+            userId: query?.includeForOtherUsers ? undefined : userId, // only admin users can view all cases
+            document: {
+              typeId: query.documentType,
+              serialNumber: query.documentNumber,
+              issuer: { contains: query.documentIssuer },
+              ownerName: { contains: query.ownerName },
+              expiryDate: {
+                gte: query.docuemtExpiryDateFrom
+                  ? dayjs(query.docuemtExpiryDateFrom).toDate()
+                  : undefined,
+                lte: query.docuemtExpiryDateTo
+                  ? dayjs(query.docuemtExpiryDateTo).toDate()
+                  : undefined,
+              },
+              issuanceDate: {
+                gte: query.docuemtIssueDateFrom
+                  ? dayjs(query.docuemtIssueDateFrom).toDate()
+                  : undefined,
+                lte: query.docuemtIssueDateTo
+                  ? dayjs(query.docuemtIssueDateTo).toDate()
+                  : undefined,
+              },
+            },
+            address: {
+              level1: query.level1,
+              level2: query.level2,
+              level3: query.level3,
+              level4: query.level4,
+              level5: query.level5,
+              country: query.country,
+              postalCode: query.postalCode,
+            },
+          },
+          {
+            OR: query.search
+              ? [
+                  { document: { serialNumber: { contains: query?.search } } },
+                  { description: { contains: query?.search } },
+                  { document: { ownerName: { contains: query?.search } } },
+                ]
+              : undefined,
+          },
+
+          {
+            address: {
+              OR: query.location
+                ? [
+                    {
+                      label: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      id: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      address1: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      address2: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      cityVillage: {
+                        contains: query.location,
+                        // mode: 'insensitive',
+                      },
+                    },
+                    {
+                      country: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      formatted: {
+                        contains: query.location,
+                        // mode: 'insensitive',
+                      },
+                    },
+                    {
+                      label: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      landmark: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      level1: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      level2: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      level3: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      level4: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      level5: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      plusCode: {
+                        contains: query.location, //mode: 'insensitive'
+                      },
+                    },
+                    {
+                      postalCode: {
+                        contains: query.location,
+                        // mode: 'insensitive',
+                      },
+                    },
+                  ]
+                : undefined,
+            },
+          },
+        ],
+      },
+      ...this.paginationService.buildPaginationQuery(query),
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      ...this.sortService.buildSortQuery(query?.orderBy),
+    };
+    const [data, totalCount] = await Promise.all([
+      this.prismaService.documentCase.findMany(dbQuery),
+      this.prismaService.documentCase.count(pick(dbQuery, 'where')),
+    ]);
+    return {
+      results: data,
+      ...this.paginationService.buildPaginationControls(
+        totalCount,
+        originalUrl,
+        query,
+      ),
+    };
+  }
+
+  async findOne(
+    id: string,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+  ) {
+    const data = await this.prismaService.documentCase.findUnique({
+      where: { id, userId },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+    if (!data) throw new NotFoundException('Document case not found');
+    return data;
+  }
+
+  async update(
+    id: string,
+    updateDocumentCaseDto: UpdateDocumentCaseDto,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+  ) {
+    const { lost, found, type, document, ...report } = updateDocumentCaseDto;
+    const { images, additionalFields, ...documentpayload } = document ?? {};
+    const _report = await this.prismaService.documentCase.findUnique({
+      where: {
+        id,
+        userId,
+        voided: false,
+        lostDocumentCase: type === 'FOUND' ? null : undefined,
+        foundDocumentCase: type === 'LOST' ? null : undefined,
+      },
+      select: {
+        lostDocumentCase: {
+          select: {
+            id: true,
+          },
+        },
+        foundDocumentCase: {
+          select: {
+            id: true,
+          },
+        },
+        document: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+    if (!_report) throw new NotFoundException('Document case not found');
+    return this.prismaService.documentCase.update({
+      where: {
+        id,
+      },
+      data: {
+        ...report,
+        foundDocumentCase:
+          type === 'FOUND' && found && _report.foundDocumentCase
+            ? {
+                update: {
+                  where: { id: _report.foundDocumentCase.id },
+                  data: found,
+                },
+              }
+            : undefined,
+        lostDocumentCase:
+          type === 'LOST' && lost && _report.lostDocumentCase
+            ? {
+                update: {
+                  where: { id: _report.lostDocumentCase.id },
+                  data: lost,
+                },
+              }
+            : undefined,
+
+        document:
+          _report.document && document
+            ? {
+                update: {
+                  where: { id: _report.document.id },
+                  data: {
+                    ...documentpayload,
+                    images: images?.length
+                      ? {
+                          deleteMany: {
+                            documentId: _report.document.id,
+                          },
+                          createMany: {
+                            data: images,
+                          },
+                        }
+                      : undefined,
+                    additionalFields: additionalFields?.length
+                      ? {
+                          deleteMany: { documentId: _report.document.id },
+                          createMany: { data: additionalFields },
+                        }
+                      : undefined,
+                  },
+                },
+              }
+            : undefined,
+      },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
+
+  async remove(id: string, query: DeleteQueryDto, userId: string) {
+    let data: DocumentCase;
+    if (query?.purge) {
+      data = await this.prismaService.documentCase.delete({
+        where: { id, userId },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+    } else {
+      data = await this.prismaService.documentCase.update({
+        where: { id, userId },
+        data: { voided: true },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+    }
+    return data;
+  }
+
+  async restore(
+    id: string,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+  ) {
+    const data = await this.prismaService.documentCase.update({
+      where: { id, userId },
+      data: { voided: false },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+    return data;
+  }
+}

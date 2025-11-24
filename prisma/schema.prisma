@@ -26,9 +26,9 @@ model User {
   messages      Message[]
 
   ratings          Rating[]
-  givenFeedback    Feedback[] @relation("GivenFeedback")
-  receivedFeedback Feedback[] @relation("ReceivedFeedback")
-  reports          Report[]
+  givenFeedback    Feedback[]     @relation("GivenFeedback")
+  receivedFeedback Feedback[]     @relation("ReceivedFeedback")
+  cases            DocumentCase[]
   addresses        Address[]
 
   role       String?
@@ -40,8 +40,8 @@ model User {
   displayUsername String?
 
   @@unique([email])
-  @@map("user")
   @@unique([username])
+  @@map("user")
 }
 
 model Session {
@@ -59,8 +59,8 @@ model Session {
   impersonatedBy String?
 
   @@unique([token])
-  @@map("session")
   @@index([userId])
+  @@map("session")
 }
 
 model Account {
@@ -80,8 +80,8 @@ model Account {
   updatedAt             DateTime
   voided                Boolean   @default(false)
 
-  @@map("account")
   @@index([userId])
+  @@map("account")
 }
 
 model Verification {
@@ -93,9 +93,10 @@ model Verification {
   updatedAt  DateTime?
   voided     Boolean   @default(false)
 
-  @@map("verification")
   @@index([identifier])
+  @@map("verification")
 }
+
 model Jwks {
   id         String   @id
   publicKey  String
@@ -111,7 +112,7 @@ model Address {
 
   // Polymorphic ownership
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Address metadata
   type  AddressType @default(OTHER)
@@ -153,7 +154,7 @@ model Address {
   // Locale-specific configuration
   localeFormat Json? // Store hierarchy labels: {"level1": "County", "level2": "Sub-County"}
 
-  reports Report[]
+  cases DocumentCase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -175,7 +176,6 @@ enum AddressType {
   BRANCH
   WAREHOUSE
   OTHER
-
 }
 
 // Optional: Address Hierarchy Configuration (for dropdowns/autocomplete)
@@ -244,8 +244,8 @@ model Document {
   // Document Type Information
   typeId       String
   type         DocumentType @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  reportId     String       @unique
-  report       Report       @relation(fields: [reportId], onDelete: Cascade, references: [id])
+  caseId       String       @unique
+  case         DocumentCase @relation(fields: [caseId], onDelete: Cascade, references: [id])
   issuanceDate DateTime?
   placeOfIssue String?
   expiryDate   DateTime?
@@ -284,24 +284,24 @@ model Image {
   createdAt  DateTime  @default(now())
 }
 
-model Report {
-  id              String    @id @default(uuid())
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
+model DocumentCase {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   eventDate DateTime // Lost or found date
   // Location information
   addressId String
-  address   Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  address   Address  @relation(fields: [addressId], references: [id], onDelete: Cascade)
 
-  tags        Json         @default("[]") // array of key words
+  tags        Json               @default("[]") // array of key words
   description String?
-  status      ReportStatus @default(ACTIVE)
+  status      DocumentCaseStatus @default(ACTIVE)
 
   // Relationship fields
-  lostReport    LostReport?
-  foundReport   FoundReport?
-  document      Document?
-  notifications Notification[]
+  lostDocumentCase  LostDocumentCase?
+  foundDocumentCase FoundDocumentCase?
+  document          Document?
+  notifications     Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -314,30 +314,30 @@ model Report {
 
 // Lost Report model for documents reported lost
 
-model LostReport {
-  id                String            @id @default(uuid())
-  reportId          String            @unique
-  report            Report            @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  matches Match[]
+model LostDocumentCase {
+  id        String       @id @default(uuid())
+  caseId    String       @unique
+  case      DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  matches   Match[]
 }
 
 // Found Report model for documents that were found
 
-model FoundReport {
-  id                 String             @id @default(uuid())
-  reportId           String             @unique
-  report             Report             @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  pointAwarded       Int                @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
-  securityQuestion   String?
-  securityAnswer     String?
-  matches            Match[]
+model FoundDocumentCase {
+  id               String       @id @default(uuid())
+  caseId           String       @unique
+  case             DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  pointAwarded     Int          @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
+  securityQuestion String?
+  securityAnswer   String?
+  matches          Match[]
 }
 
-enum ReportStatus {
+enum DocumentCaseStatus {
   DRAFT
   ACTIVE
   MATCHED
@@ -347,14 +347,15 @@ enum ReportStatus {
   PENDING_VERIFICATION
   ARCHIVED
 }
+
 // Match model for potential matches between lost and found reports
 
 model Match {
-  id            String      @id @default(uuid())
-  lostReportId  String
-  foundReportId String
-  lostReport    LostReport  @relation(fields: [lostReportId], references: [id], onDelete: Cascade)
-  foundReport   FoundReport @relation(fields: [foundReportId], references: [id], onDelete: Cascade)
+  id                  String            @id @default(uuid())
+  lostDocumentCaseId  String
+  foundDocumentCaseId String
+  lostDocumentCase    LostDocumentCase  @relation(fields: [lostDocumentCaseId], references: [id], onDelete: Cascade)
+  foundDocumentCase   FoundDocumentCase @relation(fields: [foundDocumentCaseId], references: [id], onDelete: Cascade)
 
   matchScore       Float
   status           MatchStatus @default(PENDING)
@@ -394,8 +395,8 @@ model Notification {
   type      NotificationType
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
-  report    Report?          @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  reportId  String?
+  case      DocumentCase?    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId    String?
   link      String?
   voided    Boolean          @default(false)
 
@@ -496,15 +497,15 @@ model FAQ {
 // Statistics for analytics
 
 model Statistic {
-  id                String   @id @default(uuid())
-  date              DateTime @default(now())
-  lostReportsCount  Int      @default(0)
-  foundReportsCount Int      @default(0)
-  matchesCount      Int      @default(0)
-  returnedCount     Int      @default(0)
-  activeUsers       Int      @default(0)
-  newUsers          Int      @default(0)
-  voided            Boolean  @default(false)
+  id              String   @id @default(uuid())
+  date            DateTime @default(now())
+  lostCasesCount  Int      @default(0)
+  foundCasesCount Int      @default(0)
+  matchesCount    Int      @default(0)
+  returnedCount   Int      @default(0)
+  activeUsers     Int      @default(0)
+  newUsers        Int      @default(0)
+  voided          Boolean  @default(false)
 
   @@unique([date])
 }
@@ -520,4 +521,3 @@ model Setting {
   updatedBy   String?
   voided      Boolean  @default(false)
 }
-
