@@ -16,6 +16,8 @@ import { DocumentTypesModule } from './document-types/document-types.module';
 import { CaseDocumentsModule } from './case-documents/case-documents.module';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
 import { S3Module } from './s3/s3.module';
+import { AiModule } from './ai/ai.module';
+import { AiConfig } from './ai/ai.config';
 
 @Module({
   imports: [
@@ -30,6 +32,16 @@ import { S3Module } from './s3/s3.module';
     CaseDocumentsModule,
     DocumentCasesModule,
     S3Module,
+    AiModule.registerAsync({
+      global: true,
+      useFactory: (config: AiConfig) => {
+        return {
+          googleApiKey: config.googleApiKey,
+          model: 'gemini-2.0-flash-001',
+        };
+      },
+      inject: [AiConfig],
+    }),
   ],
   controllers: [AppController],
   providers: [
