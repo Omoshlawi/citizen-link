@@ -12,6 +12,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { ZodValidationExceptionFilter } from './app.exceptionfilter';
 import { AddressHierarchyModule } from './address-hierarchy/address-hierarchy.module';
 import { AddressModule } from './address/address.module';
+import { DocumentTypesModule } from './document-types/document-types.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AddressModule } from './address/address.module';
     AuthModule.forRoot(),
     AddressHierarchyModule,
     AddressModule,
+    DocumentTypesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -109,4 +109,19 @@ export class QueryAddressResponseDto {
 
   @ApiProperty()
   totalCount: number;
+
+  @ApiProperty()
+  totalPages: number;
+
+  @ApiProperty()
+  currentPage: number;
+
+  @ApiProperty()
+  pageSize: number;
+
+  @ApiProperty()
+  next: string | null;
+
+  @ApiProperty()
+  prev: string | null;
 }

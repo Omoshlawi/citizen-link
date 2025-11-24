@@ -241,10 +241,7 @@ export class AddressService {
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
       });
     }
-    return {
-      data,
-      metadata: JSON.stringify({}),
-    };
+    return data;
   }
 
   async restore(
