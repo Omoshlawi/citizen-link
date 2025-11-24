@@ -4,6 +4,6 @@ import { Configuration, Value } from '@itgorillaz/configify';
 
 @Configuration()
 export class AiConfig {
-  @Value('GOOGLE_API_KEY', { parse: z.string().nonempty().parse })
-  googleApiKey: string;
+  @Value('GEMINI_API_KEY', { parse: z.string().nonempty().parse })
+  geminiApiKey: string;
 }

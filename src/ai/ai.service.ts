@@ -15,7 +15,7 @@ export class AiService implements OnModuleInit {
   ) {}
   onModuleInit() {
     this.genai = new GoogleGenAI({
-      apiKey: this.options.googleApiKey,
+      apiKey: this.options.geminiApiKey,
     });
   }
 

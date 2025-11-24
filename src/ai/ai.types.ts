@@ -1,7 +1,7 @@
 import { Provider, Type } from '@nestjs/common';
 
 export type AIOptions = {
-  googleApiKey: string;
+  geminiApiKey: string;
   model:
     | 'gemini-2.5-flash'
     | 'gemini-2.5-pro'

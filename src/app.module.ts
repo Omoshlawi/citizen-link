@@ -36,7 +36,7 @@ import { AiConfig } from './ai/ai.config';
       global: true,
       useFactory: (config: AiConfig) => {
         return {
-          googleApiKey: config.googleApiKey,
+          geminiApiKey: config.geminiApiKey,
           model: 'gemini-2.0-flash-001',
         };
       },
