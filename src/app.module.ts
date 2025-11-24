@@ -15,6 +15,7 @@ import { AddressModule } from './address/address.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
 import { CaseDocumentsModule } from './case-documents/case-documents.module';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
+import { S3Module } from './s3/s3.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { DocumentCasesModule } from './document-cases/document-cases.module';
     DocumentTypesModule,
     CaseDocumentsModule,
     DocumentCasesModule,
+    S3Module,
   ],
   controllers: [AppController],
   providers: [
