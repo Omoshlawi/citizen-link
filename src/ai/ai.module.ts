@@ -2,6 +2,8 @@ import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { AiController } from './ai.controller';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
 import { AiModuleOptions } from './ai.types';
+import { OcrService } from './ocr.service';
+import { AiService } from './ai.service';
 
 @Module({})
 export class AiModule {
@@ -13,8 +15,11 @@ export class AiModule {
       providers: [
         ...(options.providers || []),
         this.createAsyncProvider(options),
+        OcrService,
+        AiService,
       ],
       imports: options.imports,
+      exports: [OcrService, AiService],
     };
   }
 
