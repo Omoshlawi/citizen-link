@@ -173,8 +173,6 @@ enum AddressType {
   BILLING
   SHIPPING
   OFFICE
-  BRANCH
-  WAREHOUSE
   OTHER
 }
 

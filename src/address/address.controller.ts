@@ -31,7 +31,7 @@ import {
 } from '../query-builder';
 import { UserSession } from '../auth/auth.types';
 
-@Controller('address')
+@Controller('addresses')
 export class AddressController {
   constructor(private readonly addressService: AddressService) {}
 
