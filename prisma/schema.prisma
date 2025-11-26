@@ -282,6 +282,7 @@ model Image {
   metadata   Json? // Additional metadata (size, format, etc.)
   document   Document? @relation(fields: [documentId], references: [id])
   createdAt  DateTime  @default(now())
+  voided     Boolean   @default(false)
 }
 
 model DocumentCase {

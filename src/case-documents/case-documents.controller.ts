@@ -84,7 +84,7 @@ export class CaseDocumentsController {
     return this.caseDocumentsService.remove(documentId, query, caseId);
   }
 
-  @Patch(':documentId/restore')
+  @Post(':documentId/restore')
   @ApiOperation({ summary: 'Restore Document' })
   @ApiOkResponse({ type: GetCaseDocumentResponseDto })
   @ApiErrorsResponse({ badRequest: true })

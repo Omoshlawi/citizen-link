@@ -8,7 +8,6 @@ import {
   DocumentCase,
   DocumentCaseStatus,
 } from '../../generated/prisma/client';
-import { JsonValue } from '@prisma/client/runtime/library';
 
 export const QueryDocumentCaseSchema = z
   .object({
@@ -160,7 +159,7 @@ export class GetDocumentCaseResponseDto implements DocumentCase {
   @ApiProperty()
   eventDate: Date;
   @ApiProperty()
-  tags: JsonValue;
+  tags: Array<string>;
   @ApiProperty()
   status: DocumentCaseStatus;
   @ApiProperty()

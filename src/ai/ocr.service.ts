@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
 import { Readable } from 'stream';
 import { createWorker } from 'tesseract.js';
@@ -15,14 +13,14 @@ export class OcrService {
     const worker = await createWorker();
     const { data } = await worker.recognize(url);
     await worker.terminate();
-    return data.text as string;
+    return data.text;
   }
 
   async recognizeFromBuffer(buffer: Buffer) {
     const worker = await createWorker();
     const { data } = await worker.recognize(buffer);
     await worker.terminate();
-    return data.text as string;
+    return data.text;
   }
 
   /**

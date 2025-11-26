@@ -18,6 +18,7 @@ import { DocumentCasesModule } from './document-cases/document-cases.module';
 import { S3Module } from './s3/s3.module';
 import { AiModule } from './ai/ai.module';
 import { AiConfig } from './ai/ai.config';
+import { DocumentImagesModule } from './document-images/document-images.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AiConfig } from './ai/ai.config';
       },
       inject: [AiConfig],
     }),
+    DocumentImagesModule,
   ],
   controllers: [AppController],
   providers: [
