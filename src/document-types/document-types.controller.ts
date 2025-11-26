@@ -31,7 +31,7 @@ export class DocumentTypesController {
   constructor(private readonly documentTypesService: DocumentTypesService) {}
 
   @Post()
-  @RequireSystemPermission({ docType: ['create'] })
+  @RequireSystemPermission({ documentType: ['create'] })
   @ApiOperation({ summary: 'Create Document Type' })
   @ApiOkResponse({ type: GetDocumentTypeResponseDto })
   @ApiErrorsResponse({ badRequest: true })
@@ -64,7 +64,7 @@ export class DocumentTypesController {
   }
 
   @Patch(':id')
-  @RequireSystemPermission({ docType: ['update'] })
+  @RequireSystemPermission({ documentType: ['update'] })
   @ApiOperation({ summary: 'Update Document Type' })
   @ApiOkResponse({ type: GetDocumentTypeResponseDto })
   @ApiErrorsResponse({ badRequest: true })
@@ -77,7 +77,7 @@ export class DocumentTypesController {
   }
 
   @Delete(':id')
-  @RequireSystemPermission({ docType: ['delete'] })
+  @RequireSystemPermission({ documentType: ['delete'] })
   @ApiOperation({ summary: 'Delete Document Type' })
   @ApiOkResponse({ type: GetDocumentTypeResponseDto })
   @ApiErrorsResponse()
@@ -89,7 +89,7 @@ export class DocumentTypesController {
   }
 
   @Post(':id/restore')
-  @RequireSystemPermission({ docType: ['restore'] })
+  @RequireSystemPermission({ documentType: ['restore'] })
   @ApiOperation({ summary: 'Restore Document Type' })
   @ApiOkResponse({ type: GetDocumentTypeResponseDto })
   @ApiErrorsResponse()

@@ -8,16 +8,16 @@ import {
 
 export const adminPluginAcl = createAccessControl({
   ...defaultAdminStatements,
-  docType: ['create', 'update', 'delete', 'restore'],
+  documentType: ['create', 'update', 'delete', 'restore'],
 });
 
 const adminRole = adminPluginAcl.newRole({
-  docType: ['create', 'update', 'delete', 'restore'],
+  documentType: ['create', 'update', 'delete', 'restore'],
   ...adminAc.statements,
 });
 
 const userRole = adminPluginAcl.newRole({
-  docType: [],
+  documentType: [],
   ...userAc.statements,
 });
 

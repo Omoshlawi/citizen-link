@@ -3,6 +3,7 @@ import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
 import { ApiProperty } from '@nestjs/swagger';
 import { Document } from '../../generated/prisma/client';
+import { DocumentImageItemSchema } from '../document-images/document-images.dto';
 
 export const QueryCaseDocumentSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -29,16 +30,8 @@ export const QueryCaseDocumentSchema = z.object({
     .default(false),
 });
 
-export const CaseDocumentImageSchema = z
-  .object({
-    url: z.string().min(1, 'Required'),
-    imageType: z.enum(['FRONT', 'BACK', 'FULL']).optional(),
-    ocrText: z.string().optional(),
-  })
-  .array();
-
 export const CaseDocumentFieldSchema = z.object({
-  documentId: z.string().uuid(),
+  documentId: z.uuid(),
   fieldName: z.string().min(1, 'Required'),
   fieldValue: z.string().min(1, 'Required'), // All values stored as strings and converted as needed
 });
@@ -58,7 +51,7 @@ export const CaseDocumentSchema = z.object({
   typeId: z.string().min(1, 'Type required'),
   issuanceDate: z.iso.date().optional(),
   expiryDate: z.iso.date().optional(),
-  images: CaseDocumentImageSchema.optional(),
+  images: DocumentImageItemSchema.array().optional(),
   additionalFields: CaseDocumentFieldSchema.omit({ documentId: true })
     .array()
     .optional(),
