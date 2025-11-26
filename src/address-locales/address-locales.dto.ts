@@ -4,9 +4,7 @@ import z from 'zod';
 import { QueryBuilderSchema } from '../query-builder';
 
 const LocaleLevelSpecSchema = z.object({
-  level: z
-    .enum(['level1', 'level2', 'level3', 'level4', 'level5'])
-    .optional(),
+  level: z.enum(['level1', 'level2', 'level3', 'level4', 'level5']).optional(),
   label: z.string().min(2),
   description: z.string().optional(),
   required: z.boolean().optional().default(false),
@@ -34,7 +32,25 @@ const LocaleFormatSpecSchema = z.object({
 
 const LocaleExampleSchema = z.object({
   label: z.string().min(2),
-  address: z.record(z.string(), z.unknown()),
+  address: z.object({
+    address1: z.string().optional(),
+    address2: z.string().optional(),
+    landmark: z.string().optional(),
+    level1: z.string().optional(),
+    level2: z.string().optional(),
+    level3: z.string().optional(),
+    level4: z.string().optional(),
+    level5: z.string().optional(),
+    cityVillage: z.string().optional(),
+    stateProvince: z.string().optional(),
+    country: z.string().optional(),
+    postalCode: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    plusCode: z.string().optional(),
+    formatted: z.string().optional(),
+    localeId: z.string().optional(),
+  }),
   notes: z.string().optional(),
 });
 
@@ -118,4 +134,3 @@ export class QueryAddressLocaleResponseDto {
   @ApiProperty()
   prev: string | null;
 }
-
