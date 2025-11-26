@@ -41,6 +41,7 @@ export class AddressService {
             level4: query?.level4,
             level5: query?.level5,
             country: query?.country,
+            localeId: query?.localeId,
             postalCode: query?.postalCode,
             startDate: {
               gte: query?.startDateFrom,

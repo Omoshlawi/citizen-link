@@ -45,19 +45,11 @@ export const QueryAddressSchema = z.object({
     })
     .optional()
     .default(false),
+  localeId: z.string().uuid().optional(),
 });
 
 export const AddressSchema = z.object({
-  type: z.enum([
-    'HOME',
-    'WORK',
-    'BILLING',
-    'SHIPPING',
-    'OFFICE',
-    'BRANCH',
-    'WAREHOUSE',
-    'OTHER',
-  ]),
+  type: z.enum(['HOME', 'WORK', 'BILLING', 'SHIPPING', 'OFFICE', 'OTHER']),
   label: z.string().optional(),
   address1: z.string(),
   address2: z.string().optional(),
@@ -78,9 +70,7 @@ export const AddressSchema = z.object({
   endDate: z.string().optional(),
   preferred: z.boolean().optional(),
   formatted: z.string().optional(),
-  localeFormat: z
-    .record(z.string().nonempty(), z.string().nonempty())
-    .optional(),
+  localeId: z.uuid().optional(),
 });
 
 export class QueryAddressDto extends createZodDto(QueryAddressSchema) {}

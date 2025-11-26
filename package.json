@@ -10,6 +10,7 @@
     "auth:gen": "pnpx @better-auth/cli generate --config ./src/auth/auth.cli.config.ts",
     "db": "prisma",
     "db:seed": "node seed.js",
+    "db:seed:locales": "node seed-address-locales.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

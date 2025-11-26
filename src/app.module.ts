@@ -12,6 +12,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { ZodValidationExceptionFilter } from './app.exceptionfilter';
 import { AddressHierarchyModule } from './address-hierarchy/address-hierarchy.module';
 import { AddressModule } from './address/address.module';
+import { AddressLocalesModule } from './address-locales/address-locales.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
 import { CaseDocumentsModule } from './case-documents/case-documents.module';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
@@ -29,6 +30,7 @@ import { DocumentImagesModule } from './document-images/document-images.module';
     AuthModule.forRoot(),
     AddressHierarchyModule,
     AddressModule,
+    AddressLocalesModule,
     DocumentTypesModule,
     CaseDocumentsModule,
     DocumentCasesModule,

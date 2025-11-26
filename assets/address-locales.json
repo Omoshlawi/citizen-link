@@ -1,0 +1,526 @@
+[
+  {
+    "code": "us-default",
+    "country": "US",
+    "regionName": "United States (Default)",
+    "description": "Standard addressing convention for the United States with state, city, and ZIP code structure.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
+      "levels": [
+        {
+          "level": "level1",
+          "label": "State / Territory",
+          "required": true,
+          "aliases": ["state", "province"]
+        },
+        {
+          "level": "level2",
+          "label": "City",
+          "required": true,
+          "aliases": ["city", "town"]
+        },
+        {
+          "level": "level3",
+          "label": "County",
+          "required": false
+        }
+      ],
+      "postalCode": {
+        "label": "ZIP Code",
+        "required": true,
+        "description": "US 5 digit ZIP with optional +4"
+      },
+      "metadata": {
+        "validation": {
+          "postalCode": "^[0-9]{5}(?:-[0-9]{4})?$"
+        }
+      }
+    },
+    "examples": [
+      {
+        "label": "White House",
+        "address": {
+          "address1": "1600 Pennsylvania Ave NW",
+          "level2": "Washington",
+          "level1": "District of Columbia",
+          "postalCode": "20500",
+          "country": "US"
+        },
+        "notes": "District of Columbia acts as both city and state."
+      }
+    ],
+    "tags": ["default", "urban"]
+  },
+  {
+    "code": "us-rural",
+    "country": "US",
+    "regionName": "United States (Rural / PO Box)",
+    "description": "US rural addressing where PO Boxes or route numbers replace neighborhood levels.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{address2}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
+      "levels": [
+        {
+          "level": "level1",
+          "label": "State",
+          "required": true
+        },
+        {
+          "level": "level2",
+          "label": "Town / Township",
+          "required": true
+        }
+      ],
+      "postalCode": {
+        "label": "ZIP Code",
+        "required": true
+      },
+      "metadata": {
+        "instructions": "address1 can be Rural Route, Highway, or PO Box"
+      }
+    },
+    "examples": [
+      {
+        "label": "PO Box Sample",
+        "address": {
+          "address1": "PO Box 123",
+          "address2": null,
+          "level2": "Jackson",
+          "level1": "Wyoming",
+          "postalCode": "83001",
+          "country": "US"
+        }
+      }
+    ],
+    "tags": ["rural", "po-box"]
+  },
+  {
+    "code": "ke-default",
+    "country": "KE",
+    "regionName": "Kenya (County → Sub-County → Ward)",
+    "description": "Kenyan address hierarchy using County, Sub-County, and Ward administrative units.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "County", "required": true },
+        { "level": "level2", "label": "Sub-County", "required": true },
+        { "level": "level3", "label": "Constituency", "required": false },
+        { "level": "level4", "label": "Ward / Estate", "required": false },
+        { "level": "level5", "label": "Village / Plot", "required": false }
+      ],
+      "postalCode": {
+        "label": "Postal Code",
+        "required": false,
+        "description": "5-digit Kenyan postal code if applicable"
+      },
+      "metadata": {
+        "validation": {
+          "postalCode": "^[0-9]{5}$"
+        }
+      }
+    },
+    "examples": [
+      {
+        "label": "Nairobi CBD Sample",
+        "address": {
+          "address1": "Mama Ngina Street",
+          "level4": "Central Business District",
+          "level3": "Starehe",
+          "level2": "Nairobi West",
+          "level1": "Nairobi",
+          "postalCode": "00100",
+          "country": "KE"
+        }
+      }
+    ],
+    "tags": ["default", "county-based"]
+  },
+  {
+    "code": "ke-rural",
+    "country": "KE",
+    "regionName": "Kenya (Rural / Landmark heavy)",
+    "description": "Simplified hierarchy for rural Kenya where only county or sub-county is known and landmarks carry more weight.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}} {{landmark}}, {{level3}}, {{level2}}, {{level1}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "County", "required": true },
+        { "level": "level2", "label": "Sub-County", "required": false },
+        { "level": "level3", "label": "Ward / Location", "required": false }
+      ],
+      "metadata": {
+        "preferredFields": ["landmark", "plusCode"],
+        "validation": {
+          "postalCode": "^[0-9]{5}$"
+        }
+      }
+    },
+    "examples": [
+      {
+        "label": "Village Landmark Sample",
+        "address": {
+          "address1": "Near Chief's Camp",
+          "landmark": "200m from Kisii-Kilgoris Road",
+          "level3": "Olkeri Ward",
+          "level2": "Kajiado North",
+          "level1": "Kajiado",
+          "country": "KE",
+          "plusCode": "6GCQH6JM+XY"
+        },
+        "notes": "postalCode often unavailable"
+      }
+    ],
+    "tags": ["rural", "landmark-first"]
+  },
+  {
+    "code": "in-default",
+    "country": "IN",
+    "regionName": "India (State → District → City)",
+    "description": "Indian addressing format with state, district, city, and PIN code emphasis.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level3}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
+      "levels": [
+        {
+          "level": "level1",
+          "label": "State / Union Territory",
+          "required": true,
+          "aliases": ["state"]
+        },
+        {
+          "level": "level2",
+          "label": "District",
+          "required": true
+        },
+        {
+          "level": "level3",
+          "label": "City / Taluk",
+          "required": true
+        },
+        {
+          "level": "level4",
+          "label": "Locality / Block",
+          "required": false
+        }
+      ],
+      "postalCode": {
+        "label": "PIN Code",
+        "required": true,
+        "description": "6 digit Indian PIN code"
+      },
+      "metadata": {
+        "validation": {
+          "postalCode": "^[1-9][0-9]{5}$"
+        }
+      }
+    },
+    "examples": [
+      {
+        "label": "Bengaluru Tech Park",
+        "address": {
+          "address1": "Outer Ring Road",
+          "level4": "Kadubeesanahalli",
+          "level3": "Bengaluru",
+          "level2": "Bengaluru Urban",
+          "level1": "Karnataka",
+          "postalCode": "560103",
+          "country": "IN"
+        },
+        "notes": "Common IT corridor addressing."
+      }
+    ],
+    "tags": ["default", "metro"]
+  },
+  {
+    "code": "gb-default",
+    "country": "GB",
+    "regionName": "United Kingdom (Country → Region → District)",
+    "description": "Standard UK addresses with emphasis on county/region and alphanumeric postal codes.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "Country", "required": true },
+        { "level": "level2", "label": "Region / County", "required": true },
+        { "level": "level3", "label": "City / Borough", "required": true },
+        { "level": "level4", "label": "District / Locality", "required": false }
+      ],
+      "postalCode": {
+        "label": "Postcode",
+        "required": true,
+        "description": "Alphanumeric UK postcode"
+      },
+      "metadata": {
+        "validation": {
+          "postalCode": "^[A-Z]{1,2}[0-9][0-9A-Z]? ?[0-9][A-Z]{2}$"
+        }
+      }
+    },
+    "examples": [
+      {
+        "label": "10 Downing Street",
+        "address": {
+          "address1": "10 Downing Street",
+          "level4": "Westminster",
+          "level3": "City of Westminster",
+          "level2": "Greater London",
+          "level1": "England",
+          "postalCode": "SW1A 2AA",
+          "country": "GB"
+        }
+      }
+    ],
+    "tags": ["default", "gov"]
+  },
+  {
+    "code": "za-default",
+    "country": "ZA",
+    "regionName": "South Africa (Province → Municipality)",
+    "description": "Addresses structured by province, municipality, and suburb.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}}, {{postalCode}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "Province", "required": true },
+        { "level": "level2", "label": "Municipality", "required": true },
+        { "level": "level3", "label": "City / Town", "required": true },
+        { "level": "level4", "label": "Suburb", "required": false }
+      ],
+      "postalCode": {
+        "label": "Postal Code",
+        "required": true,
+        "description": "4-digit South African postal code"
+      }
+    },
+    "examples": [
+      {
+        "label": "Cape Town Sample",
+        "address": {
+          "address1": "Dock Road, V&A Waterfront",
+          "level4": "Waterfront",
+          "level3": "Cape Town",
+          "level2": "City of Cape Town",
+          "level1": "Western Cape",
+          "postalCode": "8001",
+          "country": "ZA"
+        }
+      }
+    ],
+    "tags": ["default", "metro"]
+  },
+  {
+    "code": "ca-default",
+    "country": "CA",
+    "regionName": "Canada (Province → City → Neighbourhood)",
+    "description": "Canadian addresses highlighting province, city, and six-character postal codes.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "Province / Territory", "required": true },
+        { "level": "level2", "label": "City / Municipality", "required": true },
+        { "level": "level3", "label": "District / Borough", "required": false },
+        { "level": "level4", "label": "Neighbourhood", "required": false }
+      ],
+      "postalCode": {
+        "label": "Postal Code",
+        "required": true,
+        "description": "Canadian alphanumeric postal code"
+      },
+      "metadata": {
+        "validation": {
+          "postalCode": "^[A-Za-z]\\d[A-Za-z] ?\\d[A-Za-z]\\d$"
+        }
+      }
+    },
+    "examples": [
+      {
+        "label": "Toronto Sample",
+        "address": {
+          "address1": "100 Queen St W",
+          "level4": "Financial District",
+          "level3": "Old Toronto",
+          "level2": "Toronto",
+          "level1": "Ontario",
+          "postalCode": "M5H 2N2",
+          "country": "CA"
+        }
+      }
+    ],
+    "tags": ["default", "urban"]
+  },
+  {
+    "code": "au-default",
+    "country": "AU",
+    "regionName": "Australia (State → City → Suburb)",
+    "description": "Australian addressing convention with suburbs and four-digit postcodes.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "State / Territory", "required": true },
+        { "level": "level2", "label": "City / Local Government Area", "required": true },
+        { "level": "level3", "label": "District", "required": false },
+        { "level": "level4", "label": "Suburb", "required": true }
+      ],
+      "postalCode": {
+        "label": "Postcode",
+        "required": true,
+        "description": "4 digit Australian postcode"
+      }
+    },
+    "examples": [
+      {
+        "label": "Sydney CBD",
+        "address": {
+          "address1": "200 George Street",
+          "level4": "Sydney",
+          "level3": "Sydney CBD",
+          "level2": "City of Sydney",
+          "level1": "NSW",
+          "postalCode": "2000",
+          "country": "AU"
+        }
+      }
+    ],
+    "tags": ["default", "metro"]
+  },
+  {
+    "code": "br-default",
+    "country": "BR",
+    "regionName": "Brazil (State → City → Bairro)",
+    "description": "Brazilian addresses centered around state, city, and neighborhood (bairro) with CEP postal codes.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}} - {{level1}}, {{postalCode}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "State (UF)", "required": true },
+        { "level": "level2", "label": "City / Municipality", "required": true },
+        { "level": "level3", "label": "District", "required": false },
+        { "level": "level4", "label": "Bairro / Neighborhood", "required": true }
+      ],
+      "postalCode": {
+        "label": "CEP",
+        "required": true,
+        "description": "Brazilian CEP 8 digits"
+      },
+      "metadata": {
+        "validation": {
+          "postalCode": "^[0-9]{5}-?[0-9]{3}$"
+        }
+      }
+    },
+    "examples": [
+      {
+        "label": "São Paulo Example",
+        "address": {
+          "address1": "Avenida Paulista, 1578",
+          "level4": "Bela Vista",
+          "level3": "Consolação",
+          "level2": "São Paulo",
+          "level1": "SP",
+          "postalCode": "01310-200",
+          "country": "BR"
+        }
+      }
+    ],
+    "tags": ["default", "bairro"]
+  },
+  {
+    "code": "de-default",
+    "country": "DE",
+    "regionName": "Germany (State → City → District)",
+    "description": "German addresses using states (Bundesländer) and five-digit PLZ postal codes.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level3}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "State", "required": true },
+        { "level": "level2", "label": "City", "required": true },
+        { "level": "level3", "label": "District / Ortsteil", "required": false }
+      ],
+      "postalCode": {
+        "label": "PLZ",
+        "required": true,
+        "description": "5 digit German postal code"
+      }
+    },
+    "examples": [
+      {
+        "label": "Berlin Mitte",
+        "address": {
+          "address1": "Platz der Republik 1",
+          "level3": "Mitte",
+          "level2": "Berlin",
+          "level1": "Berlin",
+          "postalCode": "11011",
+          "country": "DE"
+        }
+      }
+    ],
+    "tags": ["default", "government"]
+  },
+  {
+    "code": "jp-default",
+    "country": "JP",
+    "regionName": "Japan (Prefecture → City → Ward → Block)",
+    "description": "Japanese addresses with prefecture, city/ward, and block/chome notation including 7-digit postal codes.",
+    "formatSpec": {
+      "displayTemplate": "{{postalCode}} {{level1}}{{level2}}{{level3}}{{level4}}{{address1}} {{address2}} {{country}}",
+      "levels": [
+        { "level": "level1", "label": "Prefecture", "required": true },
+        { "level": "level2", "label": "City / Municipality", "required": true },
+        { "level": "level3", "label": "Ward / District", "required": false },
+        { "level": "level4", "label": "Block / Chome", "required": true }
+      ],
+      "postalCode": {
+        "label": "Postal Code",
+        "required": true,
+        "description": "7 digit Japanese postal code"
+      },
+      "metadata": {
+        "validation": {
+          "postalCode": "^\\d{3}-?\\d{4}$"
+        }
+      }
+    },
+    "examples": [
+      {
+        "label": "Tokyo Example",
+        "address": {
+          "address1": "1-1 Chiyoda",
+          "level4": "Chiyoda 1-chome",
+          "level3": "Chiyoda-ku",
+          "level2": "Tokyo",
+          "level1": "Tokyo-to",
+          "postalCode": "100-8111",
+          "country": "JP"
+        }
+      }
+    ],
+    "tags": ["default", "precision"]
+  },
+  {
+    "code": "ae-default",
+    "country": "AE",
+    "regionName": "United Arab Emirates (City → Community → Building)",
+    "description": "UAE addresses often rely on city, district, and building/PO Box references.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{address2}}, {{level3}}, {{level2}}, {{level1}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "Emirate", "required": true },
+        { "level": "level2", "label": "City / Municipality", "required": true },
+        { "level": "level3", "label": "Community / District", "required": false }
+      ],
+      "metadata": {
+        "instructions": "postalCode optional, PO Box often used",
+        "preferredFields": ["landmark", "plusCode"]
+      }
+    },
+    "examples": [
+      {
+        "label": "Dubai Marina",
+        "address": {
+          "address1": "Marina Plaza, 29th Floor",
+          "address2": "PO Box 12345",
+          "level3": "Dubai Marina",
+          "level2": "Dubai",
+          "level1": "Dubai",
+          "country": "AE"
+        }
+      }
+    ],
+    "tags": ["default", "po-box"]
+  }
+]
