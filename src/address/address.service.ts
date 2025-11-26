@@ -15,6 +15,7 @@ import {
   UpdateAddressDto,
 } from './address.dto';
 import { Address, AddressType } from '../../generated/prisma/browser';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class AddressService {
@@ -202,11 +203,14 @@ export class AddressService {
     userId: string,
     query: CustomRepresentationQueryDto,
   ) {
-    const { ...props } = createDto;
     const data = await this.prismaService.address.create({
       data: {
-        ...props,
+        ...createDto,
         userId,
+        startDate: dayjs(createDto.startDate).toDate(),
+        endDate: createDto.endDate
+          ? dayjs(createDto.endDate).toDate()
+          : undefined,
       },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });

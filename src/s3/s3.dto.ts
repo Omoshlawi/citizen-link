@@ -25,3 +25,9 @@ export class GetDownloadUrlResponseDto {
   @ApiProperty({ description: 'The signed URL for downloading a file' })
   url: string;
 }
+
+export const StreamDocumentSchema = z.object({
+  fileName: z.string().nonempty().describe('File name'),
+});
+
+export class StreamDocumentDto extends createZodDto(StreamDocumentSchema) {}
