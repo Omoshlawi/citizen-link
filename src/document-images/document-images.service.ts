@@ -13,6 +13,8 @@ import {
 } from './document-images.dto';
 import { FunctionFirstArgument } from 'src/query-builder/query-builder.types';
 import { pick } from 'lodash';
+import { OcrService } from '../ai/ocr.service';
+import { AiService } from '../ai/ai.service';
 
 @Injectable()
 export class DocumentImagesService {
@@ -21,23 +23,37 @@ export class DocumentImagesService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly ocrService: OcrService,
+    private readonly aiService: AiService,
   ) {}
 
-  create(
+  async create(
     createDocumentImageDto: CreateDocumentImageDto,
     query: CustomRepresentationQueryDto,
     caseId: string,
     documentId: string,
   ) {
-    return this.prismaService.image.createManyAndReturn({
-      data: createDocumentImageDto.images.map((image) => ({
+    const ocrResults = await Promise.all(
+      createDocumentImageDto.images.map(async (image) => {
+        const raw = await this.ocrService.recognizeFromUrl(image.url);
+        const info = await this.aiService.extractInformation(raw);
+        return { raw, info };
+      }),
+    );
+    const data = await this.prismaService.image.createManyAndReturn({
+      data: createDocumentImageDto.images.map((image, index) => ({
         ...image,
         documentId,
-        ocrText: '',
-        metadata: {}, // TODO: Handle metadata e.g if a document with no front and back
+        metadata: {
+          ocrText: ocrResults?.[index]?.raw,
+          aiProcessingResults: ocrResults?.[index]?.info,
+        }, // TODO: Handle metadata e.g if a document with no front and back
       })),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
+    return {
+      images: data,
+    };
   }
 
   async findAll(

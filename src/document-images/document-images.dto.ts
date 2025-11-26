@@ -18,7 +18,7 @@ export const QueryDocumentImageSchema = z.object({
 });
 
 export const DocumentImageItemSchema = z.object({
-  url: z.string().min(1, 'Required'),
+  url: z.url(),
   imageType: z.enum(['FRONT', 'BACK', 'FULL']).optional(),
 });
 
@@ -38,8 +38,6 @@ export class GetDocumentImageResponseDto implements Image {
   @ApiProperty()
   url: string;
   @ApiProperty()
-  ocrText: string | null;
-  @ApiProperty()
   id: string;
   @ApiProperty()
   documentId: string | null;
@@ -49,6 +47,11 @@ export class GetDocumentImageResponseDto implements Image {
   createdAt: Date;
   @ApiProperty()
   voided: boolean;
+}
+
+export class CreateDocumentImageResponseDto {
+  @ApiProperty({ isArray: true, type: GetDocumentImageResponseDto })
+  images: GetDocumentImageResponseDto[];
 }
 
 export class QueryDocumentImageResponseDto {

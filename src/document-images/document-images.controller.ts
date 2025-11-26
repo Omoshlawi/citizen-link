@@ -20,6 +20,7 @@ import {
 import { OriginalUrl } from '../query-builder';
 import {
   CreateDocumentImageDto,
+  CreateDocumentImageResponseDto,
   GetDocumentImageResponseDto,
   QueryDocumentImageDto,
 } from './document-images.dto';
@@ -31,7 +32,7 @@ export class DocumentImagesController {
 
   @Post()
   @ApiOperation({ summary: 'Create Image' })
-  @ApiCreatedResponse({ type: GetDocumentImageResponseDto })
+  @ApiCreatedResponse({ type: CreateDocumentImageResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   create(
     @Param('caseId') caseId: string,

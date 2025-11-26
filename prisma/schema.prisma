@@ -278,8 +278,8 @@ model Image {
   url        String
   documentId String?
   imageType  String? // Front, Back, Full, etc.
-  ocrText    String? // Raw OCR text extracted from this image
-  metadata   Json? // Additional metadata (size, format, etc.)
+  // ocrText    String? // Raw OCR text extracted from this image // Included in metadat
+  metadata   Json? // Additional metadata including ocrText, ai processing results, (size, format, etc.)
   document   Document? @relation(fields: [documentId], references: [id])
   createdAt  DateTime  @default(now())
   voided     Boolean   @default(false)
