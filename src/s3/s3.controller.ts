@@ -38,7 +38,7 @@ export class S3Controller {
         originalFileName: query?.fileName ?? '',
       },
     );
-    return { url };
+    return url;
   }
   @Get('download-url')
   @ApiOperation({ summary: 'Get Download URL' })

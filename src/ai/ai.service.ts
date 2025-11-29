@@ -1,17 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { AIOptions } from './ai.types';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
 import { GoogleGenAI } from '@google/genai';
+import { PrismaService } from '../prisma/prisma.service';
+import { DocumentType } from '../../generated/prisma/client';
+import { DocAiExtractDto, DocAiExtractSchema } from './ocr.dto';
 
 @Injectable()
 export class AiService implements OnModuleInit {
+  private readonly logger = new Logger(AiService.name);
   private genai: GoogleGenAI;
   constructor(
     @Inject(AI_OPTIONS_TOKEN)
     private readonly options: AIOptions,
+    private readonly prismaService: PrismaService,
   ) {}
   onModuleInit() {
     this.genai = new GoogleGenAI({
@@ -19,10 +27,12 @@ export class AiService implements OnModuleInit {
     });
   }
 
-  private getPrompt(extractedText: string) {
+  private getPrompt(
+    extractedText: string,
+    documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
+  ) {
     return `
 You are a specialized document information extraction system analyzing text from personal documents that has been extracted via OCR (Optical Character Recognition).
-
 TASK:
 Extract all relevant information from the provided OCR-extracted text and format it to match the specified document model schema.
 
@@ -54,21 +64,21 @@ DOCUMENT TYPES TO HANDLE:
 OUTPUT SCHEMA:
 Return your findings as a JSON object that strictly follows this schema:
 {
-  "serialNumber": string or null,
-  "documentNumber": string or null,
-  "batchNumber": string or null,
-  "issuer": string or null,
+  "serialNumber": string,
+  "documentNumber": string,
+  "batchNumber": string,
+  "issuer": string,
   "ownerName": string,
-  "dateOfBirth": string or null, // Format as ISO date string (YYYY-MM-DD)
-  "placeOfBirth": string or null,
-  "placeOfIssue": string or null,
-  "gender": "Male" or "Female" or "Unknown" or null,
-  "nationality": string or null,
-  "bloodGroup": string or null,
-  "note": string or null,
-  "typeId": string, // Document type (e.g., "passport", "driver_license", etc.)
-  "issuanceDate": string or null, // Format as ISO date string (YYYY-MM-DD)
-  "expiryDate": string or null, // Format as ISO date string (YYYY-MM-DD)
+  "dateOfBirth": string, // Format as ISO date string (YYYY-MM-DD)
+  "placeOfBirth": string,
+  "placeOfIssue": string,
+  "gender": "Male" or "Female" or "Unknown" (Uknown when not provided or found),
+  "nationality": string,
+  "note": string,
+  "typeId": string, // Document type id (based on the following document types provided: 
+  // ${documentTypes.map((type) => `${type.id} - ${type.name} (${type.category})`).join(', ')})
+  "issuanceDate": string, // Format as ISO date string (YYYY-MM-DD)
+  "expiryDate": string, // Format as ISO date string (YYYY-MM-DD)
   "additionalFields": [
     {
       "fieldName": string,
@@ -90,6 +100,50 @@ INSTRUCTIONS:
 7. If no relevant information exists at all, return an empty object: {}
 8. Do NOT include explanations or notes about OCR errors in the values
 9. Attempt to correct obvious OCR errors in the extracted values
+10. If the document dont fall in the provided document types, return an empty object: {}
+11. If the document is not a personal identification document, return an empty object: {}
+12. From the extracted information, generate a list of security questions and answers that are relevant to the document and is used to verify ownership of the document.
+13. The security questions and answers should be in the following format:
+   {
+     "question": string,
+     "answer": string,
+   }
+   The question should answer the information extracted from the document, and the answer should be the answer to the question.
+   The question should be in the language of the document, and the answer should be in the language of the document.
+   The number of security questions and answers should be 3-5.
+   The answer MUST BE from the information extracted
+   When generating questions prioritize in more private and less obvious questions.
+14. If the field value is not found, leave it undefined i.e dont include it in the object.Bellow is the zod validation schema for the output
+  const DocAiExtractSchema = z.object({
+  serialNumber: z.string().optional(),
+  documentNumber: z.string().optional(),
+  batchNumber: z.string().optional(),
+  issuer: z.string().optional(),
+  ownerName: z.string(),
+  dateOfBirth: z.string().optional(),
+  placeOfBirth: z.string().optional(),
+  placeOfIssue: z.string().optional(),
+  gender: z.enum(['Male', 'Female', 'Unknown']).optional(),
+  nationality: z.string().optional(),
+  note: z.string().optional(),
+  typeId: z.string(),
+  issuanceDate: z.string().optional(),
+  expiryDate: z.string().optional(),
+  additionalFields: z
+    .object({
+      fieldName: z.string(),
+      fieldValue: z.string(),
+    })
+    .array()
+    .optional(),
+  securityQuestions: z
+    .object({
+      question: z.string(),
+      answer: z.string(),
+    })
+    .array()
+    .optional(),
+});
 
 DATE HANDLING:
 - Convert all dates to ISO format (YYYY-MM-DD)
@@ -108,11 +162,29 @@ EXAMPLES:
      "issuer": "USA",
      "ownerName": "SMITH, JOHN MICHAEL",
      "dateOfBirth": "1990-01-01",
-     "typeId": "passport",
+     "typeId": "<passport_id>",
      "issuanceDate": "2020-01-01",
      "expiryDate": "2030-01-01",
      "nationality": "USA",
      "additionalFields": []
+     "securityQuestions": [
+        {
+          "question": "What is the name of the owner?",
+          "answer": "SMITH, JOHN MICHAEL"
+        },
+        {
+          "question": "What is the date of birth of the owner?",
+          "answer": "1990-01-01"
+        },
+        {
+          "question": "What is the nationality of the owner?",
+          "answer": "USA"
+        },
+        {
+          "question": "What is the document number?",
+          "answer": "A12345678"
+        }
+      ]
    }
 
 2. For poorly OCR'd driver's license: "DRlVER LlCENSE / STATE 0F EXAMPLE / DL#: Dl234567 / JANE D0E / l23 MAlN ST, ANYT0WN / D0B: O2/l5/l985 / EXP: O6/3O/2O26 / CLASS: C"
@@ -121,7 +193,7 @@ EXAMPLES:
      "issuer": "STATE OF EXAMPLE",
      "ownerName": "JANE DOE",
      "dateOfBirth": "1985-02-15",
-     "typeId": "driver_license",
+     "typeId": "<driver_license_id>",
      "expiryDate": "2026-06-30",
      "additionalFields": [
        {
@@ -132,16 +204,33 @@ EXAMPLES:
          "fieldName": "License Class",
          "fieldValue": "C"
        }
-     ]
+     ],
+     "securityQuestions": [
+        {
+          "question": "What is the name of the owner?",
+          "answer": "JANE DOE"
+        },
+        {
+          "question": "What is the date of birth of the owner?",
+          "answer": "1985-02-15"
+        },
+      ]
    }
 
 TEXT TO ANALYZE (OCR-EXTRACTED):
 ${extractedText}`;
   }
 
-  async extractInformation(extractedText: string) {
+  async extractInformation(extractedText: string): Promise<DocAiExtractDto> {
     try {
-      const prompt = this.getPrompt(extractedText);
+      const documentTypes = await this.prismaService.documentType.findMany({
+        select: {
+          id: true,
+          name: true,
+          category: true,
+        },
+      });
+      const prompt = this.getPrompt(extractedText, documentTypes);
       const response = await this.genai.models.generateContent({
         model: this.options.model,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -153,13 +242,16 @@ ${extractedText}`;
       });
       const responseText = response.text!;
       // Parse JSON from the response
-      const extractedInfo = JSON.parse(responseText as string) as Record<
-        string,
-        any
-      >;
+      const extractedInfo = JSON.parse(responseText) as Record<string, any>;
+      this.logger.debug('Extracted Information: ', extractedInfo);
+      const vlidation = await DocAiExtractSchema.safeParseAsync(extractedInfo);
+      if (!vlidation.success) {
+        this.logger.error('Invalid extraction result', vlidation.error);
+        throw new BadRequestException('Invalid extraction result');
+      }
 
       // Return the structured information or empty object if nothing extracted
-      return extractedInfo || {};
+      return vlidation.data;
     } catch (error) {
       console.error('Error extracting information:', error);
       throw error;

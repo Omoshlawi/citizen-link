@@ -25,6 +25,39 @@ export const ImageProcessOptionsSchema = z.object({
   threshold: z.coerce.number().optional(),
 });
 
+export const DocAiExtractSchema = z.object({
+  serialNumber: z.string().optional(),
+  documentNumber: z.string().optional(),
+  batchNumber: z.string().optional(),
+  issuer: z.string().optional(),
+  ownerName: z.string(),
+  dateOfBirth: z.string().optional(),
+  placeOfBirth: z.string().optional(),
+  placeOfIssue: z.string().optional(),
+  gender: z.enum(['Male', 'Female', 'Unknown']).optional(),
+  nationality: z.string().optional(),
+  note: z.string().optional(),
+  typeId: z.string(),
+  issuanceDate: z.string().optional(),
+  expiryDate: z.iso.date().optional(),
+  additionalFields: z
+    .object({
+      fieldName: z.string(),
+      fieldValue: z.string(),
+    })
+    .array()
+    .optional(),
+  securityQuestions: z
+    .object({
+      question: z.string(),
+      answer: z.string(),
+    })
+    .array()
+    .optional(),
+});
+
+export class DocAiExtractDto extends createZodDto(DocAiExtractSchema) {}
+
 export const OCRImageProcessingOptions = ImageProcessOptionsSchema.extend({
   path: z
     .string()

@@ -1,51 +1,51 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
   Query,
 } from '@nestjs/common';
-import { DocumentCasesService } from './document-cases.service';
 import {
-  ApiOperation,
   ApiCreatedResponse,
   ApiOkResponse,
+  ApiOperation,
 } from '@nestjs/swagger';
+import { Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
+import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
   OriginalUrl,
 } from '../query-builder';
-import { Session } from '@thallesp/nestjs-better-auth';
-import { UserSession } from '../auth/auth.types';
 import {
-  CreateDocumentCaseDto,
+  CreateFoundDocumentCaseDto,
+  GetDocumentCaseResponseDto,
   QueryDocumentCaseDto,
   QueryDocumentCaseResponseDto,
-  UpdateDocumentCaseDto,
+  CreateLostDocumentCaseDto,
 } from './document-cases.dto';
-import { GetDocumentCaseResponseDto } from './document-cases.dto';
+import { DocumentCasesService } from './document-cases.service';
 
 @Controller('documents/cases')
 export class DocumentCasesController {
   constructor(private readonly documentCasesService: DocumentCasesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create Document Case' })
+  @ApiOperation({ summary: 'Report Found Document Case' })
   @ApiCreatedResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse({ badRequest: true })
-  create(
-    @Body() createDocumentCaseDto: CreateDocumentCaseDto,
+  reportFoundDocumentCase(
+    @Body() createFoundDocumentCaseDto: CreateFoundDocumentCaseDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.create(
-      createDocumentCaseDto,
+    return this.documentCasesService.reportFoundDocumentCase(
+      createFoundDocumentCaseDto,
       query,
       user.id,
     );
@@ -76,18 +76,18 @@ export class DocumentCasesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update Document Case' })
+  @ApiOperation({ summary: 'Report Lost Document Case' })
   @ApiOkResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse({ badRequest: true })
-  update(
+  reportLostDocumentCase(
     @Param('id') id: string,
-    @Body() updateDocumentCaseDto: UpdateDocumentCaseDto,
+    @Body() createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.update(
+    return this.documentCasesService.reportLostDocumentCase(
       id,
-      updateDocumentCaseDto,
+      createLostDocumentCaseDto,
       query,
       user.id,
     );

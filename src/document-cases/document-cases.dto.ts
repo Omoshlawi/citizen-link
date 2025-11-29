@@ -73,82 +73,30 @@ export const DocumentCaseSchema = z.object({
   ]),
 });
 
-export const LostDocumentCaseSchema = z.object({
-  reportId: z.uuid(),
-});
-
 export const FoundDocumentCaseSchema = z.object({
-  reportId: z.uuid(),
-  securityQuestion: z.string().optional().optional(),
-  securityAnswer: z.string().optional().optional(),
+  addressId: z.uuid(),
+  eventDate: z.iso.date(),
+  tags: z.string().min(1).array().optional(),
+  description: z.string().optional(),
+  images: z.string().nonempty().array().max(2),
 });
 
-const _ReportDocumentCaseSchema = DocumentCaseSchema.omit({
-  documentId: true,
-  status: true,
-}).extend({
-  type: z.enum(['LOST', 'FOUND']),
-  document: CaseDocumentSchema,
-  lost: LostDocumentCaseSchema.omit({ reportId: true }).optional(),
-  found: FoundDocumentCaseSchema.omit({ reportId: true }).optional(),
+export const LostDocumentCaseSchema = FoundDocumentCaseSchema.extend({
+  document: CaseDocumentSchema.extend({
+    expiryDate: z.iso.date().optional(),
+  }),
 });
-
-export const ReportDocumentCaseSchema = {
-  partial: _ReportDocumentCaseSchema
-    .partial()
-    .refine(
-      (data) => {
-        if (data.type === 'LOST') return data.lost !== undefined;
-        return true;
-      },
-      {
-        message: 'Lost details are required when type is LOST',
-        path: ['lost'],
-      },
-    )
-    .refine(
-      (data) => {
-        if (data.type === 'FOUND') return data.found !== undefined;
-        return true;
-      },
-      {
-        message: 'Found details are required when type is FOUND',
-        path: ['found'],
-      },
-    ),
-  required: _ReportDocumentCaseSchema
-    .refine(
-      (data) => {
-        if (data.type === 'LOST') return data.lost !== undefined;
-        return true;
-      },
-      {
-        message: 'Lost details are required when type is LOST',
-        path: ['lost'],
-      },
-    )
-    .refine(
-      (data) => {
-        if (data.type === 'FOUND') return data.found !== undefined;
-        return true;
-      },
-      {
-        message: 'Found details are required when type is FOUND',
-        path: ['found'],
-      },
-    ),
-};
 
 export class QueryDocumentCaseDto extends createZodDto(
   QueryDocumentCaseSchema,
 ) {}
 
-export class CreateDocumentCaseDto extends createZodDto(
-  ReportDocumentCaseSchema.required,
+export class CreateFoundDocumentCaseDto extends createZodDto(
+  FoundDocumentCaseSchema,
 ) {}
 
-export class UpdateDocumentCaseDto extends createZodDto(
-  ReportDocumentCaseSchema.partial,
+export class CreateLostDocumentCaseDto extends createZodDto(
+  LostDocumentCaseSchema,
 ) {}
 
 export class GetDocumentCaseResponseDto implements DocumentCase {

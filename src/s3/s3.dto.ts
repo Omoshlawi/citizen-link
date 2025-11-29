@@ -18,6 +18,8 @@ export class GetUploadUrlDto extends createZodDto(GetUploadUrlSchema) {}
 export class GetUploadUrlResponseDto {
   @ApiProperty({ description: 'The signed URL for uploading a file' })
   url: string;
+  @ApiProperty({ description: 'The key for the file' })
+  key: string;
 }
 
 export class GetDownloadUrlDto extends createZodDto(GetDownloadUrlSchema) {}

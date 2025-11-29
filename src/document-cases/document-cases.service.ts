@@ -1,13 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable, NotFoundException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
-  CreateDocumentCaseDto,
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  CreateFoundDocumentCaseDto,
   QueryDocumentCaseDto,
-  UpdateDocumentCaseDto,
+  CreateLostDocumentCaseDto,
 } from './document-cases.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -21,45 +22,91 @@ import { SortService } from '../query-builder';
 import dayjs from 'dayjs';
 import { pick } from 'lodash';
 import { DocumentCase } from '../../generated/prisma/client';
+import { OcrService } from '../ai/ocr.service';
+import { AiService } from '../ai/ai.service';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class DocumentCasesService {
+  private readonly logger = new Logger(DocumentCasesService.name);
   constructor(
     private readonly prismaService: PrismaService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly ocrService: OcrService,
+    private readonly aiService: AiService,
+    private readonly s3Service: S3Service,
   ) {}
-  create(
-    createDocumentCaseDto: CreateDocumentCaseDto,
+
+  private async filesExists(images: string[]): Promise<void> {
+    this.logger.debug('Checking if images exist', images);
+    const exists = await Promise.all(
+      images.map((image) => this.s3Service.fileExists(image)),
+    );
+    const allExists = exists.every(Boolean);
+    if (!allExists) {
+      throw new BadRequestException('One or more images do not exist');
+    }
+    this.logger.debug('All images exist');
+  }
+  async reportFoundDocumentCase(
+    createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    const { lost, found, type, document, eventDate, ...caseData } =
-      createDocumentCaseDto;
-    const { images, additionalFields, ...documentpayload } = document;
-
-    return this.prismaService.documentCase.create({
+    const { eventDate, images, ...caseData } = createDocumentCaseDto;
+    await this.filesExists(images);
+    const extractionTasks = await Promise.all(
+      images.map(async (image) => {
+        const url = await this.s3Service.generateDownloadSignedUrl(image);
+        const text = await this.ocrService.recognizeFromUrl(url);
+        return text;
+      }),
+    );
+    const info = await this.aiService.extractInformation(
+      extractionTasks.join('\n\n'),
+    );
+    const { additionalFields, securityQuestions, ...documentpayload } = info;
+    return await this.prismaService.documentCase.create({
       data: {
         ...caseData,
         eventDate: dayjs(eventDate).toDate(),
-        foundDocumentCase: type === 'FOUND' ? { create: found } : undefined,
-        lostDocumentCase: type === 'LOST' ? { create: lost } : undefined,
+        foundDocumentCase: {
+          create: {
+            securityQuestion: securityQuestions,
+          },
+        },
         userId,
         document: {
           create: {
             ...documentpayload,
+            expiryDate: documentpayload.expiryDate
+              ? dayjs(documentpayload.expiryDate).toDate()
+              : undefined,
+            issuanceDate: documentpayload.issuanceDate
+              ? dayjs(documentpayload.issuanceDate).toDate()
+              : undefined,
+            dateOfBirth: documentpayload.dateOfBirth
+              ? dayjs(documentpayload.dateOfBirth).toDate()
+              : undefined,
             images: images?.length
               ? {
                   createMany: {
-                    data: images,
+                    data: images.map((image, i) => ({
+                      url: image,
+                      metadata: { ocrText: extractionTasks[i] },
+                    })),
                   },
                 }
               : undefined,
             additionalFields: additionalFields?.length
               ? {
                   createMany: {
-                    data: additionalFields,
+                    data: additionalFields.map((field) => ({
+                      fieldName: field.fieldName,
+                      fieldValue: field.fieldValue,
+                    })),
                   },
                 }
               : undefined,
@@ -249,97 +296,12 @@ export class DocumentCasesService {
     return data;
   }
 
-  async update(
+  async reportLostDocumentCase(
     id: string,
-    updateDocumentCaseDto: UpdateDocumentCaseDto,
+    createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     userId: string,
-  ) {
-    const { lost, found, type, document, ...report } = updateDocumentCaseDto;
-    const { images, additionalFields, ...documentpayload } = document ?? {};
-    const _report = await this.prismaService.documentCase.findUnique({
-      where: {
-        id,
-        userId,
-        voided: false,
-        lostDocumentCase: type === 'FOUND' ? null : undefined,
-        foundDocumentCase: type === 'LOST' ? null : undefined,
-      },
-      select: {
-        lostDocumentCase: {
-          select: {
-            id: true,
-          },
-        },
-        foundDocumentCase: {
-          select: {
-            id: true,
-          },
-        },
-        document: {
-          select: {
-            id: true,
-          },
-        },
-      },
-    });
-    if (!_report) throw new NotFoundException('Document case not found');
-    return this.prismaService.documentCase.update({
-      where: {
-        id,
-      },
-      data: {
-        ...report,
-        foundDocumentCase:
-          type === 'FOUND' && found && _report.foundDocumentCase
-            ? {
-                update: {
-                  where: { id: _report.foundDocumentCase.id },
-                  data: found,
-                },
-              }
-            : undefined,
-        lostDocumentCase:
-          type === 'LOST' && lost && _report.lostDocumentCase
-            ? {
-                update: {
-                  where: { id: _report.lostDocumentCase.id },
-                  data: lost,
-                },
-              }
-            : undefined,
-
-        document:
-          _report.document && document
-            ? {
-                update: {
-                  where: { id: _report.document.id },
-                  data: {
-                    ...documentpayload,
-                    images: images?.length
-                      ? {
-                          deleteMany: {
-                            documentId: _report.document.id,
-                          },
-                          createMany: {
-                            data: images,
-                          },
-                        }
-                      : undefined,
-                    additionalFields: additionalFields?.length
-                      ? {
-                          deleteMany: { documentId: _report.document.id },
-                          createMany: { data: additionalFields },
-                        }
-                      : undefined,
-                  },
-                },
-              }
-            : undefined,
-      },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
-    });
-  }
+  ) {}
 
   async remove(id: string, query: DeleteQueryDto, userId: string) {
     let data: DocumentCase;

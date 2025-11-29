@@ -353,8 +353,7 @@ model FoundDocumentCase {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   pointAwarded     Int          @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
-  securityQuestion String?
-  securityAnswer   String?
+  securityQuestion Json?        @default("[]")
   matches          Match[]
 }
 

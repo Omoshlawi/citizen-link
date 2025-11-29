@@ -1,20 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { pick } from 'lodash';
+import { FunctionFirstArgument } from 'src/query-builder/query-builder.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationService } from '../query-builder/pagination.service';
-import { CustomRepresentationService } from '../query-builder/representation.service';
-import { SortService } from '../query-builder/sort.service';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
 } from '../query-builder/query-builder.utils';
-import {
-  CreateDocumentImageDto,
-  QueryDocumentImageDto,
-} from './document-images.dto';
-import { FunctionFirstArgument } from 'src/query-builder/query-builder.types';
-import { pick } from 'lodash';
-import { OcrService } from '../ai/ocr.service';
-import { AiService } from '../ai/ai.service';
+import { CustomRepresentationService } from '../query-builder/representation.service';
+import { SortService } from '../query-builder/sort.service';
+import { QueryDocumentImageDto } from './document-images.dto';
 
 @Injectable()
 export class DocumentImagesService {
@@ -23,38 +18,7 @@ export class DocumentImagesService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
-    private readonly ocrService: OcrService,
-    private readonly aiService: AiService,
   ) {}
-
-  async create(
-    createDocumentImageDto: CreateDocumentImageDto,
-    query: CustomRepresentationQueryDto,
-    caseId: string,
-    documentId: string,
-  ) {
-    const ocrResults = await Promise.all(
-      createDocumentImageDto.images.map(async (image) => {
-        const raw = await this.ocrService.recognizeFromUrl(image.url);
-        const info = await this.aiService.extractInformation(raw);
-        return { raw, info };
-      }),
-    );
-    const data = await this.prismaService.image.createManyAndReturn({
-      data: createDocumentImageDto.images.map((image, index) => ({
-        ...image,
-        documentId,
-        metadata: {
-          ocrText: ocrResults?.[index]?.raw,
-          aiProcessingResults: ocrResults?.[index]?.info,
-        }, // TODO: Handle metadata e.g if a document with no front and back
-      })),
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
-    });
-    return {
-      images: data,
-    };
-  }
 
   async findAll(
     query: QueryDocumentImageDto,
