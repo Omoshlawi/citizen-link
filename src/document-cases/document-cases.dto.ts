@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
@@ -6,8 +7,12 @@ import { QueryAddressSchema } from '../address/address.dto';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   DocumentCase,
-  DocumentCaseStatus,
+  FoundDocumentCase,
+  FoundDocumentCaseStatus,
+  LostDocumentCase,
+  LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
+import { JsonValue } from '@prisma/client/runtime/library';
 
 export const QueryDocumentCaseSchema = z
   .object({
@@ -96,6 +101,43 @@ export class CreateLostDocumentCaseDto extends createZodDto(
   LostDocumentCaseSchema,
 ) {}
 
+export class LostDocumentCaseResponseDto implements LostDocumentCase {
+  @ApiProperty()
+  id: string;
+  @ApiProperty()
+  caseId: string;
+  @ApiProperty({ enum: LostDocumentCaseStatus })
+  status: LostDocumentCaseStatus;
+  @ApiProperty()
+  createdAt: Date;
+  @ApiProperty()
+  updatedAt: Date;
+}
+
+export class SecurityQuestionDto {
+  @ApiProperty()
+  question: string;
+  @ApiProperty()
+  answer: string;
+}
+
+export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
+  @ApiProperty()
+  createdAt: Date;
+  @ApiProperty()
+  updatedAt: Date;
+  @ApiProperty()
+  pointAwarded: number;
+  @ApiProperty({ isArray: true, type: SecurityQuestionDto })
+  securityQuestion: JsonValue;
+  @ApiProperty()
+  id: string;
+  @ApiProperty()
+  caseId: string;
+  @ApiProperty({ enum: FoundDocumentCaseStatus })
+  status: FoundDocumentCaseStatus;
+}
+
 export class GetDocumentCaseResponseDto implements DocumentCase {
   @ApiProperty()
   addressId: string;
@@ -106,8 +148,6 @@ export class GetDocumentCaseResponseDto implements DocumentCase {
   @ApiProperty()
   tags: Array<string>;
   @ApiProperty()
-  status: DocumentCaseStatus;
-  @ApiProperty()
   id: string;
   @ApiProperty()
   userId: string;
@@ -117,6 +157,10 @@ export class GetDocumentCaseResponseDto implements DocumentCase {
   updatedAt: Date;
   @ApiProperty()
   voided: boolean;
+  @ApiProperty({ type: LostDocumentCaseResponseDto })
+  lostDocumentCase: LostDocumentCaseResponseDto;
+  @ApiProperty({ type: FoundDocumentCaseResponseDto })
+  foundDocumentCase: FoundDocumentCaseResponseDto;
 }
 
 export class QueryDocumentCaseResponseDto {

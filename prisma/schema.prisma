@@ -314,9 +314,8 @@ model DocumentCase {
   addressId String
   address   Address  @relation(fields: [addressId], references: [id], onDelete: Cascade)
 
-  tags        Json               @default("[]") // array of key words
+  tags        Json    @default("[]") // array of key words
   description String?
-  status      DocumentCaseStatus @default(ACTIVE)
 
   // Relationship fields
   lostDocumentCase  LostDocumentCase?
@@ -336,36 +335,42 @@ model DocumentCase {
 // Lost Report model for documents reported lost
 
 model LostDocumentCase {
-  id        String       @id @default(uuid())
-  caseId    String       @unique
-  case      DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id        String                 @id @default(uuid())
+  caseId    String                 @unique
+  case      DocumentCase           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  status    LostDocumentCaseStatus @default(COMPLETED)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
   matches   Match[]
 }
 
 // Found Report model for documents that were found
 
 model FoundDocumentCase {
-  id               String       @id @default(uuid())
-  caseId           String       @unique
-  case             DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  pointAwarded     Int          @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
-  securityQuestion Json?        @default("[]")
+  id               String                  @id @default(uuid())
+  caseId           String                  @unique
+  case             DocumentCase            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  status           FoundDocumentCaseStatus @default(DRAFT)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  pointAwarded     Int                     @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
+  securityQuestion Json?                   @default("[]")
   matches          Match[]
 }
 
-enum DocumentCaseStatus {
-  DRAFT
-  ACTIVE
-  MATCHED
-  RETURNED
-  EXPIRED
-  CLAIMED
-  PENDING_VERIFICATION
-  ARCHIVED
+enum LostDocumentCaseStatus {
+  SUBMITTED // When user submit lost document info
+  MATCHED // When a match is found
+  COMPLETED // When the document is reunited with the owner
+}
+
+enum FoundDocumentCaseStatus {
+  DRAFT // When the document is in draft status
+  SUBMITTED // When the document is submitted by the user to pickup station/point
+  VERIFIED // When the document is verified by the admin
+  MATCHED // When a match is found
+  CLAIMED // When the document is claimed by the owner
+  COMPLETED // When the document is reunited with the owner
 }
 
 // Match model for potential matches between lost and found reports
