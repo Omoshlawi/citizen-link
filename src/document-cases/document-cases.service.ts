@@ -160,6 +160,22 @@ export class DocumentCasesService {
               country: query.country,
               postalCode: query.postalCode,
             },
+            foundDocumentCase:
+              query.caseType === 'FOUND' ? { isNot: null } : undefined,
+            lostDocumentCase:
+              query.caseType === 'LOST' ? { isNot: null } : undefined,
+            eventDate: query.eventDateFrom
+              ? {
+                  gte: dayjs(query.eventDateFrom).toDate(),
+                  lte: dayjs(query.eventDateTo).toDate(),
+                }
+              : undefined,
+            createdAt: query.dateReportedFrom
+              ? {
+                  gte: dayjs(query.dateReportedFrom).toDate(),
+                  lte: dayjs(query.dateReportedTo).toDate(),
+                }
+              : undefined,
           },
           {
             OR: query.search
