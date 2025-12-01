@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CustomRepresentationService } from 'src/query-builder/representation.service';
@@ -35,13 +36,13 @@ export class CaseDocumentsService {
       data: {
         ...data,
         caseId,
-        images: images?.length
-          ? {
-              createMany: {
-                data: images,
-              },
-            }
-          : undefined,
+        // images: images?.length
+        //   ? {
+        //       createMany: {
+        //         data: images,
+        //       },
+        //     }
+        //   : undefined,
         additionalFields: additionalFields?.length
           ? {
               createMany: {
@@ -142,16 +143,16 @@ export class CaseDocumentsService {
       where: { id: documentId, voided: false, caseId },
       data: {
         ...data,
-        images: images?.length
-          ? {
-              deleteMany: {
-                documentId: documentId,
-              },
-              createMany: {
-                data: images,
-              },
-            }
-          : undefined,
+        // images: images?.length
+        //   ? {
+        //       deleteMany: {
+        //         documentId: documentId,
+        //       },
+        //       createMany: {
+        //         data: images,
+        //       },
+        //     }
+        //   : undefined,
         additionalFields: additionalFields?.length
           ? {
               deleteMany: { documentId: documentId },

@@ -3,7 +3,6 @@ import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
 import { ApiProperty } from '@nestjs/swagger';
 import { Document } from '../../generated/prisma/client';
-import { DocumentImageItemSchema } from '../document-images/document-images.dto';
 
 export const QueryCaseDocumentSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -51,7 +50,7 @@ export const CaseDocumentSchema = z.object({
   typeId: z.string().min(1, 'Type required'),
   issuanceDate: z.iso.date().optional(),
   expiryDate: z.iso.date().optional(),
-  images: DocumentImageItemSchema.array().optional(),
+  images: z.string().nonempty().array().max(2).optional(),
   additionalFields: CaseDocumentFieldSchema.omit({ documentId: true })
     .array()
     .optional(),

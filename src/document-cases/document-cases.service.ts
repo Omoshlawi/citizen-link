@@ -1,30 +1,29 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  CreateFoundDocumentCaseDto,
-  QueryDocumentCaseDto,
-  CreateLostDocumentCaseDto,
-} from './document-cases.dto';
-import { PrismaService } from '../prisma/prisma.service';
-import {
-  CustomRepresentationQueryDto,
-  DeleteQueryDto,
-  FunctionFirstArgument,
-  PaginationService,
-} from '../query-builder';
-import { CustomRepresentationService } from '../query-builder';
-import { SortService } from '../query-builder';
 import dayjs from 'dayjs';
 import { pick } from 'lodash';
 import { DocumentCase } from '../../generated/prisma/client';
-import { OcrService } from '../ai/ocr.service';
 import { AiService } from '../ai/ai.service';
+import { OcrService } from '../ai/ocr.service';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  CustomRepresentationQueryDto,
+  CustomRepresentationService,
+  DeleteQueryDto,
+  FunctionFirstArgument,
+  PaginationService,
+  SortService,
+} from '../query-builder';
 import { S3Service } from '../s3/s3.service';
+import {
+  CreateFoundDocumentCaseDto,
+  CreateLostDocumentCaseDto,
+  QueryDocumentCaseDto,
+} from './document-cases.dto';
 
 @Injectable()
 export class DocumentCasesService {
@@ -297,11 +296,59 @@ export class DocumentCasesService {
   }
 
   async reportLostDocumentCase(
-    id: string,
     createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     userId: string,
-  ) {}
+  ) {
+    return await this.prismaService.documentCase.create({
+      data: {
+        userId,
+        eventDate: dayjs(createLostDocumentCaseDto.eventDate).toDate(),
+        addressId: createLostDocumentCaseDto.addressId,
+        document: {
+          create: {
+            ownerName: createLostDocumentCaseDto.ownerName,
+            typeId: createLostDocumentCaseDto.typeId,
+            batchNumber: createLostDocumentCaseDto.batchNumber,
+            serialNumber: createLostDocumentCaseDto.serialNumber,
+            issuer: createLostDocumentCaseDto.issuer,
+            issuanceDate: createLostDocumentCaseDto.issuanceDate
+              ? dayjs(createLostDocumentCaseDto.issuanceDate).toDate()
+              : undefined,
+            expiryDate: createLostDocumentCaseDto.expiryDate
+              ? dayjs(createLostDocumentCaseDto.expiryDate).toDate()
+              : undefined,
+            dateOfBirth: createLostDocumentCaseDto.dateOfBirth
+              ? dayjs(createLostDocumentCaseDto.dateOfBirth).toDate()
+              : undefined,
+            placeOfBirth: createLostDocumentCaseDto.placeOfBirth,
+            placeOfIssue: createLostDocumentCaseDto.placeOfIssue,
+            gender: createLostDocumentCaseDto.gender,
+            nationality: createLostDocumentCaseDto.nationality,
+            note: createLostDocumentCaseDto.note,
+            additionalFields: createLostDocumentCaseDto.additionalFields?.length
+              ? {
+                  createMany: {
+                    data: createLostDocumentCaseDto.additionalFields.map(
+                      (field) => ({
+                        fieldName: field.fieldName,
+                        fieldValue: field.fieldValue,
+                      }),
+                    ),
+                  },
+                }
+              : undefined,
+          },
+        },
+        description: createLostDocumentCaseDto.description,
+        tags: createLostDocumentCaseDto.tags,
+        lostDocumentCase: {
+          create: {},
+        },
+      },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
 
   async remove(id: string, query: DeleteQueryDto, userId: string) {
     let data: DocumentCase;

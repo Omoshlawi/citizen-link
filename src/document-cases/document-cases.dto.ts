@@ -81,11 +81,9 @@ export const FoundDocumentCaseSchema = z.object({
   images: z.string().nonempty().array().max(2),
 });
 
-export const LostDocumentCaseSchema = FoundDocumentCaseSchema.extend({
-  document: CaseDocumentSchema.extend({
-    expiryDate: z.iso.date().optional(),
-  }),
-});
+export const LostDocumentCaseSchema = FoundDocumentCaseSchema.merge(
+  CaseDocumentSchema,
+).omit({ images: true });
 
 export class QueryDocumentCaseDto extends createZodDto(
   QueryDocumentCaseSchema,

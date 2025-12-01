@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Body,
   Controller,
   Delete,
   Get,
   Param,
-  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -35,7 +33,7 @@ import { DocumentCasesService } from './document-cases.service';
 export class DocumentCasesController {
   constructor(private readonly documentCasesService: DocumentCasesService) {}
 
-  @Post()
+  @Post('found')
   @ApiOperation({ summary: 'Report Found Document Case' })
   @ApiCreatedResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse({ badRequest: true })
@@ -46,6 +44,22 @@ export class DocumentCasesController {
   ) {
     return this.documentCasesService.reportFoundDocumentCase(
       createFoundDocumentCaseDto,
+      query,
+      user.id,
+    );
+  }
+
+  @Post('lost')
+  @ApiOperation({ summary: 'Report Lost Document Case' })
+  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  reportLostDocumentCase(
+    @Body() createLostDocumentCaseDto: CreateLostDocumentCaseDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.reportLostDocumentCase(
+      createLostDocumentCaseDto,
       query,
       user.id,
     );
@@ -73,24 +87,6 @@ export class DocumentCasesController {
     @Session() { user }: UserSession,
   ) {
     return this.documentCasesService.findOne(id, query, user.id);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Report Lost Document Case' })
-  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
-  @ApiErrorsResponse({ badRequest: true })
-  reportLostDocumentCase(
-    @Param('id') id: string,
-    @Body() createLostDocumentCaseDto: CreateLostDocumentCaseDto,
-    @Query() query: CustomRepresentationQueryDto,
-    @Session() { user }: UserSession,
-  ) {
-    return this.documentCasesService.reportLostDocumentCase(
-      id,
-      createLostDocumentCaseDto,
-      query,
-      user.id,
-    );
   }
 
   @Delete(':id')
