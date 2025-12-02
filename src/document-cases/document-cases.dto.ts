@@ -2,7 +2,10 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
-import { CaseDocumentSchema } from '../case-documents/case-documents.dto';
+import {
+  CaseDocumentSchema,
+  GetCaseDocumentResponseDto,
+} from '../case-documents/case-documents.dto';
 import { QueryAddressSchema } from '../address/address.dto';
 import { ApiProperty } from '@nestjs/swagger';
 import {
@@ -161,6 +164,8 @@ export class GetDocumentCaseResponseDto implements DocumentCase {
   lostDocumentCase: LostDocumentCaseResponseDto;
   @ApiProperty({ type: FoundDocumentCaseResponseDto })
   foundDocumentCase: FoundDocumentCaseResponseDto;
+  @ApiProperty({ type: GetCaseDocumentResponseDto })
+  document: GetCaseDocumentResponseDto;
 }
 
 export class QueryDocumentCaseResponseDto {

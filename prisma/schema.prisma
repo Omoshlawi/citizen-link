@@ -272,7 +272,6 @@ model Document {
   note         String? // Additional notes
 
   createdAt        DateTime        @default(now())
-  voided           Boolean         @default(false)
   images           Image[]
   additionalFields DocumentField[]
 }

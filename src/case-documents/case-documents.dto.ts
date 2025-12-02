@@ -2,7 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
 import { ApiProperty } from '@nestjs/swagger';
-import { Document } from '../../generated/prisma/client';
+import { Document, DocumentField } from '../../generated/prisma/client';
 
 export const QueryCaseDocumentSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -59,12 +59,27 @@ export const CaseDocumentSchema = z.object({
 export class CreateCaseDocumentDto extends createZodDto(CaseDocumentSchema) {}
 
 export class UpdateCaseDocumentDto extends createZodDto(
-  CaseDocumentSchema.partial(),
+  CaseDocumentSchema.omit({ images: true }).partial(),
 ) {}
 
 export class QueryCaseDocumentDto extends createZodDto(
   QueryCaseDocumentSchema,
 ) {}
+
+export class DocumentFieldDto implements DocumentField {
+  @ApiProperty()
+  id: string;
+  @ApiProperty()
+  createdAt: Date;
+  @ApiProperty()
+  updatedAt: Date;
+  @ApiProperty()
+  documentId: string;
+  @ApiProperty()
+  fieldName: string;
+  @ApiProperty()
+  fieldValue: string;
+}
 
 export class GetCaseDocumentResponseDto implements Document {
   @ApiProperty()
@@ -105,6 +120,8 @@ export class GetCaseDocumentResponseDto implements Document {
   createdAt: Date;
   @ApiProperty()
   voided: boolean;
+  @ApiProperty({ isArray: true, type: DocumentFieldDto })
+  additionalFields: DocumentFieldDto[];
 }
 
 export class QueryCaseDocumentResponseDto {
