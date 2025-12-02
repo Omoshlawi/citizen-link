@@ -77,12 +77,15 @@ export class DocumentImagesService {
     const info = await this.aiService.extractInformation(
       extractionTasks.join('\n\n'),
     );
-    const { additionalFields, securityQuestions, ...documentpayload } = info;
+    const { additionalFields, securityQuestions, typeId, ...documentpayload } =
+      info;
     const updatedDocument = await this.prismaService.document.update({
       where: { id: documentId, caseId },
       data: {
         ...documentpayload,
-        typeId: createDocumentImageDto.typeId,
+        type: {
+          connect: { id: typeId },
+        },
         expiryDate: documentpayload.expiryDate
           ? dayjs(documentpayload.expiryDate).toDate()
           : undefined,
@@ -122,7 +125,7 @@ export class DocumentImagesService {
               },
             },
           },
-        },
+        } as any,
       },
       select: {
         images: {

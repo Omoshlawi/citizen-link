@@ -18,9 +18,7 @@ export class QueryDocumentImageDto extends createZodDto(
   QueryDocumentImageSchema,
 ) {}
 
-export class CreateDocumentImageDto extends createZodDto(DocumentImageSchema) {
-  typeId: any;
-}
+export class CreateDocumentImageDto extends createZodDto(DocumentImageSchema) {}
 
 export class GetDocumentImageResponseDto implements Image {
   @ApiProperty()
