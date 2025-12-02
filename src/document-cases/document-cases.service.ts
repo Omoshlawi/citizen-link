@@ -23,6 +23,7 @@ import {
   CreateFoundDocumentCaseDto,
   CreateLostDocumentCaseDto,
   QueryDocumentCaseDto,
+  UpdateDocumentCaseDto,
 } from './document-cases.dto';
 
 @Injectable()
@@ -311,6 +312,23 @@ export class DocumentCasesService {
     return data;
   }
 
+  async update(
+    id: string,
+    updateDocumentCaseDto: UpdateDocumentCaseDto,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+  ) {
+    return await this.prismaService.documentCase.update({
+      where: { id, userId },
+      data: {
+        ...updateDocumentCaseDto,
+        eventDate: updateDocumentCaseDto.eventDate
+          ? dayjs(updateDocumentCaseDto.eventDate).toDate()
+          : undefined,
+      },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
   async reportLostDocumentCase(
     createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     query: CustomRepresentationQueryDto,

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -26,6 +27,7 @@ import {
   QueryDocumentCaseDto,
   QueryDocumentCaseResponseDto,
   CreateLostDocumentCaseDto,
+  UpdateDocumentCaseDto,
 } from './document-cases.dto';
 import { DocumentCasesService } from './document-cases.service';
 
@@ -87,6 +89,24 @@ export class DocumentCasesController {
     @Session() { user }: UserSession,
   ) {
     return this.documentCasesService.findOne(id, query, user.id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update Document Case' })
+  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  update(
+    @Param('id') id: string,
+    @Body() updateDocumentCaseDto: UpdateDocumentCaseDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.update(
+      id,
+      updateDocumentCaseDto,
+      query,
+      user.id,
+    );
   }
 
   @Delete(':id')

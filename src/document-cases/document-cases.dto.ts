@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
@@ -102,6 +101,10 @@ export class CreateFoundDocumentCaseDto extends createZodDto(
 
 export class CreateLostDocumentCaseDto extends createZodDto(
   LostDocumentCaseSchema,
+) {}
+
+export class UpdateDocumentCaseDto extends createZodDto(
+  FoundDocumentCaseSchema.omit({ images: true }).partial(),
 ) {}
 
 export class LostDocumentCaseResponseDto implements LostDocumentCase {
