@@ -301,7 +301,6 @@ model Image {
   metadata   Json? // Additional metadata including ocrText, ai processing results, (size, format, etc.)
   document   Document? @relation(fields: [documentId], references: [id])
   createdAt  DateTime  @default(now())
-  voided     Boolean   @default(false)
 }
 
 model DocumentCase {

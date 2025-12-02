@@ -85,7 +85,7 @@ export const FoundDocumentCaseSchema = z.object({
   eventDate: z.iso.date(),
   tags: z.string().min(1).array().optional(),
   description: z.string().optional(),
-  images: z.string().nonempty().array().max(2),
+  images: z.string().nonempty().array().nonempty().max(2),
 });
 
 export const LostDocumentCaseSchema = FoundDocumentCaseSchema.merge(

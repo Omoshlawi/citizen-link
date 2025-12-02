@@ -44,7 +44,7 @@ export class CaseDocumentsService {
         expiryDate: data?.expiryDate
           ? dayjs(data?.expiryDate).toDate()
           : undefined,
-        additionalFields: additionalFields?.length
+        additionalFields: additionalFields
           ? {
               deleteMany: { documentId: documentId },
               createMany: { data: additionalFields },

@@ -1,20 +1,37 @@
-import { Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { ApiErrorsResponse } from 'src/app.decorators';
-import {
-  CustomRepresentationQueryDto,
-  DeleteQueryDto,
-} from 'src/query-builder/query-builder.utils';
+import { CustomRepresentationQueryDto } from 'src/query-builder/query-builder.utils';
 import { OriginalUrl } from '../query-builder';
 import {
+  CreateDocumentImageDto,
   GetDocumentImageResponseDto,
   QueryDocumentImageDto,
+  CreateDocumentImageResponseDto,
 } from './document-images.dto';
 import { DocumentImagesService } from './document-images.service';
 
 @Controller('documents/cases/:caseId/documents/:documentId/images')
 export class DocumentImagesController {
   constructor(private readonly documentImagesService: DocumentImagesService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Create Image' })
+  @ApiOkResponse({ type: CreateDocumentImageResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  create(
+    @Body() createDocumentImageDto: CreateDocumentImageDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Param('caseId') caseId: string,
+    @Param('documentId') documentId: string,
+  ) {
+    return this.documentImagesService.create(
+      createDocumentImageDto,
+      caseId,
+      documentId,
+      query,
+    );
+  }
 
   @Get()
   @ApiOperation({ summary: 'Get Images' })
@@ -45,42 +62,6 @@ export class DocumentImagesController {
     @Param('documentId') documentId: string,
   ) {
     return this.documentImagesService.findOne(
-      imageId,
-      query,
-      caseId,
-      documentId,
-    );
-  }
-
-  @Delete(':imageId')
-  @ApiOperation({ summary: 'Delete Image' })
-  @ApiOkResponse({ type: GetDocumentImageResponseDto })
-  @ApiErrorsResponse({ badRequest: true })
-  remove(
-    @Param('imageId') imageId: string,
-    @Query() query: DeleteQueryDto,
-    @Param('caseId') caseId: string,
-    @Param('documentId') documentId: string,
-  ) {
-    return this.documentImagesService.remove(
-      imageId,
-      query,
-      caseId,
-      documentId,
-    );
-  }
-
-  @Post(':imageId/restore')
-  @ApiOperation({ summary: 'Restore Image' })
-  @ApiOkResponse({ type: GetDocumentImageResponseDto })
-  @ApiErrorsResponse({ badRequest: true })
-  restore(
-    @Param('imageId') imageId: string,
-    @Query() query: CustomRepresentationQueryDto,
-    @Param('caseId') caseId: string,
-    @Param('documentId') documentId: string,
-  ) {
-    return this.documentImagesService.restore(
       imageId,
       query,
       caseId,

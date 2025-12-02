@@ -8,29 +8,19 @@ import { ApiProperty } from '@nestjs/swagger';
 export const QueryDocumentImageSchema = z.object({
   ...QueryBuilderSchema.shape,
   imageType: z.enum(['FRONT', 'BACK', 'FULL']).optional(),
-  includeVoided: z
-    .stringbool({
-      truthy: ['true', '1'],
-      falsy: ['false', '0'],
-    })
-    .optional()
-    .default(false),
-});
-
-export const DocumentImageItemSchema = z.object({
-  url: z.url(),
-  imageType: z.enum(['FRONT', 'BACK', 'FULL']).optional(),
 });
 
 export const DocumentImageSchema = z.object({
-  images: DocumentImageItemSchema.array(),
+  images: z.string().nonempty().array().nonempty().max(2),
 });
 
 export class QueryDocumentImageDto extends createZodDto(
   QueryDocumentImageSchema,
 ) {}
 
-export class CreateDocumentImageDto extends createZodDto(DocumentImageSchema) {}
+export class CreateDocumentImageDto extends createZodDto(DocumentImageSchema) {
+  typeId: any;
+}
 
 export class GetDocumentImageResponseDto implements Image {
   @ApiProperty()
