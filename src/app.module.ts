@@ -16,6 +16,7 @@ import { AddressLocalesModule } from './address-locales/address-locales.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
 import { CaseDocumentsModule } from './case-documents/case-documents.module';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
+import { CaseStatusTransitionsModule } from './case-status-transitions/case-status-transitions.module';
 import { S3Module } from './s3/s3.module';
 import { AiModule } from './ai/ai.module';
 import { AiConfig } from './ai/ai.config';
@@ -34,6 +35,7 @@ import { DocumentImagesModule } from './document-images/document-images.module';
     DocumentTypesModule,
     CaseDocumentsModule,
     DocumentCasesModule,
+    CaseStatusTransitionsModule,
     S3Module,
     AiModule.registerAsync({
       global: true,
