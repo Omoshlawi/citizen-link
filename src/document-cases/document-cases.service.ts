@@ -6,7 +6,11 @@ import {
 } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { pick } from 'lodash';
-import { DocumentCase } from '../../generated/prisma/client';
+import {
+  DocumentCase,
+  FoundDocumentCaseStatus,
+  LostDocumentCaseStatus,
+} from '../../generated/prisma/client';
 import { AiService } from '../ai/ai.service';
 import { OcrService } from '../ai/ocr.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -312,12 +316,42 @@ export class DocumentCasesService {
     return data;
   }
 
+  private async canUpdateCase(caseId: string) {
+    const documentCase = await this.prismaService.documentCase.findUnique({
+      where: { id: caseId },
+      select: {
+        lostDocumentCase: true,
+        foundDocumentCase: true,
+      },
+    });
+    if (!documentCase) {
+      throw new NotFoundException('Document case not found');
+    }
+    if (
+      documentCase.lostDocumentCase &&
+      documentCase.lostDocumentCase.status === LostDocumentCaseStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        'Cant Update Lost Document Case that is completed',
+      );
+    }
+    if (
+      documentCase.foundDocumentCase &&
+      documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
+    ) {
+      throw new BadRequestException(
+        'Cant Update Found Document Case that is not in draft status',
+      );
+    }
+  }
+
   async update(
     id: string,
     updateDocumentCaseDto: UpdateDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
+    await this.canUpdateCase(id);
     return await this.prismaService.documentCase.update({
       where: { id, userId },
       data: {

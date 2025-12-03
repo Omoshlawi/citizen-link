@@ -1,9 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import dayjs from 'dayjs';
-import { CustomRepresentationService } from 'src/query-builder/representation.service';
+import { CustomRepresentationService } from '../query-builder/representation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CustomRepresentationQueryDto } from '../query-builder';
 import { UpdateCaseDocumentDto } from './case-documents.dto';
+import {
+  FoundDocumentCaseStatus,
+  LostDocumentCaseStatus,
+} from '../../generated/prisma/enums';
 @Injectable()
 export class CaseDocumentsService {
   constructor(
@@ -22,6 +30,35 @@ export class CaseDocumentsService {
     });
     if (!data) throw new NotFoundException('Document not found');
     return data;
+  }
+
+  private async canUpdateCase(caseId: string) {
+    const documentCase = await this.prismaService.documentCase.findUnique({
+      where: { id: caseId },
+      select: {
+        lostDocumentCase: true,
+        foundDocumentCase: true,
+      },
+    });
+    if (!documentCase) {
+      throw new NotFoundException('Document case not found');
+    }
+    if (
+      documentCase.lostDocumentCase &&
+      documentCase.lostDocumentCase.status === LostDocumentCaseStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        'Cant Update Lost Document Case that is completed',
+      );
+    }
+    if (
+      documentCase.foundDocumentCase &&
+      documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
+    ) {
+      throw new BadRequestException(
+        'Cant Update Found Document Case that is not in draft status',
+      );
+    }
   }
 
   async update(

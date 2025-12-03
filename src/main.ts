@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppConfig } from './config/app.config';
@@ -23,17 +26,17 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('The Hive')
-    .setDescription('The Hive API Documentation')
+    .setTitle('Docufind API')
+    .setDescription('Docufind API Documentation')
     .setVersion('1.0')
     .build();
 
-  // Create the main Hive document
+  // Create the main Docufind document
   const hiveDocument = cleanupOpenApiDoc(
     SwaggerModule.createDocument(app, config),
   );
 
-  // Merge Better Auth paths and components into Hive document
+  // Merge Better Auth paths and components into Docufind document
   const mergedDocument = mergeBetterAuthSchema(
     hiveDocument,
     betterAuthOpenAPISchema,

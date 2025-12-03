@@ -20,6 +20,10 @@ import { OcrService } from '../ai/ocr.service';
 import { AiService } from '../ai/ai.service';
 import { S3Service } from '../s3/s3.service';
 import dayjs from 'dayjs';
+import {
+  FoundDocumentCaseStatus,
+  LostDocumentCaseStatus,
+} from '../../generated/prisma/client';
 
 @Injectable()
 export class DocumentImagesService {
@@ -56,6 +60,35 @@ export class DocumentImagesService {
     if (!caseData) throw new NotFoundException('Case not found');
     if (caseData?.foundDocumentCase === null) {
       throw new BadRequestException('Case is not a found case');
+    }
+  }
+
+  private async canUpdateCase(caseId: string) {
+    const documentCase = await this.prismaService.documentCase.findUnique({
+      where: { id: caseId },
+      select: {
+        lostDocumentCase: true,
+        foundDocumentCase: true,
+      },
+    });
+    if (!documentCase) {
+      throw new NotFoundException('Document case not found');
+    }
+    if (
+      documentCase.lostDocumentCase &&
+      documentCase.lostDocumentCase.status === LostDocumentCaseStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        'Cant Update Lost Document Case that is completed',
+      );
+    }
+    if (
+      documentCase.foundDocumentCase &&
+      documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
+    ) {
+      throw new BadRequestException(
+        'Cant Update Found Document Case that is not in draft status',
+      );
     }
   }
 
