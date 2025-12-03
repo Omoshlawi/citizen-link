@@ -405,7 +405,6 @@ model CaseStatusTransition {
   @@index([actorType, actorId])
   @@index([toStatus])
   @@index([createdAt])
-  @@map("case_status_transition")
 }
 
 enum CaseType {

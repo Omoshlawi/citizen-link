@@ -126,6 +126,7 @@ export class CaseStatusTransitionsService {
     toStatus: FoundDocumentCaseStatus | LostDocumentCaseStatus,
     actorType: ActorType,
     actorId: string,
+    customRep?: string,
     metadata?: {
       deviceId?: string;
       deviceLocation?: string;
@@ -188,7 +189,7 @@ export class CaseStatusTransitionsService {
     }
 
     // 3. Update the case status
-    await this.prismaService.documentCase.update({
+    const updatedCase = await this.prismaService.documentCase.update({
       where: { id: caseId },
       data: {
         [currentStatus.caseType === CaseType.FOUND
@@ -199,6 +200,7 @@ export class CaseStatusTransitionsService {
           },
         },
       },
+      ...this.representationService.buildCustomRepresentationQuery(customRep),
     });
     // 4. Create CaseStatusTransition record for audit
     await this.prismaService.caseStatusTransition.create({
@@ -219,5 +221,6 @@ export class CaseStatusTransitionsService {
       },
     });
     // 5. Return updated case
+    return updatedCase;
   }
 }

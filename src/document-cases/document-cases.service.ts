@@ -451,25 +451,13 @@ export class DocumentCasesService {
       );
     }
 
-    // Update status to SUBMITTED
-    const doc = await this.prismaService.documentCase.update({
-      where: { id, userId },
-      data: {
-        foundDocumentCase: {
-          update: {
-            status: FoundDocumentCaseStatus.SUBMITTED,
-          },
-        },
-      },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
-    });
-    await this.caseStatusTransitionsService.transitionStatus(
+    return await this.caseStatusTransitionsService.transitionStatus(
       id,
       FoundDocumentCaseStatus.SUBMITTED,
       ActorType.USER,
       userId,
+      query?.v,
     );
-    return doc;
   }
   async remove(id: string, query: DeleteQueryDto, userId: string) {
     let data: DocumentCase;
