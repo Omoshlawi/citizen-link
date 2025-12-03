@@ -4,7 +4,7 @@ import { DocumentCasesController } from './document-cases.controller';
 import { DocumentCasesService } from './document-cases.service';
 
 @Module({
-  imports: [CaseStatusTransitionsModule],
+  imports: [CaseStatusTransitionsModule, CaseStatusTransitionsModule],
   controllers: [DocumentCasesController],
   providers: [DocumentCasesService],
 })

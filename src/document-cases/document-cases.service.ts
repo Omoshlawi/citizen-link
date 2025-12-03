@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   BadRequestException,
   Injectable,
@@ -7,6 +8,7 @@ import {
 import dayjs from 'dayjs';
 import { pick } from 'lodash';
 import {
+  ActorType,
   DocumentCase,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
@@ -29,6 +31,7 @@ import {
   QueryDocumentCaseDto,
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
+import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 
 @Injectable()
 export class DocumentCasesService {
@@ -41,6 +44,7 @@ export class DocumentCasesService {
     private readonly ocrService: OcrService,
     private readonly aiService: AiService,
     private readonly s3Service: S3Service,
+    private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
   ) {}
 
   private async filesExists(images: string[]): Promise<void> {
@@ -448,7 +452,7 @@ export class DocumentCasesService {
     }
 
     // Update status to SUBMITTED
-    return await this.prismaService.documentCase.update({
+    const doc = await this.prismaService.documentCase.update({
       where: { id, userId },
       data: {
         foundDocumentCase: {
@@ -459,6 +463,13 @@ export class DocumentCasesService {
       },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
+    await this.caseStatusTransitionsService.transitionStatus(
+      id,
+      FoundDocumentCaseStatus.SUBMITTED,
+      ActorType.USER,
+      userId,
+    );
+    return doc;
   }
   async remove(id: string, query: DeleteQueryDto, userId: string) {
     let data: DocumentCase;
