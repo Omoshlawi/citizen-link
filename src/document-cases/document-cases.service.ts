@@ -418,6 +418,48 @@ export class DocumentCasesService {
     });
   }
 
+  async submitFoundDocumentCase(
+    id: string,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+  ) {
+    // First, verify it's a found case owned by the user
+    const documentCase = await this.prismaService.documentCase.findUnique({
+      where: { id, userId },
+      include: {
+        foundDocumentCase: true,
+      },
+    });
+
+    if (!documentCase) {
+      throw new NotFoundException('Document case not found');
+    }
+
+    if (!documentCase.foundDocumentCase) {
+      throw new BadRequestException('This is not a found document case');
+    }
+
+    if (
+      documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
+    ) {
+      throw new BadRequestException(
+        `Cannot submit case. Current status: ${documentCase.foundDocumentCase.status}. Only DRAFT cases can be submitted.`,
+      );
+    }
+
+    // Update status to SUBMITTED
+    return await this.prismaService.documentCase.update({
+      where: { id, userId },
+      data: {
+        foundDocumentCase: {
+          update: {
+            status: FoundDocumentCaseStatus.SUBMITTED,
+          },
+        },
+      },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
   async remove(id: string, query: DeleteQueryDto, userId: string) {
     let data: DocumentCase;
     if (query?.purge) {
