@@ -30,6 +30,7 @@ import {
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
 import { DocumentCasesService } from './document-cases.service';
+import { RequireSystemPermission } from '../auth/auth.decorators';
 
 @Controller('documents/cases')
 export class DocumentCasesController {
@@ -135,6 +136,40 @@ export class DocumentCasesController {
     @Session() { user }: UserSession,
   ) {
     return this.documentCasesService.remove(id, query, user.id);
+  }
+
+  @Post(':id/verify')
+  @RequireSystemPermission({ documentCase: ['verify'] })
+  @ApiOperation({ summary: 'Verify Found Document Case' })
+  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  verifyFoundDocumentCase(
+    @Param('id') id: string,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.verifyFoundDocumentCase(
+      id,
+      query,
+      user.id,
+    );
+  }
+
+  @Post(':id/reject')
+  @RequireSystemPermission({ documentCase: ['reject'] })
+  @ApiOperation({ summary: 'Reject Found Document Case' })
+  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  rejectFoundDocumentCase(
+    @Param('id') id: string,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.rejectFoundDocumentCase(
+      id,
+      query,
+      user.id,
+    );
   }
 
   @Post(':id/restore')

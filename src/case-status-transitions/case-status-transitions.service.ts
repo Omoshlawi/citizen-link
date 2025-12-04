@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
@@ -138,6 +135,9 @@ export class CaseStatusTransitionsService {
     // 1. Get current status
     const currentStatus = await this.getCurrentStatus(caseId);
     if (currentStatus.status === toStatus) {
+      this.logger.warn(
+        `Cannot transition to the same status for case ${caseId} from ${currentStatus.status} to ${toStatus}`,
+      );
       throw new BadRequestException('Cannot transition to the same status');
     }
     // 2. Validate transition is allowed (DRAFT -> SUBMITTED, SUBMITTED -> VERIFIED, etc.)
@@ -147,6 +147,9 @@ export class CaseStatusTransitionsService {
         currentStatus.status === FoundDocumentCaseStatus.DRAFT &&
         toStatus !== FoundDocumentCaseStatus.SUBMITTED
       ) {
+        this.logger.warn(
+          `Invalid transition from DRAFT to ${toStatus} for found document case ${caseId}`,
+        );
         throw new BadRequestException(
           'Invalid transition from DRAFT to ' +
             toStatus +
@@ -158,6 +161,9 @@ export class CaseStatusTransitionsService {
         toStatus !== FoundDocumentCaseStatus.VERIFIED &&
         toStatus !== FoundDocumentCaseStatus.REJECTED
       ) {
+        this.logger.warn(
+          `Invalid transition from SUBMITTED to ${toStatus} for found document case ${caseId}`,
+        );
         throw new BadRequestException(
           'Invalid transition from SUBMITTED to ' +
             toStatus +
@@ -168,6 +174,9 @@ export class CaseStatusTransitionsService {
         currentStatus.status === FoundDocumentCaseStatus.VERIFIED &&
         toStatus !== FoundDocumentCaseStatus.COMPLETED
       ) {
+        this.logger.warn(
+          `Invalid transition from VERIFIED to ${toStatus} for found document case ${caseId}`,
+        );
         throw new BadRequestException(
           'Invalid transition from VERIFIED to ' +
             toStatus +
@@ -180,6 +189,9 @@ export class CaseStatusTransitionsService {
         currentStatus.status === LostDocumentCaseStatus.SUBMITTED &&
         toStatus !== LostDocumentCaseStatus.COMPLETED
       ) {
+        this.logger.warn(
+          `Invalid transition from SUBMITTED to ${toStatus} for lost document case ${caseId}`,
+        );
         throw new BadRequestException(
           'Invalid transition from SUBMITTED to ' +
             toStatus +
@@ -187,7 +199,9 @@ export class CaseStatusTransitionsService {
         );
       }
     }
-
+    this.logger.log(
+      `Transitioning status for case ${caseId} from ${currentStatus.status} to ${toStatus}`,
+    );
     // 3. Update the case status
     const updatedCase = await this.prismaService.documentCase.update({
       where: { id: caseId },
@@ -202,6 +216,7 @@ export class CaseStatusTransitionsService {
       },
       ...this.representationService.buildCustomRepresentationQuery(customRep),
     });
+    this.logger.log(`Updated case ${caseId} status to ${toStatus}`);
     // 4. Create CaseStatusTransition record for audit
     await this.prismaService.caseStatusTransition.create({
       data: {
@@ -220,6 +235,9 @@ export class CaseStatusTransitionsService {
         metadata: metadata as any,
       },
     });
+    this.logger.log(
+      `Created case status transition for case ${caseId} from ${currentStatus.status} to ${toStatus}`,
+    );
     // 5. Return updated case
     return updatedCase;
   }

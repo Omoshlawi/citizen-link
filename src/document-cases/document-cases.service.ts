@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   BadRequestException,
   Injectable,
@@ -459,6 +458,37 @@ export class DocumentCasesService {
       query?.v,
     );
   }
+
+  async verifyFoundDocumentCase(
+    id: string,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+  ) {
+    this.logger.log(`Verifying found document case ${id} for user ${userId}`);
+    return await this.caseStatusTransitionsService.transitionStatus(
+      id,
+      FoundDocumentCaseStatus.VERIFIED,
+      ActorType.USER,
+      userId,
+      query?.v,
+    );
+  }
+
+  async rejectFoundDocumentCase(
+    id: string,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+  ) {
+    this.logger.log(`Rejecting found document case ${id} for user ${userId}`);
+    return await this.caseStatusTransitionsService.transitionStatus(
+      id,
+      FoundDocumentCaseStatus.REJECTED,
+      ActorType.USER,
+      userId,
+      query?.v,
+    );
+  }
+
   async remove(id: string, query: DeleteQueryDto, userId: string) {
     let data: DocumentCase;
     if (query?.purge) {
