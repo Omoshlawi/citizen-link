@@ -30,7 +30,7 @@ export const DocAiExtractSchema = z.object({
   documentNumber: z.string().optional(),
   batchNumber: z.string().optional(),
   issuer: z.string().optional(),
-  ownerName: z.string(),
+  ownerName: z.string().optional(),
   dateOfBirth: z.string().optional(),
   placeOfBirth: z.string().optional(),
   placeOfIssue: z.string().optional(),

@@ -3,6 +3,7 @@ import { QueryBuilderSchema } from '../query-builder/query-builder.utils';
 import z from 'zod';
 import { DocumentCategory, DocumentType } from '../../generated/prisma/browser';
 import { ApiProperty } from '@nestjs/swagger';
+import { JsonValue } from '@prisma/client/runtime/library';
 
 export const QueryDocumentTypeSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -58,6 +59,10 @@ export class QueryDocumentTypeDto extends createZodDto(
 ) {}
 
 export class GetDocumentTypeResponseDto implements DocumentType {
+  @ApiProperty()
+  aiExtractionPrompt: string | null;
+  @ApiProperty()
+  verificationStrategy: JsonValue;
   @ApiProperty()
   category: DocumentCategory;
 

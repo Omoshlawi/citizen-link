@@ -29,7 +29,7 @@ export class DocumentTypesService {
     query: CustomRepresentationQueryDto,
   ) {
     return this.prismaService.documentType.create({
-      data: createDocumentTypeDto,
+      data: { ...createDocumentTypeDto, verificationStrategy: {} },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
   }

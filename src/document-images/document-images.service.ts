@@ -107,9 +107,10 @@ export class DocumentImagesService {
         return text;
       }),
     );
-    const info = await this.aiService.extractInformation(
-      extractionTasks.join('\n\n'),
-    );
+    const info = await this.aiService.extractInformation({
+      source: 'ocr',
+      extractedText: extractionTasks.join('\n\n'),
+    });
     const { additionalFields, securityQuestions, typeId, ...documentpayload } =
       info;
     const updatedDocument = await this.prismaService.document.update({

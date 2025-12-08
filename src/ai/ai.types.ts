@@ -1,4 +1,5 @@
 import { Provider, Type } from '@nestjs/common';
+import { DocumentCategory } from '../../generated/prisma/enums';
 
 export type AIOptions = {
   geminiApiKey: string;
@@ -91,3 +92,11 @@ export interface VerificationResult {
   >;
   flexibilityApplied: string[];
 }
+
+export type OcrExtractionInput = { source: 'ocr'; extractedText: string };
+export type ImageExtractionInput = {
+  source: 'img';
+  files: Array<{ buffer: Buffer; mimeType: string }>;
+};
+
+export type ExtractInformationInput = OcrExtractionInput | ImageExtractionInput;

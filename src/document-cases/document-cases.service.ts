@@ -71,9 +71,10 @@ export class DocumentCasesService {
         return text;
       }),
     );
-    const info = await this.aiService.extractInformation(
-      extractionTasks.join('\n\n'),
-    );
+    const info = await this.aiService.extractInformation({
+      source: 'ocr',
+      extractedText: extractionTasks.join('\n\n'),
+    });
     const { additionalFields, securityQuestions, ...documentpayload } = info;
     return await this.prismaService.documentCase.create({
       data: {
@@ -117,6 +118,9 @@ export class DocumentCasesService {
                   },
                 }
               : undefined,
+            extractionConfidence: {},
+            aiExtractedData: {},
+            aiExtractionPrompt: '',
           },
         },
       },
@@ -408,6 +412,9 @@ export class DocumentCasesService {
                   },
                 }
               : undefined,
+            extractionConfidence: {},
+            aiExtractedData: {},
+            aiExtractionPrompt: '',
           },
         },
         description: createLostDocumentCaseDto.description,

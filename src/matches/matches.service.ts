@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   BadRequestException,
   Injectable,
@@ -29,6 +30,7 @@ import {
   QueryMatchesDto,
   RejectMatchDto,
 } from './matches.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 const MATCH_THRESHOLD = 0.65; // Minimum AI confidence score to create a match
 
@@ -252,12 +254,13 @@ export class MatchesService {
           foundDocumentCaseId: match.foundDocumentCaseId,
           matchScore: match.score,
           status: MatchStatus.PENDING,
-          aiMatchReasons: {
+          aiAnalysis: {
             reasons: match.reasons,
             breakdown: match.breakdown,
             isExactMatch: match.score >= 0.9,
           },
-          aiModelVersion: 'v1.0',
+          aiModel: 'gemini-2.5-flash',
+          matchNumber: uuidv4(),
         },
       });
 
@@ -354,12 +357,13 @@ export class MatchesService {
             foundDocumentCaseId: foundCase.foundDocumentCase.id,
             matchScore: matchResult.score,
             status: MatchStatus.PENDING,
-            aiMatchReasons: {
+            aiAnalysis: {
               reasons: matchResult.reasons,
               breakdown: matchResult.breakdown,
               isExactMatch: matchResult.isExactMatch,
             },
-            aiModelVersion: 'v1.0',
+            aiModel: 'gemini-2.5-flash',
+            matchNumber: uuidv4(),
           },
         });
 
@@ -386,7 +390,7 @@ export class MatchesService {
           gte: query.minMatchScore,
           lte: query.maxMatchScore,
         },
-        adminVerified: query.adminVerified,
+        // adminVerified: query.adminVerified,
         voided: false,
       },
       ...this.paginationService.buildPaginationQuery(query),
@@ -466,7 +470,7 @@ export class MatchesService {
     return await this.prismaService.match.update({
       where: { id },
       data: {
-        status: MatchStatus.ACCEPTED,
+        status: MatchStatus.PENDING,
       },
       ...this.representationService.buildCustomRepresentationQuery(),
     });
@@ -509,7 +513,7 @@ export class MatchesService {
       );
     }
 
-    if (match.status === MatchStatus.COMPLETED) {
+    if (match.status === MatchStatus.CLAIMED) {
       throw new BadRequestException('Cannot reject a completed match');
     }
 
@@ -549,7 +553,7 @@ export class MatchesService {
       throw new NotFoundException('Match not found');
     }
 
-    if (match.status !== MatchStatus.ACCEPTED) {
+    if (match.status !== MatchStatus.PENDING) {
       throw new BadRequestException(
         `Cannot complete match with status ${match.status}. Match must be ACCEPTED`,
       );
@@ -559,12 +563,7 @@ export class MatchesService {
     const updatedMatch = await this.prismaService.match.update({
       where: { id },
       data: {
-        status: MatchStatus.COMPLETED,
-        handoverDate: completeMatchDto.handoverDate
-          ? new Date(completeMatchDto.handoverDate)
-          : new Date(),
-        handoverLocation: completeMatchDto.handoverLocation,
-        handoverCode: completeMatchDto.handoverCode,
+        status: MatchStatus.CLAIMED,
       },
     });
 
@@ -617,8 +616,8 @@ export class MatchesService {
    */
   async adminVerifyMatch(
     id: string,
-    adminVerifyDto: AdminVerifyMatchDto,
-    adminUserId: string,
+    _adminVerifyDto: AdminVerifyMatchDto,
+    _adminUserId: string,
   ): Promise<any> {
     const match = await this.prismaService.match.findUnique({
       where: { id },
@@ -631,8 +630,8 @@ export class MatchesService {
     return await this.prismaService.match.update({
       where: { id },
       data: {
-        adminVerified: adminVerifyDto.verified,
-        verifiedBy: adminVerifyDto.verified ? adminUserId : null,
+        // adminVerified: adminVerifyDto.verified,
+        // verifiedBy: adminVerifyDto.verified ? adminUserId : null,
       },
     });
   }

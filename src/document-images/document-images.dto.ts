@@ -22,6 +22,10 @@ export class CreateDocumentImageDto extends createZodDto(DocumentImageSchema) {}
 
 export class GetDocumentImageResponseDto implements Image {
   @ApiProperty()
+  blurredUrl: string | null;
+  @ApiProperty()
+  aiAnalysis: JsonValue;
+  @ApiProperty()
   imageType: string | null;
   @ApiProperty()
   url: string;
