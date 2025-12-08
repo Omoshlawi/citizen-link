@@ -32,7 +32,7 @@ export class AiService implements OnModuleInit {
     });
   }
 
-  private getExtractionPrompt(
+  private getOcrExtractionPrompt(
     extractedText: string,
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
   ) {
@@ -78,7 +78,6 @@ Return your findings as a JSON object that strictly follows this schema:
   "placeOfBirth": string,
   "placeOfIssue": string,
   "gender": "Male" or "Female" or "Unknown" (Uknown when not provided or found),
-  "nationality": string,
   "note": string,
   "typeId": string, // Document type id (based on the following document types provided: 
   // ${documentTypes.map((type) => `${type.id} - ${type.name} (${type.category})`).join(', ')})
@@ -129,7 +128,6 @@ INSTRUCTIONS:
   placeOfBirth: z.string().optional(),
   placeOfIssue: z.string().optional(),
   gender: z.enum(['Male', 'Female', 'Unknown']).optional(),
-  nationality: z.string().optional(),
   note: z.string().optional(),
   typeId: z.string(),
   issuanceDate: z.string().optional(),
@@ -170,7 +168,6 @@ EXAMPLES:
      "typeId": "<passport_id>",
      "issuanceDate": "2020-01-01",
      "expiryDate": "2030-01-01",
-     "nationality": "USA",
      "additionalFields": []
      "securityQuestions": [
         {
@@ -180,10 +177,6 @@ EXAMPLES:
         {
           "question": "What is the date of birth of the owner?",
           "answer": "1990-01-01"
-        },
-        {
-          "question": "What is the nationality of the owner?",
-          "answer": "USA"
         },
         {
           "question": "What is the document number?",
@@ -263,7 +256,6 @@ ${extractedText}`;
 
     **STRONG IDENTIFIERS (High Weight):**
     - ownerName: Should be very similar (account for typos, OCR errors, middle names, cultural variations)
-    - nationality: Should match exactly
     - gender: Should match exactly
 
     **MODERATE IDENTIFIERS (Medium Weight):**
@@ -331,11 +323,6 @@ ${extractedText}`;
           "similarity": <number 0-100>,
           "note": "<brief explanation if mismatch>"
         },
-        "nationality": {
-          "match": <boolean>,
-          "similarity": <number 0-100>,
-          "note": "<brief explanation if mismatch>"
-        }
         // ... include all relevant fields that were compared
       },
       "matchingFields": [<array of field names that matched>],
@@ -390,7 +377,7 @@ ${extractedText}`;
           category: true,
         },
       });
-      const prompt = this.getExtractionPrompt(extractedText, documentTypes);
+      const prompt = this.getOcrExtractionPrompt(extractedText, documentTypes);
       const response = await this.genai.models.generateContent({
         model: this.options.model,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],

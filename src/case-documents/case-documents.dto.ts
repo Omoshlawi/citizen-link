@@ -16,7 +16,6 @@ export const QueryCaseDocumentSchema = z.object({
   placeOfBirth: z.string().optional(),
   placeOfIssue: z.string().optional(),
   gender: z.enum(['Male', 'Female', 'Unknown']).optional(),
-  nationality: z.string().optional(),
   typeId: z.string().optional(),
   issuanceDate: z.iso.date().optional(),
   expiryDate: z.iso.date().optional(),
@@ -45,7 +44,6 @@ export const CaseDocumentSchema = z.object({
   placeOfBirth: z.string().optional(), // Owner's place of birth
   placeOfIssue: z.string().optional(),
   gender: z.enum(['Male', 'Female', 'Unknown']).optional(), // Owner's gender
-  nationality: z.string().optional(),
   note: z.string().optional(), // Additional notes, could be also any identifying marks on document as well, any instruction,e.t.c
   typeId: z.string().min(1, 'Type required'),
   issuanceDate: z.iso.date().optional(),
@@ -102,8 +100,6 @@ export class GetCaseDocumentResponseDto implements Document {
   placeOfIssue: string | null;
   @ApiProperty()
   gender: string | null;
-  @ApiProperty()
-  nationality: string | null;
   @ApiProperty()
   note: string | null;
   @ApiProperty()

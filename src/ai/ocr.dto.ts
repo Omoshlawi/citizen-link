@@ -35,7 +35,6 @@ export const DocAiExtractSchema = z.object({
   placeOfBirth: z.string().optional(),
   placeOfIssue: z.string().optional(),
   gender: z.enum(['Male', 'Female', 'Unknown']).optional(),
-  nationality: z.string().optional(),
   note: z.string().optional(),
   typeId: z.string(),
   issuanceDate: z.string().optional(),

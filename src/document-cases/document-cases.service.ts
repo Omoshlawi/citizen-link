@@ -395,7 +395,6 @@ export class DocumentCasesService {
             placeOfBirth: createLostDocumentCaseDto.placeOfBirth,
             placeOfIssue: createLostDocumentCaseDto.placeOfIssue,
             gender: createLostDocumentCaseDto.gender,
-            nationality: createLostDocumentCaseDto.nationality,
             note: createLostDocumentCaseDto.note,
             additionalFields: createLostDocumentCaseDto.additionalFields?.length
               ? {
