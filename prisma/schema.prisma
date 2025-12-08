@@ -12,24 +12,14 @@ datasource db {
 }
 
 model User {
-  id            String         @id
+  id            String   @id
   name          String
   email         String
   emailVerified Boolean
   image         String?
   createdAt     DateTime
   updatedAt     DateTime
-  voided        Boolean        @default(false)
-  sessions      Session[]
-  accounts      Account[]
-  notifications Notification[]
-  messages      Message[]
-
-  ratings          Rating[]
-  givenFeedback    Feedback[]     @relation("GivenFeedback")
-  receivedFeedback Feedback[]     @relation("ReceivedFeedback")
-  cases            DocumentCase[]
-  addresses        Address[]
+  voided        Boolean  @default(false)
 
   role       String?
   banned     Boolean?
@@ -38,6 +28,20 @@ model User {
 
   username        String?
   displayUsername String?
+
+  // relationshipd
+  sessions       Session[]
+  accounts       Account[]
+  notifications  Notification[]
+  messages       Message[]
+  ratings        Rating[]
+  cases          DocumentCase[]
+  addresses      Address[]
+  userActivities UserActivity[]
+  claims         Claim[]
+  aiinteractions AIInteraction[]
+  transactions   Transaction[]
+  disputes       Dispute[]
 
   @@unique([email])
   @@unique([username])
@@ -104,6 +108,25 @@ model Jwks {
   createdAt  DateTime
 
   @@map("jwks")
+}
+
+model UserActivity {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String // e.g., "create", "update", "delete", "view"
+  resource    String // e.g., "screening", "client", "referral"
+  resourceId  String? // ID of the affected resource
+  metadata    Json? // Additional data about the activity
+  description String? // Human-readable description of the activity
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([resource, resourceId])
+  @@map("user_activity")
 }
 
 // Universal Address Model with Hierarchical Support
@@ -244,8 +267,16 @@ model DocumentType {
   averageReplacementCost  Float?
   documents               Document[]
   voided                  Boolean          @default(false)
+
+  // AI Extraction Configuration
+  aiExtractionPrompt String? @db.Text // Custom prompt for this doc type
+
+  // AI Verification Configuration
+  verificationStrategy Json // How AI should verify: { "strictFields": ["idNumber"], "flexibleFields": ["name"] }
 }
 
+// Common fields in PII Docs, helpfull in narrowing down search as cases grow and grow larger hence reducing primsps as well
+// E.g will look for docs with certain field values then on that naroowed search, perfom ai matching 
 model Document {
   id             String  @id @default(uuid())
   // Common Document Identifiers
@@ -257,8 +288,14 @@ model Document {
   dateOfBirth  DateTime? // Owner's date of birth
   placeOfBirth String? // Owner's place of birth
   gender       String? // Owner's gender
-  nationality  String? // Owner's nationality
-  ownerName    String
+  ownerName    String?
+
+  // AI Extraction
+  aiExtractionPrompt String? @db.Text // Custom prompt for this doc
+  aiExtractedData    Json? // AI extracts from uploaded images
+
+  // AI Confidence Scores
+  extractionConfidence Json // Per-field confidence scores
 
   issuer       String?
   // Document Type Information
@@ -274,10 +311,10 @@ model Document {
   createdAt        DateTime        @default(now())
   images           Image[]
   additionalFields DocumentField[]
+  aiextraction     AIExtraction[]
 }
 
 // Dynamic Field Values - stores actual values for document-specific fields
-
 model DocumentField {
   id         String   @id @default(uuid())
   documentId String
@@ -295,12 +332,47 @@ model DocumentField {
 model Image {
   id         String    @id @default(uuid())
   url        String
+  blurredUrl String? // Privacy-protected version
+  aiAnalysis Json? // { "quality": 0.95, "readability": 0.88, "tampering_detected": false }
   documentId String?
   imageType  String? // Front, Back, Full, etc.
   // ocrText    String? // Raw OCR text extracted from this image // Included in metadat
-  metadata   Json? // Additional metadata including ocrText, ai processing results, (size, format, etc.)
+  metadata   Json? // Additional metadata including ocrText(whn using seperate ocr to extratc text from image e.g tessaract), ai processing results, (size, format, etc.)
   document   Document? @relation(fields: [documentId], references: [id])
   createdAt  DateTime  @default(now())
+}
+
+model AIExtraction {
+  id String @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  // AI Model Info
+  aiModel      String // e.g., "claude-sonnet-4", "gpt-4-vision"
+  modelVersion String // Track model versions for debugging
+
+  // Extraction Data
+  rawInput      Json // Input sent to AI (image URLs, text, etc.)
+  rawOutput     Json // Full AI response
+  extractedData Json // Parsed extracted fields
+  confidence    Json // Per-field confidence scores
+
+  // Status
+  status       AIExtractionStatus @default(SUCCESS)
+  errorMessage String?            @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId])
+  @@index([status])
+}
+
+enum AIExtractionStatus {
+  SUCCESS
+  PARTIAL_SUCCESS
+  FAILED
+  RETRY_NEEDED
 }
 
 model DocumentCase {
@@ -355,6 +427,9 @@ model FoundDocumentCase {
   pointAwarded     Int                     @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
   securityQuestion Json?                   @default("[]")
   matches          Match[]
+  claims           Claim[]
+  pickupStation    PickupStation?          @relation(fields: [pickupStationId], references: [id])
+  pickupStationId  String?
 }
 
 enum LostDocumentCaseStatus {
@@ -422,69 +497,456 @@ enum ActorType {
 // Match model for potential matches between lost and found reports
 
 model Match {
-  id                  String            @id @default(uuid())
+  id          String @id @default(uuid())
+  matchNumber String @unique
+
   lostDocumentCaseId  String
   foundDocumentCaseId String
   lostDocumentCase    LostDocumentCase  @relation(fields: [lostDocumentCaseId], references: [id], onDelete: Cascade)
   foundDocumentCase   FoundDocumentCase @relation(fields: [foundDocumentCaseId], references: [id], onDelete: Cascade)
 
-  matchScore       Float
-  status           MatchStatus @default(PENDING)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  adminVerified    Boolean     @default(false)
-  verifiedBy       String?
-  handoverDate     DateTime?
-  handoverLocation String?
-  handoverCode     String?
-  feedbacks        Feedback[]
-  voided           Boolean     @default(false)
+  // AI Matching Results
+  aiModel    String // AI model used for matching
+  matchScore Float // 0-100, AI-determined confidence
 
-  // Potential AI metadata fields
-  aiModelVersion String?
-  aiMatchReasons Json?
+  // Consolidated AI Analysis (all matching metadata in one place)
+  aiAnalysis Json        @db.Json
+  // Complete structure: {
+  //   "reasoning": "Documents match based on identical ID numbers and names...",
+  //   "fieldComparison": {
+  //     "idNumber": { "match": true, "confidence": 0.99, "reasoning": "Exact match" },
+  //     "name": { "match": true, "confidence": 0.92, "reasoning": "Names reversed but semantically identical" }
+  //   },
+  //   "riskFactors": { "low_image_quality": false, "partial_match": false },
+  // }
+  status     MatchStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
+  // Notification
+  notifiedAt DateTime?
+  viewedAt   DateTime?
+
+  // Relations
+  claims Claim[]
+
+  voided Boolean @default(false)
+
+  @@unique([lostDocumentCaseId, foundDocumentCaseId])
+  @@index([aiModel])
   @@index([status])
 }
 
 enum MatchStatus {
+  PENDING // Match found, awaiting user action
+  VIEWED // User viewed the match
+  REJECTED // User rejected match
+  CLAIMED // User claimed this match
+  EXPIRED // Match expired without action
+}
+
+model Claim {
+  id          String @id @default(uuid())
+  claimNumber String @unique
+
+  // Claimant
+  userId String // Redundant field but kept for optimization through index and ease of querying
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Found Document Case
+  foundDocumentCaseId String // redundant field but kept for optimization through index and ease of querying
+  foundDocumentCase   FoundDocumentCase @relation(fields: [foundDocumentCaseId], references: [id], onDelete: Cascade)
+
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id])
+
+  // AI-Powered Security Verification
+  verificationAttempts Int @default(0) // 
+  maxAttempts          Int @default(3)
+
+  verifiedAt         DateTime?
+  verificationStatus ClaimVerificationStatus @default(PENDING)
+
+  // AI tracks all verification attempts
+  verificationHistory AIVerificationAttempt[]
+
+  // Pickup Details
+  pickupStationId     String?
+  pickupStation       PickupStation? @relation(fields: [pickupStationId], references: [id])
+  preferredPickupDate DateTime?
+
+  // Status
+  status ClaimStatus @default(PENDING_VERIFICATION)
+
+  // Fees & Payment
+  serviceFee   Float @default(0)
+  finderReward Float @default(0)
+  totalAmount  Float @default(0)
+
+  // Relations
+  transaction Transaction?
+  handover    Handover?
+  dispute     Dispute?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([foundDocumentCaseId])
+  @@index([matchId])
+  @@index([status])
+}
+
+enum ClaimVerificationStatus {
   PENDING
-  ACCEPTED
-  REJECTED
+  VERIFIED
+  FAILED
+}
+
+enum ClaimStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  PAYMENT_PENDING
+  PAYMENT_COMPLETE
+  READY_FOR_PICKUP
   COMPLETED
+  CANCELLED
   DISPUTED
 }
 
-// Notification model for user alerts
+model AIVerificationAttempt {
+  id String @id @default(uuid())
 
-model Notification {
-  id        String           @id @default(uuid())
-  user      User             @relation(fields: [userId], references: [id])
-  userId    String
-  title     String
-  message   String
-  type      NotificationType
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  case      DocumentCase?    @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  caseId    String?
-  link      String?
-  voided    Boolean          @default(false)
+  claimId String
+  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  attemptNumber Int // 1, 2, 3...
+
+  // AI Model Info
+  aiModel      String
+  modelVersion String
+
+  // User's Answers
+  userResponses Json // User's answers to security questions
+
+  // AI Analysis
+  aiAnalysis Json // AI's detailed analysis of each answer
+  // Example: {
+  //   "question1": {
+  //     "expected": "John Michael Doe",
+  //     "provided": "Doe John Michael",
+  //     "match": true,
+  //     "confidence": 0.95,
+  //     "reasoning": "Names reordered but all components present and correct"
+  //   }
+  // }
+
+  // AI Decision
+  overallVerdict  VerificationVerdict
+  confidenceScore Float // 0-1, how confident AI is in its decision
+  reasoning       String              @db.Text // AI explains its decision
+
+  // Flexibility Factors AI Considered
+  flexibilityApplied Json // What variations AI accepted: name order, spelling, formatting, etc.
+
+  // Result
+  passed Boolean
+
+  createdAt DateTime @default(now())
+
+  @@index([claimId])
+  @@index([attemptNumber])
+}
+
+enum VerificationVerdict {
+  STRONG_MATCH // High confidence, clear match
+  LIKELY_MATCH // Good confidence with acceptable variations
+  UNCERTAIN // Low confidence, borderline
+  NO_MATCH // Clear mismatch
+  INSUFFICIENT_DATA // Can't determine
+}
+
+//  AI INTERACTION LOGS
+model AIInteraction {
+  id String @id @default(uuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Interaction Type
+  interactionType AIInteractionType
+
+  // AI Model Info
+  aiModel      String
+  modelVersion String
+
+  // Context - What entity triggered this AI call
+  entityType String? // "LostDocument", "Match", "Claim", etc.
+  entityId   String?
+
+  // Request/Response
+  prompt   String @db.Text
+  response String @db.Text
+
+  // Performance & Cost Tracking
+  tokenUsage     Json? // { "input": 1500, "output": 800, "total": 2300 }
+  processingTime Int? // milliseconds
+  estimatedCost  Float? // Cost in USD (calculated from token usage)
+
+  // Status
+  success      Boolean @default(true)
+  errorMessage String? @db.Text
+  retryCount   Int     @default(0)
+
+  createdAt DateTime @default(now())
 
   @@index([userId])
-  @@index([isRead])
+  @@index([interactionType])
+  @@index([entityType, entityId])
+  @@index([createdAt]) // For analytics and cost tracking
+  @@index([success]) // Quick filtering of failed requests
+}
+
+enum AIInteractionType {
+  DOCUMENT_EXTRACTION // Extracting data from lost/found document images
+  DOCUMENT_MATCHING // Finding matches between lost and found
+  CLAIM_VERIFICATION // Verifying user's security answers
+  IMAGE_ANALYSIS // Analyzing document image quality/authenticity
+  SECURITY_QUESTIONS_GEN // Generating security questions
+  DISPUTE_ANALYSIS // Analyzing disputes
+  USER_QUERY_RESPONSE // Responding to user questions/chat
+  ALTERNATIVE_MATCHES // Finding alternative matches when user rejects
+}
+
+model PickupStation {
+  id      String  @id @default(uuid())
+  name    String
+  code    String  @unique
+  address String
+  city    String
+  region  String?
+
+  // Contact
+  phone String
+  email String?
+
+  // Location
+  latitude  Float?
+  longitude Float?
+
+  // Operating Hours
+  operatingHours Json
+
+  // Capacity
+  isActive Boolean @default(true)
+
+  // Relations
+  foundDocumentCases FoundDocumentCase[]
+  claims             Claim[]
+  handovers          Handover[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([city])
+}
+
+model Handover {
+  id             String @id @default(uuid())
+  handoverNumber String @unique
+
+  claimId String @unique
+  claim   Claim  @relation(fields: [claimId], references: [id])
+
+  pickupStationId String
+  pickupStation   PickupStation @relation(fields: [pickupStationId], references: [id])
+
+  // Scheduling
+  scheduledDate DateTime
+  completedAt   DateTime?
+
+  // Verification at pickup
+  ownerVerified Boolean @default(false)
+  finderPresent Boolean @default(false)
+
+  // Documentation
+  ownerSignature  String?
+  finderSignature String?
+  handoverNotes   String? @db.Text
+
+  status HandoverStatus @default(SCHEDULED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([claimId])
+  @@index([status])
+}
+
+enum HandoverStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// Notification model for user alerts
+model Transaction {
+  id                String @id @default(uuid())
+  transactionNumber String @unique
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  claimId String @unique
+  claim   Claim  @relation(fields: [claimId], references: [id])
+
+  // Amounts
+  serviceFee   Float
+  finderReward Float
+  platformFee  Float @default(0)
+  totalAmount  Float
+
+  // Payment Details
+  paymentMethod         PaymentMethod
+  paymentProvider       String?
+  providerTransactionId String?
+
+  status TransactionStatus @default(PENDING)
+
+  // Metadata
+  metadata Json?
+
+  paidAt     DateTime?
+  refundedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([claimId])
+  @@index([status])
+}
+
+enum PaymentMethod {
+  CARD
+  MOBILE_MONEY
+  BANK_TRANSFER
+  WALLET
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+model Rating {
+  id String @id @default(uuid())
+
+  // Rater
+  raterId String
+  rater   User   @relation(fields: [raterId], references: [id], onDelete: Cascade)
+
+  // Rating Details
+  rating Int // 1-5 stars
+  review String? @db.Text
+
+  // AI Sentiment Analysis (optional)
+  aiSentiment Json? // AI analyzes review sentiment and flags concerns
+
+  // Context
+  claimId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([raterId])
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String           @db.Text
+
+  // Related Entity
+  relatedId   String?
+  relatedType String?
+
+  // Delivery
+  read   Boolean   @default(false)
+  readAt DateTime?
+
+  // Channels
+  sentViaEmail Boolean @default(false)
+  sentViaSMS   Boolean @default(false)
+  sentViaPush  Boolean @default(false)
+
+  createdAt      DateTime      @default(now())
+  documentCase   DocumentCase? @relation(fields: [documentCaseId], references: [id])
+  documentCaseId String?
+
+  @@index([userId])
+  @@index([read])
   @@index([type])
 }
 
 enum NotificationType {
-  POTENTIAL_MATCH
-  MATCH_ACCEPTED
-  MATCH_REJECTED
-  DOCUMENT_RETURNED
-  NEW_MESSAGE
-  SYSTEM
-  REWARD_OFFERED
-  LOCATION_ALERT
+  MATCH_FOUND
+  CLAIM_VERIFIED
+  PAYMENT_RECEIVED
+  PICKUP_READY
+  HANDOVER_SCHEDULED
+  HANDOVER_COMPLETED
+  RATING_RECEIVED
+  DOCUMENT_EXPIRED
+  SYSTEM_ALERT
+}
+
+model Dispute {
+  id            String @id @default(uuid())
+  disputeNumber String @unique
+
+  claimId String @unique
+  claim   Claim  @relation(fields: [claimId], references: [id])
+
+  initiatedBy String
+  initiator   User   @relation(fields: [initiatedBy], references: [id])
+
+  reason      String @db.Text
+  description String @db.Text
+  evidence    Json?
+
+  // AI Analysis
+  aiAnalysis Json? // AI analyzes dispute and suggests resolution
+
+  status     DisputeStatus @default(OPEN)
+  resolution String?       @db.Text
+  resolvedBy String?
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([claimId])
+  @@index([status])
+}
+
+enum DisputeStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  CLOSED
 }
 
 // Message model for communication between users
@@ -520,39 +982,6 @@ model Conversation {
   @@index([participants])
 }
 
-// Feedback model for ratings after document return
-
-model Feedback {
-  id         String   @id @default(uuid())
-  giver      User     @relation("GivenFeedback", fields: [giverId], references: [id])
-  giverId    String
-  receiver   User     @relation("ReceivedFeedback", fields: [receiverId], references: [id])
-  receiverId String
-  rating     Int // 1-5
-  comment    String?
-  match      Match    @relation(fields: [matchId], references: [id])
-  matchId    String
-  createdAt  DateTime @default(now())
-  voided     Boolean  @default(false)
-
-  @@unique([giverId, matchId])
-  @@index([receiverId])
-}
-
-// Rating model for document condition
-
-model Rating {
-  id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  score     Int // 1-5
-  comment   String?
-  createdAt DateTime @default(now())
-  voided    Boolean  @default(false)
-
-  @@index([userId])
-}
-
 // FAQ model
 
 model FAQ {
@@ -563,22 +992,6 @@ model FAQ {
   order    Int
   isActive Boolean @default(true)
   voided   Boolean @default(false)
-}
-
-// Statistics for analytics
-
-model Statistic {
-  id              String   @id @default(uuid())
-  date            DateTime @default(now())
-  lostCasesCount  Int      @default(0)
-  foundCasesCount Int      @default(0)
-  matchesCount    Int      @default(0)
-  returnedCount   Int      @default(0)
-  activeUsers     Int      @default(0)
-  newUsers        Int      @default(0)
-  voided          Boolean  @default(false)
-
-  @@unique([date])
 }
 
 // System Settings

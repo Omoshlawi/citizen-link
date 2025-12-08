@@ -17,6 +17,7 @@ import { CaseDocumentsModule } from './case-documents/case-documents.module';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
 import { DocumentImagesModule } from './document-images/document-images.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
+import { MatchesModule } from './matches/matches.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QueryBuilderModule } from './query-builder';
 import { S3Module } from './s3/s3.module';
@@ -46,6 +47,7 @@ import { S3Module } from './s3/s3.module';
       inject: [AiConfig],
     }),
     DocumentImagesModule,
+    MatchesModule,
   ],
   controllers: [AppController],
   providers: [

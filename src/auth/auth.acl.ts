@@ -11,6 +11,7 @@ export const adminPluginAcl = createAccessControl({
   documentType: ['create', 'update', 'delete', 'restore'],
   addressLocale: ['create', 'update', 'delete', 'restore'],
   documentCase: ['verify', 'reject', 'update', 'delete'],
+  match: ['create', 'update', 'delete', 'restore', 'verify'],
 });
 
 const adminRole = adminPluginAcl.newRole({
