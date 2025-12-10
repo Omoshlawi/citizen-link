@@ -140,7 +140,7 @@ export class S3Service implements OnModuleInit {
    * @param key The S3 object key (path/filename).
    * @returns Promise resolving to the metadata of the file, or undefined if not found.
    */
-  async getFileMetadata(key: string): Promise<Record<string, any> | undefined> {
+  async getFileMetadata(key: string) {
     try {
       const command = new HeadObjectCommand({
         Bucket: this.config.privateBucket,

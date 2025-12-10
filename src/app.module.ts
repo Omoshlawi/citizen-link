@@ -40,7 +40,8 @@ import { S3Module } from './s3/s3.module';
       useFactory: (config: AiConfig) => {
         return {
           geminiApiKey: config.geminiApiKey,
-          model: 'gemini-2.0-flash-001',
+          model: 'gemini-2.5-flash',
+          // model: 'gemini-2.0-flash-001',
         };
       },
       inject: [AiConfig],

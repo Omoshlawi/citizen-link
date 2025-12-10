@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   BadRequestException,
   Inject,
@@ -16,6 +17,7 @@ import {
   Document,
 } from '../../generated/prisma/client';
 import { DocAiExtractDto, DocAiExtractSchema } from './ocr.dto';
+import { nullToUndefined } from '../app.utils';
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -266,6 +268,7 @@ export class AiService implements OnModuleInit {
       - Parse handwritten and printed text.
       - Return date fields in ISO format (YYYY-MM-DD).
       - If a field is uncertain or illegible, omit it or set its value to null. Do NOT hallucinate.
+      - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
 
       SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
       {
@@ -334,6 +337,7 @@ export class AiService implements OnModuleInit {
       - Visually analyze all uploaded images.
       - Use your expert OCR, context awareness, and reasoning to organize the fields.
       - Output a single, valid JSON object conforming to the schema above.
+      - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
 
     `;
   }
@@ -487,7 +491,7 @@ export class AiService implements OnModuleInit {
     return prompt;
   }
 
-  async extractInformation(
+  private async _extractInformation(
     input: ExtractInformationInput,
   ): Promise<DocAiExtractDto> {
     try {
@@ -507,6 +511,7 @@ export class AiService implements OnModuleInit {
       } else {
         prompt = this.getImageExtractionPrompt(documentTypes);
       }
+      this.logger.debug(`Prompt: ${prompt}`);
       const response = await this.genai.models.generateContent({
         model: this.options.model,
         contents: [
@@ -662,8 +667,11 @@ export class AiService implements OnModuleInit {
         },
       });
       const responseText = response.text!.trim();
+      this.logger.debug(`Response Text: ${responseText}`);
       // Parse JSON from the response
-      const extractedInfo = JSON.parse(responseText) as Record<string, any>;
+      const extractedInfo = nullToUndefined<Record<string, any>>(
+        JSON.parse(responseText),
+      );
       this.logger.debug('Extracted Information: ', extractedInfo);
       const vlidation = await DocAiExtractSchema.safeParseAsync(extractedInfo);
       if (!vlidation.success) {
@@ -674,6 +682,228 @@ export class AiService implements OnModuleInit {
       // Return the structured information or empty object if nothing extracted
       return vlidation.data;
     } catch (error) {
+      console.error('Error extracting information:', error);
+      throw error;
+    }
+  }
+
+  async extractInformation(
+    input: ExtractInformationInput,
+  ): Promise<DocAiExtractDto> {
+    try {
+      const documentTypes = await this.prismaService.documentType.findMany({
+        select: {
+          id: true,
+          name: true,
+          category: true,
+        },
+      });
+
+      let prompt: string;
+      if (input.source === 'ocr') {
+        prompt = this.getOcrExtractionPrompt(
+          input.extractedText,
+          documentTypes,
+        );
+      } else {
+        prompt = this.getImageExtractionPrompt(documentTypes);
+      }
+
+      this.logger.debug(`Prompt: ${prompt}`);
+
+      // --- START OF FIX: SWITCH TO STREAMING ---
+      let responseText = '';
+
+      // The configuration object is the same, but we call streamGenerateContent
+      const stream = await this.genai.models.generateContentStream({
+        model: this.options.model,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              ...(input.source === 'img'
+                ? input.files.map((file) =>
+                    this.fileToGenerativePart(file.buffer, file.mimeType),
+                  )
+                : []),
+            ],
+          },
+        ],
+        config: {
+          temperature: 0.1,
+          responseMimeType: 'application/json', // Critical for structured output
+          maxOutputTokens: 2048,
+          // NOTE: The responseSchema is identical to your original code
+          responseSchema: {
+            // ... your full JSON schema ...
+            type: Type.OBJECT,
+            properties: {
+              serialNumber: {
+                type: Type.STRING,
+                description: 'Serial number of the document',
+                title: 'Serial Number',
+                nullable: true,
+              },
+              documentNumber: {
+                type: Type.STRING,
+                description:
+                  'Document number (unique identifier on most documents)',
+                title: 'Document Number',
+                nullable: true,
+              },
+              batchNumber: {
+                type: Type.STRING,
+                description: 'Batch number or barcode/QR batch',
+                title: 'Batch Number',
+                nullable: true,
+              },
+              issuer: {
+                type: Type.STRING,
+                description:
+                  'Issuer (government, authority, country, state, etc.)',
+                title: 'Issuer',
+                nullable: true,
+              },
+              ownerName: {
+                type: Type.STRING,
+                description: "Owner's full name as printed on the document",
+                title: 'Owner Name',
+              },
+              dateOfBirth: {
+                type: Type.STRING,
+                description: "Owner's date of birth (ISO: YYYY-MM-DD)",
+                title: 'Date of Birth',
+                nullable: true,
+              },
+              placeOfBirth: {
+                type: Type.STRING,
+                description: "Owner's place of birth (city, country, etc.)",
+                title: 'Place of Birth',
+                nullable: true,
+              },
+              placeOfIssue: {
+                type: Type.STRING,
+                description: 'Document place of issue (if available)',
+                title: 'Place of Issue',
+                nullable: true,
+              },
+              gender: {
+                type: Type.STRING,
+                description: "Owner's gender (Male, Female, Unknown)",
+                enum: ['Male', 'Female', 'Unknown'],
+                title: 'Gender',
+                nullable: true,
+              },
+              note: {
+                type: Type.STRING,
+                description:
+                  'Special notes, remarks or status found on the document',
+                title: 'Note',
+                nullable: true,
+              },
+              typeId: {
+                type: Type.STRING,
+                description:
+                  'Document type identifier (should match one of the provided document types)',
+                title: 'Type ID',
+              },
+              issuanceDate: {
+                type: Type.STRING,
+                description:
+                  "Document's issuance/issue date (ISO format if possible)",
+                title: 'Issuance Date',
+                nullable: true,
+              },
+              expiryDate: {
+                type: Type.STRING,
+                description:
+                  "Document's expiration/expiry date (ISO: YYYY-MM-DD)",
+                title: 'Expiry Date',
+                nullable: true,
+              },
+              additionalFields: {
+                type: Type.ARRAY,
+                description:
+                  'Additional fields found on the document that do not fit standard categories',
+                title: 'Additional Fields',
+                nullable: true,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    fieldName: {
+                      type: Type.STRING,
+                      description: 'Name of the field',
+                      title: 'Field Name',
+                    },
+                    fieldValue: {
+                      type: Type.STRING,
+                      description: 'Value of the field',
+                      title: 'Field Value',
+                    },
+                  },
+                },
+              },
+              securityQuestions: {
+                type: Type.ARRAY,
+                description:
+                  'Security questions and answers derived from document content',
+                title: 'Security Questions',
+                nullable: true,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    question: {
+                      type: Type.STRING,
+                      title: 'Question',
+                      description: 'Security question',
+                    },
+                    answer: {
+                      type: Type.STRING,
+                      title: 'Answer',
+                      description: 'Answer to the question',
+                    },
+                  },
+                },
+              },
+            },
+            // required: ['ownerName'],
+          },
+        },
+      });
+
+      // Aggregate all text chunks from the stream
+      for await (const chunk of stream) {
+        responseText += chunk?.text?.trim() ?? '';
+      }
+      // --- END OF FIX ---
+
+      this.logger.debug(`Response Text: ${responseText}`);
+
+      // Parse JSON from the response
+      // Before parsing, add a final cleanup step to handle potential markdown fences (`json)
+      const cleanedResponseText = responseText
+        .trim()
+        .replace(/^```json\s*/, '')
+        .replace(/\s*```$/, '');
+
+      const extractedInfo = nullToUndefined<Record<string, any>>(
+        JSON.parse(cleanedResponseText),
+      );
+
+      this.logger.debug('Extracted Information: ', extractedInfo);
+      const vlidation = await DocAiExtractSchema.safeParseAsync(extractedInfo);
+
+      if (!vlidation.success) {
+        this.logger.error('Invalid extraction result', vlidation.error);
+        throw new BadRequestException('Invalid extraction result');
+      }
+
+      return vlidation.data;
+    } catch (error) {
+      // It's good practice to log the error before re-throwing it.
+      // If the JSON.parse error happens here, the responseText logging
+      // above will show the incomplete string that failed to parse.
       console.error('Error extracting information:', error);
       throw error;
     }

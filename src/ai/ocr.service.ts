@@ -52,7 +52,7 @@ export class OcrService {
   /**
    * Download file from URL as a buffer
    */
-  private async downloadFileAsBuffer(fileUrl: string): Promise<Buffer> {
+  async downloadFileAsBuffer(fileUrl: string): Promise<Buffer> {
     try {
       const response = await fetch(fileUrl);
       if (!response.ok) {

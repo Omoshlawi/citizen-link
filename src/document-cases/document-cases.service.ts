@@ -31,6 +31,7 @@ import {
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
+import { AiConfig } from '../ai/ai.config';
 
 @Injectable()
 export class DocumentCasesService {
@@ -44,6 +45,7 @@ export class DocumentCasesService {
     private readonly aiService: AiService,
     private readonly s3Service: S3Service,
     private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
+    private readonly aiConfig: AiConfig,
   ) {}
 
   private async filesExists(images: string[]): Promise<void> {
@@ -62,20 +64,36 @@ export class DocumentCasesService {
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
+    console.log('Ai Config ---------->', this.aiConfig);
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
     await this.filesExists(images);
-    const extractionTasks = await Promise.all(
+    // const extractionTasks = await Promise.all(
+    //   images.map(async (image) => {
+    //     const url = await this.s3Service.generateDownloadSignedUrl(image);
+    //     const text = await this.ocrService.recognizeFromUrl(url);
+    //     return text;
+    //   }),
+    // );
+    // const info = await this.aiService.extractInformation({
+    //   source: 'ocr',
+    //   extractedText: extractionTasks.join('\n\n'),
+    // });
+    const _extractionTasks = await Promise.all(
       images.map(async (image) => {
         const url = await this.s3Service.generateDownloadSignedUrl(image);
-        const text = await this.ocrService.recognizeFromUrl(url);
-        return text;
+        const buffer = await this.ocrService.downloadFileAsBuffer(url);
+        const metadata = await this.s3Service.getFileMetadata(image);
+        const mimeType =
+          metadata?.ContentType ?? `image/${image.split('.').pop()}`;
+        return { buffer, mimeType };
       }),
     );
-    const info = await this.aiService.extractInformation({
-      source: 'ocr',
-      extractedText: extractionTasks.join('\n\n'),
+    const _info = await this.aiService.extractInformation({
+      source: 'img',
+      files: _extractionTasks,
     });
-    const { additionalFields, securityQuestions, ...documentpayload } = info;
+
+    const { additionalFields, securityQuestions, ...documentpayload } = _info; //?? info ?? {};
     return await this.prismaService.documentCase.create({
       data: {
         ...caseData,
@@ -101,9 +119,11 @@ export class DocumentCasesService {
             images: images?.length
               ? {
                   createMany: {
-                    data: images.map((image, i) => ({
+                    data: images.map((image) => ({
                       url: image,
-                      metadata: { ocrText: extractionTasks[i] },
+                      metadata: {
+                        // ocrText: extractionTasks[i]
+                      },
                     })),
                   },
                 }

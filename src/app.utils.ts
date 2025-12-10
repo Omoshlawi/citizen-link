@@ -1,3 +1,4 @@
+import _ from 'lodash';
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -50,4 +51,22 @@ export function mergeBetterAuthSchema(hiveDoc: any, betterAuthSchema: any) {
   merged.tags = [...(merged.tags || []), ...(betterAuthSchema.tags || [])];
 
   return merged;
+}
+
+export function nullToUndefined<T>(input: T): T {
+  if (input === null) {
+    return undefined as unknown as T;
+  }
+
+  // Arrays → map recursively
+  if (Array.isArray(input)) {
+    return input.map(nullToUndefined) as unknown as T;
+  }
+
+  // Plain objects → map recursively
+  if (_.isPlainObject(input)) {
+    return _.mapValues(input, (value) => nullToUndefined(value)) as T;
+  }
+
+  return input;
 }
