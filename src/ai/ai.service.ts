@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   BadRequestException,
@@ -15,6 +17,7 @@ import {
   DocumentField,
   DocumentType,
   Document,
+  AIExtractionStatus,
 } from '../../generated/prisma/client';
 import { DocAiExtractDto, DocAiExtractSchema } from './ocr.dto';
 import { nullToUndefined } from '../app.utils';
@@ -269,68 +272,167 @@ export class AiService implements OnModuleInit {
       - Return date fields in ISO format (YYYY-MM-DD).
       - If a field is uncertain or illegible, omit it or set its value to null. Do NOT hallucinate.
       - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
+      - Note any damage, tampering, or quality issues
+      - Confidence scores should be between 0 and 1
+      - Be conservative with confidence scores - it's better to be uncertain than wrong
+      - Flag any signs of tampering, damage, or poor quality in the imageAnalysis object
+
+
+
 
       SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
       {
-        "serialNumber": string,              // Serial number on the document (if present)
-        "documentNumber": string,            // Primary document number (passport/ID/license etc.)
-        "batchNumber": string,               // Batch/lot/barcode/QR batch info
-        "issuer": string,                    // Issuing country, authority, institution, or agency 
-        "ownerName": string,                 // Person's full name as shown on document
-        "dateOfBirth": string,               // Owner's birth date (YYYY-MM-DD)
-        "placeOfBirth": string,              // Owner's place of birth (city/country, as shown)
-        "placeOfIssue": string,              // Place where document is issued
-        "gender": "Male" | "Female" | "Unknown", // Owner's gender (Unknown if not found)
-        "note": string,                      // Any noted remarks or visible comments (optional)
-        "typeId": string,                    // Use the "id" from this list of supported document types: ${JSON.stringify(documentTypes, null, 2)}
-        "issuanceDate": string,              // Document's date of issue (YYYY-MM-DD)
-        "expiryDate": string,                // Expiry/valid until (YYYY-MM-DD)
-        "additionalFields": [                // Other fields as visually extracted, format:
+        "data": {
+          "serialNumber": string,              // Serial number on the document (if present)
+          "documentNumber": string,            // Primary document number (passport/ID/license etc.)
+          "batchNumber": string,               // Batch/lot/barcode/QR batch info
+          "issuer": string,                    // Issuing country, authority, institution, or agency 
+          "ownerName": string,                 // Person's full name as shown on document
+          "dateOfBirth": string,               // Owner's birth date (YYYY-MM-DD)
+          "placeOfBirth": string,              // Owner's place of birth (city/country, as shown)
+          "placeOfIssue": string,              // Place where document is issued
+          "gender": "Male" | "Female" | "Unknown", // Owner's gender (Unknown if not found)
+          "note": string,                      // Any noted remarks or visible comments (optional)
+          "typeId": string,                    // Use the "id" from this list of supported document types:${documentTypes.map((type) => `${type.id} - ${type.name} (${type.category})`).join(', ')})
+          "issuanceDate": string,              // Document's date of issue (YYYY-MM-DD)
+          "expiryDate": string,                // Expiry/valid until (YYYY-MM-DD)
+          "additionalFields": [                // Other fields as visually extracted, format:
+            {
+              "fieldName": string,
+              "fieldValue": string
+            }
+          ],
+          "securityQuestions": [               // Make 1-2 questions/answers based on data you extract, format:
+            {
+              "question": string,
+              "answer": string
+            }
+          ]
+        },
+        "confidence": {
+          "documentNumber": 0.95,
+          "ownerName": 0.88,
+          "dateOfBirth": 0.92,
+          // Confidence score (0-1) for each extracted field
+        },
+        "imageAnalysis": [
           {
-            "fieldName": string,
-            "fieldValue": string
+            "index": 0,
+            "quality": 0.85,
+            "readability": 0.90,
+            "tamperingDetected": false,
+            "warnings": ["slight blur on bottom right corner"]
           }
         ],
-        "securityQuestions": [               // Make 1-2 questions/answers based on data you extract, format:
-          {
-            "question": string,
-            "answer": string
-          }
-        ]
       }
 
       EXAMPLES OF GOOD OUTPUT:
 
-      1. For a clear passport photo: 
+      1. For a clear passport photo:
       {
-        "documentNumber": "A12345678",
-        "ownerName": "JOHN DOE",
-        "dateOfBirth": "1990-01-01",
-        "nationality": "Countryland",
-        "typeId": "<type id for passport>", 
-        "issuer": "Countryland Government",
-        "expiryDate": "2032-12-31",
-        "securityQuestions": [
-          { "question": "What is the document number?", "answer": "A12345678" },
-          { "question": "What is the name of the owner?", "answer": "JOHN DOE" }
-        ]
+        "data": {
+          "documentNumber": "A12345678",
+          "ownerName": "JOHN DOE",
+          "dateOfBirth": "1990-01-01",
+          "issuer": "Countryland Government",
+          "typeId": "<type id for passport>",
+          "expiryDate": "2032-12-31",
+          "gender": "Male",
+          "serialNumber": "P123456",
+          "placeOfBirth": "Capital City",
+          "placeOfIssue": "Capital City",
+          "note": "None",
+          "additionalFields": [
+            { "fieldName": "Nationality", "fieldValue": "Countryland" }
+          ],
+          "securityQuestions": [
+            { "question": "What is the document number?", "answer": "A12345678" },
+            { "question": "What is the owner's full name?", "answer": "JOHN DOE" }
+          ]
+        },
+        "confidence": {
+          "documentNumber": 0.97,
+          "ownerName": 0.94,
+          "dateOfBirth": 0.91,
+          "issuer": 0.90,
+          "typeId": 1,
+          "expiryDate": 0.99,
+          "additionalFields": [
+            { "fieldName": "Nationality", "fieldValue": "Countryland", "nameScore": 0.97, "valueScore": 0.97 }
+          ],
+          "securityQuestions": [
+            { "question": "What is the document number?", "answer": "A12345678", "questionScore": 0.97, "answerScore": 0.97 },
+            { "question": "What is the owner's full name?", "answer": "JOHN DOE", "questionScore": 0.97, "answerScore": 0.97 }
+          ]
+        },
+        "imageAnalysis": [
+          {
+            "index": 0,
+            "imageType": "Front",
+            "quality": 0.93,
+            "readability": 0.95,
+            "tamperingDetected": false,
+            "warnings": []
+          }
+        ],
       }
 
       2. For a license image with both front and back:
       {
-        "documentNumber": "D1234567",
-        "ownerName": "JANE DOE",
-        "dateOfBirth": "1985-02-15",
-        "typeId": "<type id for driver's license>",
-        "issuer": "STATE OF EXAMPLE",
-        "expiryDate": "2026-06-30",
-        "additionalFields": [
-          { "fieldName": "Address", "fieldValue": "123 MAIN ST, ANYTOWN" },
-          { "fieldName": "License Class", "fieldValue": "C" }
+        "data": {
+          "documentNumber": "D1234567",
+          "ownerName": "JANE DOE",
+          "dateOfBirth": "1985-02-15",
+          "typeId": "<type id for driver's license>",
+          "issuer": "STATE OF EXAMPLE",
+          "expiryDate": "2026-06-30",
+          "gender": "Female",
+          "serialNumber": "L987654",
+          "placeOfBirth": "ANYTOWN",
+          "placeOfIssue": "STATE OF EXAMPLE",
+          "additionalFields": [
+            { "fieldName": "Address", "fieldValue": "123 MAIN ST, ANYTOWN" },
+            { "fieldName": "License Class", "fieldValue": "C" }
+          ],
+          "securityQuestions": [
+            { "question": "What is the document number?", "answer": "D1234567" },
+            { "question": "What is the owner's full name?", "answer": "JANE DOE" }
+          ]
+        },
+        "confidence": {
+          "documentNumber": 0.96,
+          "ownerName": 0.91,
+          "dateOfBirth": 0.90,
+          "issuer": 0.92,
+          "typeId": 1,
+          "expiryDate": 0.97,
+          "additionalFields": [
+            { "fieldName": "Address", "fieldValue": "123 MAIN ST, ANYTOWN", "nameScore": 0.96, "valueScore": 0.96 },
+            { "fieldName": "License Class", "fieldValue": "C", "nameScore": 0.96, "valueScore": 0.96 }
+          ],
+          "securityQuestions": [
+            { "question": "What is the document number?", "answer": "D1234567", "questionScore": 0.96, "answerScore": 0.96 },
+            { "question": "What is the owner's full name?", "answer": "JANE DOE", "questionScore": 0.96, "answerScore": 0.96 }
+          ]
+        },
+        "imageAnalysis": [
+          {
+            "index": 0,
+            "imageType": "Front",
+            "quality": 0.88,
+            "readability": 0.90,
+            "tamperingDetected": false,
+            "warnings": ["slight blur on bottom right corner"]
+          }
+          {
+            "index": 1,
+            "imageType": "Back",
+            "quality": 0.88,
+            "readability": 0.90,
+            "tamperingDetected": false,
+            "warnings": ["slight blur on bottom right corner"]
+          }
         ],
-        "securityQuestions": [
-          { "question": "What is the document number?", "answer": "D1234567" }
-        ]
       }
 
       PROCESS:
@@ -687,9 +789,10 @@ export class AiService implements OnModuleInit {
     }
   }
 
-  async extractInformation(
-    input: ExtractInformationInput,
-  ): Promise<DocAiExtractDto> {
+  async extractInformation(input: ExtractInformationInput) {
+    let prompt: string = '';
+    let responseText: string = '';
+    let extractedInfo: DocAiExtractDto | null = null;
     try {
       const documentTypes = await this.prismaService.documentType.findMany({
         select: {
@@ -699,7 +802,6 @@ export class AiService implements OnModuleInit {
         },
       });
 
-      let prompt: string;
       if (input.source === 'ocr') {
         prompt = this.getOcrExtractionPrompt(
           input.extractedText,
@@ -710,9 +812,6 @@ export class AiService implements OnModuleInit {
       }
 
       this.logger.debug(`Prompt: ${prompt}`);
-
-      // --- START OF FIX: SWITCH TO STREAMING ---
-      let responseText = '';
 
       // The configuration object is the same, but we call streamGenerateContent
       const stream = await this.genai.models.generateContentStream({
@@ -739,129 +838,357 @@ export class AiService implements OnModuleInit {
             // ... your full JSON schema ...
             type: Type.OBJECT,
             properties: {
-              serialNumber: {
-                type: Type.STRING,
-                description: 'Serial number of the document',
-                title: 'Serial Number',
-                nullable: true,
-              },
-              documentNumber: {
-                type: Type.STRING,
-                description:
-                  'Document number (unique identifier on most documents)',
-                title: 'Document Number',
-                nullable: true,
-              },
-              batchNumber: {
-                type: Type.STRING,
-                description: 'Batch number or barcode/QR batch',
-                title: 'Batch Number',
-                nullable: true,
-              },
-              issuer: {
-                type: Type.STRING,
-                description:
-                  'Issuer (government, authority, country, state, etc.)',
-                title: 'Issuer',
-                nullable: true,
-              },
-              ownerName: {
-                type: Type.STRING,
-                description: "Owner's full name as printed on the document",
-                title: 'Owner Name',
-              },
-              dateOfBirth: {
-                type: Type.STRING,
-                description: "Owner's date of birth (ISO: YYYY-MM-DD)",
-                title: 'Date of Birth',
-                nullable: true,
-              },
-              placeOfBirth: {
-                type: Type.STRING,
-                description: "Owner's place of birth (city, country, etc.)",
-                title: 'Place of Birth',
-                nullable: true,
-              },
-              placeOfIssue: {
-                type: Type.STRING,
-                description: 'Document place of issue (if available)',
-                title: 'Place of Issue',
-                nullable: true,
-              },
-              gender: {
-                type: Type.STRING,
-                description: "Owner's gender (Male, Female, Unknown)",
-                enum: ['Male', 'Female', 'Unknown'],
-                title: 'Gender',
-                nullable: true,
-              },
-              note: {
-                type: Type.STRING,
-                description:
-                  'Special notes, remarks or status found on the document',
-                title: 'Note',
-                nullable: true,
-              },
-              typeId: {
-                type: Type.STRING,
-                description:
-                  'Document type identifier (should match one of the provided document types)',
-                title: 'Type ID',
-              },
-              issuanceDate: {
-                type: Type.STRING,
-                description:
-                  "Document's issuance/issue date (ISO format if possible)",
-                title: 'Issuance Date',
-                nullable: true,
-              },
-              expiryDate: {
-                type: Type.STRING,
-                description:
-                  "Document's expiration/expiry date (ISO: YYYY-MM-DD)",
-                title: 'Expiry Date',
-                nullable: true,
-              },
-              additionalFields: {
-                type: Type.ARRAY,
-                description:
-                  'Additional fields found on the document that do not fit standard categories',
-                title: 'Additional Fields',
-                nullable: true,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    fieldName: {
-                      type: Type.STRING,
-                      description: 'Name of the field',
-                      title: 'Field Name',
+              data: {
+                type: Type.OBJECT,
+                properties: {
+                  serialNumber: {
+                    type: Type.STRING,
+                    description: 'Serial number of the document',
+                    title: 'Serial Number',
+                    nullable: true,
+                  },
+                  documentNumber: {
+                    type: Type.STRING,
+                    description:
+                      'Document number (unique identifier on most documents)',
+                    title: 'Document Number',
+                    nullable: true,
+                  },
+                  batchNumber: {
+                    type: Type.STRING,
+                    description: 'Batch number or barcode/QR batch',
+                    title: 'Batch Number',
+                    nullable: true,
+                  },
+                  issuer: {
+                    type: Type.STRING,
+                    description:
+                      'Issuer (government, authority, country, state, etc.)',
+                    title: 'Issuer',
+                    nullable: true,
+                  },
+                  ownerName: {
+                    type: Type.STRING,
+                    description: "Owner's full name as printed on the document",
+                    title: 'Owner Name',
+                  },
+                  dateOfBirth: {
+                    type: Type.STRING,
+                    description: "Owner's date of birth (ISO: YYYY-MM-DD)",
+                    title: 'Date of Birth',
+                    nullable: true,
+                  },
+                  placeOfBirth: {
+                    type: Type.STRING,
+                    description: "Owner's place of birth (city, country, etc.)",
+                    title: 'Place of Birth',
+                    nullable: true,
+                  },
+                  placeOfIssue: {
+                    type: Type.STRING,
+                    description: 'Document place of issue (if available)',
+                    title: 'Place of Issue',
+                    nullable: true,
+                  },
+                  gender: {
+                    type: Type.STRING,
+                    description: "Owner's gender (Male, Female, Unknown)",
+                    enum: ['Male', 'Female', 'Unknown'],
+                    title: 'Gender',
+                    nullable: true,
+                  },
+                  note: {
+                    type: Type.STRING,
+                    description:
+                      'Special notes, remarks or status found on the document',
+                    title: 'Note',
+                    nullable: true,
+                  },
+                  typeId: {
+                    type: Type.STRING,
+                    description:
+                      'Document type identifier (should match one of the provided document types)',
+                    title: 'Type ID',
+                  },
+                  issuanceDate: {
+                    type: Type.STRING,
+                    description:
+                      "Document's issuance/issue date (ISO format if possible)",
+                    title: 'Issuance Date',
+                    nullable: true,
+                  },
+                  expiryDate: {
+                    type: Type.STRING,
+                    description:
+                      "Document's expiration/expiry date (ISO: YYYY-MM-DD)",
+                    title: 'Expiry Date',
+                    nullable: true,
+                  },
+                  additionalFields: {
+                    type: Type.ARRAY,
+                    description:
+                      'Additional fields found on the document that do not fit standard categories',
+                    title: 'Additional Fields',
+                    nullable: true,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        fieldName: {
+                          type: Type.STRING,
+                          description: 'Name of the field',
+                          title: 'Field Name',
+                        },
+                        fieldValue: {
+                          type: Type.STRING,
+                          description: 'Value of the field',
+                          title: 'Field Value',
+                        },
+                      },
                     },
-                    fieldValue: {
-                      type: Type.STRING,
-                      description: 'Value of the field',
-                      title: 'Field Value',
+                  },
+                  securityQuestions: {
+                    type: Type.ARRAY,
+                    description:
+                      'Security questions and answers derived from document content',
+                    title: 'Security Questions',
+                    nullable: true,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        question: {
+                          type: Type.STRING,
+                          title: 'Question',
+                          description: 'Security question',
+                        },
+                        answer: {
+                          type: Type.STRING,
+                          title: 'Answer',
+                          description: 'Answer to the question',
+                        },
+                      },
                     },
                   },
                 },
               },
-              securityQuestions: {
+              confidence: {
+                type: Type.OBJECT,
+                properties: {
+                  serialNumber: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for serial number if found else null',
+                    title: 'Serial Number',
+                    nullable: true,
+                  },
+                  documentNumber: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for document number if found else null',
+                    title: 'Document Number',
+                    nullable: true,
+                  },
+                  batchNumber: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for batch number if found else null',
+                    title: 'Batch Number',
+                    nullable: true,
+                  },
+                  issuer: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for issuer if found else null',
+                    title: 'Issuer',
+                    nullable: true,
+                  },
+                  ownerName: {
+                    type: Type.NUMBER,
+                    description:
+                      "Confidence score for owner's name if found else null",
+                    title: 'Owner Name',
+                    nullable: true,
+                  },
+                  dateOfBirth: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for date of birth if found else null',
+                    title: 'Date of Birth',
+                    nullable: true,
+                  },
+                  placeOfBirth: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for place of birth if found else null',
+                    title: 'Place of Birth',
+                    nullable: true,
+                  },
+                  placeOfIssue: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for place of issue if found else null',
+                    title: 'Place of Issue',
+                    nullable: true,
+                  },
+                  gender: {
+                    type: Type.NUMBER,
+                    description:
+                      "Confidence score for owner's gender if found else null",
+                    title: 'Gender',
+                    nullable: true,
+                  },
+                  typeId: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for document type identifier if found else null',
+                    title: 'Type ID',
+                    nullable: true,
+                  },
+                  issuanceDate: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for issuance date if found else null',
+                    title: 'Issuance Date',
+                    nullable: true,
+                  },
+                  expiryDate: {
+                    type: Type.NUMBER,
+                    description:
+                      'Confidence score for expiry date if found else null',
+                    title: 'Expiry Date',
+                    nullable: true,
+                  },
+                  additionalFields: {
+                    type: Type.ARRAY,
+                    description:
+                      'Additional fields found on the document that do not fit standard categories if found else null',
+                    title: 'Additional Fields',
+                    nullable: true,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        fieldName: {
+                          type: Type.STRING,
+                          description: 'Name of the field',
+                          title: 'Field Name',
+                          nullable: true,
+                        },
+                        nameScore: {
+                          type: Type.NUMBER,
+                          description:
+                            'Confidence score for the field name if found else null',
+                          title: 'Field Name Score',
+                          nullable: true,
+                        },
+                        fieldValue: {
+                          type: Type.STRING,
+                          description: 'Value of the field',
+                          title: 'Field Value',
+                          nullable: true,
+                        },
+                        valueScore: {
+                          type: Type.NUMBER,
+                          description:
+                            'Confidence score for the field value if found else null',
+                          title: 'Field Value Score',
+                          nullable: true,
+                        },
+                      },
+                    },
+                  },
+                  securityQuestions: {
+                    type: Type.ARRAY,
+                    description:
+                      'Security questions and answers derived from document content',
+                    title: 'Security Questions',
+                    nullable: true,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        question: {
+                          type: Type.STRING,
+                          title: 'Question',
+                          description: 'Security question',
+                          nullable: true,
+                        },
+                        questionScore: {
+                          type: Type.NUMBER,
+                          description:
+                            'Confidence score for the question if found else null',
+                          title: 'Question Score',
+                          nullable: true,
+                        },
+                        answer: {
+                          type: Type.STRING,
+                          title: 'Answer',
+                          description: 'Answer to the question',
+                          nullable: true,
+                        },
+                        answerScore: {
+                          type: Type.NUMBER,
+                          description:
+                            'Confidence score for the answer if found else null',
+                          title: 'Answer Score',
+                          nullable: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              imageAnalysis: {
                 type: Type.ARRAY,
-                description:
-                  'Security questions and answers derived from document content',
-                title: 'Security Questions',
+                description: 'List of image analysis if found else null',
+                title: 'Image Analysis',
                 nullable: true,
                 items: {
                   type: Type.OBJECT,
                   properties: {
-                    question: {
-                      type: Type.STRING,
-                      title: 'Question',
-                      description: 'Security question',
+                    index: {
+                      type: Type.NUMBER,
+                      description: 'Index of the image if found else null',
+                      title: 'Index',
+                      nullable: true,
                     },
-                    answer: {
+                    imageType: {
                       type: Type.STRING,
-                      title: 'Answer',
-                      description: 'Answer to the question',
+                      description: 'Type of the image if found else null',
+                      title: 'Image Type',
+                      nullable: true,
+                    },
+                    quality: {
+                      type: Type.NUMBER,
+                      description:
+                        '0-1 score for image quality if found else null',
+                      title: 'Quality',
+                      nullable: true,
+                    },
+                    readability: {
+                      type: Type.NUMBER,
+                      description:
+                        '0-1 score for text readability if found else null',
+                      title: 'Readability',
+                      nullable: true,
+                    },
+                    tamperingDetected: {
+                      type: Type.BOOLEAN,
+                      description:
+                        'true if tampering detected in the image if found else null',
+                      title: 'Tampering Detected',
+                      nullable: true,
+                    },
+                    warnings: {
+                      type: Type.ARRAY,
+                      description:
+                        'List of warnings about the image if found else null',
+                      title: 'Warnings',
+                      nullable: true,
+                      items: {
+                        type: Type.STRING,
+                        description:
+                          'Warning about the image if found else null',
+                        title: 'Warning',
+                        nullable: true,
+                      },
                     },
                   },
                 },
@@ -876,37 +1203,44 @@ export class AiService implements OnModuleInit {
       for await (const chunk of stream) {
         responseText += chunk?.text?.trim() ?? '';
       }
-      // --- END OF FIX ---
 
       this.logger.debug(`Response Text: ${responseText}`);
+      const cleanedResponseText = this.cleanResponseText(responseText);
 
-      // Parse JSON from the response
-      // Before parsing, add a final cleanup step to handle potential markdown fences (`json)
-      const cleanedResponseText = responseText
-        .trim()
-        .replace(/^```json\s*/, '')
-        .replace(/\s*```$/, '');
-
-      const extractedInfo = nullToUndefined<Record<string, any>>(
+      extractedInfo = nullToUndefined<DocAiExtractDto>(
         JSON.parse(cleanedResponseText),
       );
 
-      this.logger.debug('Extracted Information: ', extractedInfo);
-      const vlidation = await DocAiExtractSchema.safeParseAsync(extractedInfo);
-
-      if (!vlidation.success) {
-        this.logger.error('Invalid extraction result', vlidation.error);
-        throw new BadRequestException('Invalid extraction result');
-      }
-
-      return vlidation.data;
-    } catch (error) {
-      // It's good practice to log the error before re-throwing it.
-      // If the JSON.parse error happens here, the responseText logging
-      // above will show the incomplete string that failed to parse.
-      console.error('Error extracting information:', error);
-      throw error;
+      const extraction = await this.prismaService.aIExtraction.create({
+        data: {
+          rawInput: prompt,
+          rawOutput: cleanedResponseText,
+          aiModel: this.options.model,
+          extractedData: extractedInfo.data,
+          confidence: extractedInfo.confidence,
+          imageAnalysis: extractedInfo.imageAnalysis,
+        },
+      });
+      return extraction;
+    } catch (error: any) {
+      this.logger.error('Error extracting information:', error);
+      return await this.prismaService.aIExtraction.create({
+        data: {
+          rawInput: prompt,
+          rawOutput: this.cleanResponseText(responseText),
+          aiModel: this.options.model,
+          errorMessage: error?.message ?? 'Unknown error',
+          status: AIExtractionStatus.FAILED,
+        },
+      });
     }
+  }
+
+  private cleanResponseText(responseText: string) {
+    return responseText
+      .trim()
+      .replace(/^```json\s*/, '')
+      .replace(/\s*```$/, '');
   }
 
   async matchDocuments(

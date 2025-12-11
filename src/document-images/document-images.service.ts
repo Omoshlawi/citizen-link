@@ -24,6 +24,7 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
+import { DocAiExtractDto } from 'src/ai/ocr.dto';
 
 @Injectable()
 export class DocumentImagesService {
@@ -100,19 +101,37 @@ export class DocumentImagesService {
   ) {
     await this.ensureCaseTypeIsFound(caseId);
     await this.filesExists(createDocumentImageDto.images);
-    const extractionTasks = await Promise.all(
+    // const extractionTasks = await Promise.all(
+    //   createDocumentImageDto.images.map(async (image) => {
+    //     const url = await this.s3Service.generateDownloadSignedUrl(image);
+    //     const text = await this.ocrService.recognizeFromUrl(url);
+    //     return text;
+    //   }),
+    // );
+    // const info = await this.aiService.extractInformation({
+    //   source: 'ocr',
+    //   extractedText: extractionTasks.join('\n\n'),
+    // });
+    // const { additionalFields, securityQuestions, typeId, ...documentpayload } =
+    //   info;
+
+    const _extractionTasks = await Promise.all(
       createDocumentImageDto.images.map(async (image) => {
         const url = await this.s3Service.generateDownloadSignedUrl(image);
-        const text = await this.ocrService.recognizeFromUrl(url);
-        return text;
+        const buffer = await this.ocrService.downloadFileAsBuffer(url);
+        const metadata = await this.s3Service.getFileMetadata(image);
+        const mimeType =
+          metadata?.ContentType ?? `image/${image.split('.').pop()}`;
+        return { buffer, mimeType };
       }),
     );
-    const info = await this.aiService.extractInformation({
-      source: 'ocr',
-      extractedText: extractionTasks.join('\n\n'),
+    const extraction = await this.aiService.extractInformation({
+      source: 'img',
+      files: _extractionTasks,
     });
     const { additionalFields, securityQuestions, typeId, ...documentpayload } =
-      info;
+      extraction.extractedData as DocAiExtractDto['data'];
+
     const updatedDocument = await this.prismaService.document.update({
       where: { id: documentId, caseId },
       data: {
@@ -136,7 +155,11 @@ export class DocumentImagesService {
           createMany: {
             data: createDocumentImageDto.images.map((image, i) => ({
               url: image,
-              metadata: { ocrText: extractionTasks[i] },
+              metadata: {
+                imageAnalysis: (
+                  extraction.imageAnalysis as DocAiExtractDto['imageAnalysis']
+                )[i],
+              },
             })),
           },
         },
@@ -162,12 +185,18 @@ export class DocumentImagesService {
         } as any,
       },
       select: {
+        id: true,
         images: {
           select: {
             id: true,
           },
         },
       },
+    });
+    // update the ai extraction document id
+    await this.prismaService.aIExtraction.update({
+      where: { id: extraction.id },
+      data: { documentId: updatedDocument.id },
     });
     return {
       images: await this.prismaService.image.findMany({

@@ -290,12 +290,11 @@ model Document {
   gender       String? // Owner's gender
   ownerName    String?
 
-  // AI Extraction
-  aiExtractionPrompt String? @db.Text // Custom prompt for this doc
-  aiExtractedData    Json? // AI extracts from uploaded images
-
+  // AI Extraction (Moved to AIInteraction model hence reducing duplication of data and reducing db size)
+  // aiExtractionPrompt String? @db.Text // 
+  // aiExtractedData    Json? // AI extracts from uploaded images
   // AI Confidence Scores
-  extractionConfidence Json // Per-field confidence scores
+  // extractionConfidence Json // Per-field confidence scores
 
   issuer       String?
   // Document Type Information
@@ -345,18 +344,18 @@ model Image {
 model AIExtraction {
   id String @id @default(uuid())
 
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   // AI Model Info
   aiModel      String // e.g., "claude-sonnet-4", "gpt-4-vision"
-  modelVersion String // Track model versions for debugging
 
   // Extraction Data
   rawInput      Json // Input sent to AI (image URLs, text, etc.)
   rawOutput     Json // Full AI response
-  extractedData Json // Parsed extracted fields
-  confidence    Json // Per-field confidence scores
+  extractedData Json? // Parsed extracted fields
+  confidence    Json? // Per-field confidence scores
+  imageAnalysis Json? // Image analysis results
 
   // Status
   status       AIExtractionStatus @default(SUCCESS)

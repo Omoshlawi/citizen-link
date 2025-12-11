@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Injectable,
@@ -32,6 +34,7 @@ import {
 } from './document-cases.dto';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 import { AiConfig } from '../ai/ai.config';
+import { DocAiExtractDto } from '../ai/ocr.dto';
 
 @Injectable()
 export class DocumentCasesService {
@@ -64,7 +67,6 @@ export class DocumentCasesService {
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    console.log('Ai Config ---------->', this.aiConfig);
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
     await this.filesExists(images);
     // const extractionTasks = await Promise.all(
@@ -88,13 +90,13 @@ export class DocumentCasesService {
         return { buffer, mimeType };
       }),
     );
-    const _info = await this.aiService.extractInformation({
+    const extraction = await this.aiService.extractInformation({
       source: 'img',
       files: _extractionTasks,
     });
-
-    const { additionalFields, securityQuestions, ...documentpayload } = _info; //?? info ?? {};
-    return await this.prismaService.documentCase.create({
+    const { additionalFields, securityQuestions, ...documentpayload } =
+      extraction.extractedData as DocAiExtractDto['data'];
+    const documentCase = await this.prismaService.documentCase.create({
       data: {
         ...caseData,
         eventDate: dayjs(eventDate).toDate(),
@@ -119,10 +121,13 @@ export class DocumentCasesService {
             images: images?.length
               ? {
                   createMany: {
-                    data: images.map((image) => ({
+                    data: images.map((image, i) => ({
                       url: image,
                       metadata: {
                         // ocrText: extractionTasks[i]
+                        imageAnalysis: (
+                          extraction.imageAnalysis as DocAiExtractDto['imageAnalysis']
+                        )[i],
                       },
                     })),
                   },
@@ -138,14 +143,19 @@ export class DocumentCasesService {
                   },
                 }
               : undefined,
-            extractionConfidence: {},
-            aiExtractedData: {},
-            aiExtractionPrompt: '',
           },
         },
       },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      include: {
+        document: true,
+      },
     });
+    // update the ai extraction document id
+    await this.prismaService.aIExtraction.update({
+      where: { id: extraction.id },
+      data: { documentId: documentCase.document!.id! },
+    });
+    return await this.findOne(documentCase.id, query, userId);
   }
 
   async findAll(
@@ -432,9 +442,6 @@ export class DocumentCasesService {
                   },
                 }
               : undefined,
-            extractionConfidence: {},
-            aiExtractedData: {},
-            aiExtractionPrompt: '',
           },
         },
         description: createLostDocumentCaseDto.description,
