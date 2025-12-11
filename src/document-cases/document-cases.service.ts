@@ -14,8 +14,11 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
+import { AiConfig } from '../ai/ai.config';
 import { AiService } from '../ai/ai.service';
+import { DocAiExtractDto } from '../ai/ocr.dto';
 import { OcrService } from '../ai/ocr.service';
+import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
@@ -32,9 +35,6 @@ import {
   QueryDocumentCaseDto,
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
-import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
-import { AiConfig } from '../ai/ai.config';
-import { DocAiExtractDto } from '../ai/ocr.dto';
 
 @Injectable()
 export class DocumentCasesService {
@@ -62,6 +62,7 @@ export class DocumentCasesService {
     }
     this.logger.debug('All images exist');
   }
+
   async reportFoundDocumentCase(
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
@@ -103,6 +104,7 @@ export class DocumentCasesService {
         foundDocumentCase: {
           create: {
             securityQuestion: securityQuestions,
+            extractionId: extraction.id,
           },
         },
         userId,
@@ -127,7 +129,7 @@ export class DocumentCasesService {
                         // ocrText: extractionTasks[i]
                         imageAnalysis: (
                           extraction.imageAnalysis as DocAiExtractDto['imageAnalysis']
-                        )[i],
+                        ).find((image) => image.index === i),
                       },
                     })),
                   },

@@ -158,7 +158,7 @@ export class DocumentImagesService {
               metadata: {
                 imageAnalysis: (
                   extraction.imageAnalysis as DocAiExtractDto['imageAnalysis']
-                )[i],
+                ).find((image) => image.index === i),
               },
             })),
           },

@@ -290,12 +290,6 @@ model Document {
   gender       String? // Owner's gender
   ownerName    String?
 
-  // AI Extraction (Moved to AIInteraction model hence reducing duplication of data and reducing db size)
-  // aiExtractionPrompt String? @db.Text // 
-  // aiExtractedData    Json? // AI extracts from uploaded images
-  // AI Confidence Scores
-  // extractionConfidence Json // Per-field confidence scores
-
   issuer       String?
   // Document Type Information
   typeId       String
@@ -310,7 +304,7 @@ model Document {
   createdAt        DateTime        @default(now())
   images           Image[]
   additionalFields DocumentField[]
-  aiextraction     AIExtraction[]
+  aiextractions    AIExtraction[]
 }
 
 // Dynamic Field Values - stores actual values for document-specific fields
@@ -344,34 +338,25 @@ model Image {
 model AIExtraction {
   id String @id @default(uuid())
 
-  documentId String?
-  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  // AI Model Info
-  aiModel      String // e.g., "claude-sonnet-4", "gpt-4-vision"
+  // Related ai Interaction
+  aiInteractionId String         @unique
+  aiInteraction   AIInteraction? @relation(fields: [aiInteractionId], references: [id])
 
   // Extraction Data
-  rawInput      Json // Input sent to AI (image URLs, text, etc.)
-  rawOutput     Json // Full AI response
   extractedData Json? // Parsed extracted fields
   confidence    Json? // Per-field confidence scores
   imageAnalysis Json? // Image analysis results
 
-  // Status
-  status       AIExtractionStatus @default(SUCCESS)
-  errorMessage String?            @db.Text
+  // status
+  success      Boolean @default(true)
+  errorMessage String? @db.Text
 
-  createdAt DateTime @default(now())
+  createdAt          DateTime            @default(now())
+  document           Document?           @relation(fields: [documentId], references: [id])
+  documentId         String?
+  foundDocumentCases FoundDocumentCase[]
 
-  @@index([documentId])
-  @@index([status])
-}
-
-enum AIExtractionStatus {
-  SUCCESS
-  PARTIAL_SUCCESS
-  FAILED
-  RETRY_NEEDED
+  @@index([aiInteractionId])
 }
 
 model DocumentCase {
@@ -417,9 +402,16 @@ model LostDocumentCase {
 // Found Report model for documents that were found
 
 model FoundDocumentCase {
-  id               String                  @id @default(uuid())
-  caseId           String                  @unique
-  case             DocumentCase            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  id String @id @default(uuid())
+
+  // Related Case
+  caseId String       @unique
+  case   DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  // Related Extraction
+  extractionId String
+  extraction   AIExtraction @relation(fields: [extractionId], references: [id])
+
   status           FoundDocumentCaseStatus @default(DRAFT)
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
@@ -677,7 +669,7 @@ model AIInteraction {
 
   // AI Model Info
   aiModel      String
-  modelVersion String
+  modelVersion String?
 
   // Context - What entity triggered this AI call
   entityType String? // "LostDocument", "Match", "Claim", etc.
@@ -697,7 +689,8 @@ model AIInteraction {
   errorMessage String? @db.Text
   retryCount   Int     @default(0)
 
-  createdAt DateTime @default(now())
+  createdAt    DateTime      @default(now())
+  aiextraction AIExtraction?
 
   @@index([userId])
   @@index([interactionType])

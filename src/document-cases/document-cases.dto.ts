@@ -129,6 +129,8 @@ export class SecurityQuestionDto {
 
 export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
   @ApiProperty()
+  extractionId: string;
+  @ApiProperty()
   pickupStationId: string | null;
   @ApiProperty()
   createdAt: Date;

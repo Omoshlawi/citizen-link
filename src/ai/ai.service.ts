@@ -2,25 +2,32 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
+  GenerateContentResponse,
+  GoogleGenAI,
+  Part,
+  Type,
+} from '@google/genai';
+import {
   BadRequestException,
   Inject,
   Injectable,
   Logger,
   OnModuleInit,
 } from '@nestjs/common';
-import { AIOptions, ExtractInformationInput } from './ai.types';
-import { AI_OPTIONS_TOKEN } from './ai.contants';
-import { GoogleGenAI, Part, Type } from '@google/genai';
-import { PrismaService } from '../prisma/prisma.service';
 import {
+  AIInteraction,
+  AIInteractionType,
+  Document,
   DocumentCase,
   DocumentField,
   DocumentType,
-  Document,
-  AIExtractionStatus,
 } from '../../generated/prisma/client';
-import { DocAiExtractDto, DocAiExtractSchema } from './ocr.dto';
 import { nullToUndefined } from '../app.utils';
+import { PrismaService } from '../prisma/prisma.service';
+import { AI_OPTIONS_TOKEN } from './ai.contants';
+import { AIOptions, ExtractInformationInput } from './ai.types';
+import { DocAiExtractDto, DocAiExtractSchema } from './ocr.dto';
+import z from 'zod';
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -789,10 +796,10 @@ export class AiService implements OnModuleInit {
     }
   }
 
-  async extractInformation(input: ExtractInformationInput) {
+  private async scan(input: ExtractInformationInput) {
     let prompt: string = '';
     let responseText: string = '';
-    let extractedInfo: DocAiExtractDto | null = null;
+    let lastChunck: GenerateContentResponse | null = null;
     try {
       const documentTypes = await this.prismaService.documentType.findMany({
         select: {
@@ -1202,37 +1209,41 @@ export class AiService implements OnModuleInit {
       // Aggregate all text chunks from the stream
       for await (const chunk of stream) {
         responseText += chunk?.text?.trim() ?? '';
+        lastChunck = chunk;
       }
-
       this.logger.debug(`Response Text: ${responseText}`);
-      const cleanedResponseText = this.cleanResponseText(responseText);
-
-      extractedInfo = nullToUndefined<DocAiExtractDto>(
-        JSON.parse(cleanedResponseText),
-      );
-
-      const extraction = await this.prismaService.aIExtraction.create({
+      const aiInteraction = await this.prismaService.aIInteraction.create({
         data: {
-          rawInput: prompt,
-          rawOutput: cleanedResponseText,
+          prompt: prompt,
+          response: responseText,
           aiModel: this.options.model,
-          extractedData: extractedInfo.data,
-          confidence: extractedInfo.confidence,
-          imageAnalysis: extractedInfo.imageAnalysis,
+          interactionType: AIInteractionType.DOCUMENT_EXTRACTION,
+          entityType: 'Document',
+          modelVersion: lastChunck?.modelVersion,
+          // entityId: input.documentId,
+          tokenUsage: lastChunck?.usageMetadata as any,
         },
       });
-      return extraction;
+      return aiInteraction;
     } catch (error: any) {
-      this.logger.error('Error extracting information:', error);
-      return await this.prismaService.aIExtraction.create({
+      this.logger.error('Error scanning and extracting information:', error);
+      await this.prismaService.aIInteraction.create({
         data: {
-          rawInput: prompt,
-          rawOutput: this.cleanResponseText(responseText),
+          prompt: prompt,
+          response: responseText,
           aiModel: this.options.model,
+          interactionType: AIInteractionType.DOCUMENT_EXTRACTION,
+          entityType: 'Document',
+          modelVersion: lastChunck?.modelVersion,
+          // entityId: input.documentId,
+          tokenUsage: lastChunck?.usageMetadata as any,
           errorMessage: error?.message ?? 'Unknown error',
-          status: AIExtractionStatus.FAILED,
+          success: false,
         },
       });
+      throw new BadRequestException(
+        'Failed to scan and extract document information',
+      );
     }
   }
 
@@ -1241,6 +1252,60 @@ export class AiService implements OnModuleInit {
       .trim()
       .replace(/^```json\s*/, '')
       .replace(/\s*```$/, '');
+  }
+
+  private async extractInformationFromInteraction(
+    aiInteraction: AIInteraction,
+  ) {
+    try {
+      const aiResponse = nullToUndefined<Record<string, any>>(
+        JSON.parse(this.cleanResponseText(aiInteraction.response)) as Record<
+          string,
+          any
+        >,
+      );
+      const validtion = await DocAiExtractSchema.safeParseAsync(aiResponse);
+      if (!validtion.success) {
+        await this.prismaService.aIExtraction.create({
+          data: {
+            aiInteractionId: aiInteraction.id,
+            errorMessage: JSON.stringify(z.formatError(validtion.error)),
+            success: false,
+          },
+        });
+        throw new BadRequestException('Invalid extraction result');
+      }
+
+      return await this.prismaService.aIExtraction.create({
+        data: {
+          extractedData: validtion.data.data,
+          confidence: validtion.data.confidence,
+          imageAnalysis: validtion.data.imageAnalysis,
+          aiInteractionId: aiInteraction.id,
+          success: true,
+        },
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        /* empty */
+        // Avoid creating aiExtraction as its already created in zod validation failure block
+      } else {
+        await this.prismaService.aIExtraction.create({
+          data: {
+            aiInteractionId: aiInteraction.id,
+            errorMessage: error?.message ?? 'Unknown error',
+            success: false,
+          },
+        });
+      }
+      this.logger.error('Error extracting information:', error);
+      throw new BadRequestException('Failed to extract document information');
+    }
+  }
+
+  async extractInformation(input: ExtractInformationInput) {
+    const aiInteraction = await this.scan(input);
+    return await this.extractInformationFromInteraction(aiInteraction);
   }
 
   async matchDocuments(
