@@ -5,7 +5,7 @@ CREATE TYPE "AddressType" AS ENUM ('HOME', 'WORK', 'BILLING', 'SHIPPING', 'OFFIC
 CREATE TYPE "DocumentCategory" AS ENUM ('IDENTITY', 'ACADEMIC', 'PROFESSIONAL', 'VEHICLE', 'FINANCIAL', 'MEDICAL', 'LEGAL', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "AIExtractionStatus" AS ENUM ('SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'RETRY_NEEDED');
+CREATE TYPE "AIExtractionInteractionType" AS ENUM ('DATA_EXTRACTION', 'CONFIDENCE_SCORE', 'IMAGE_ANALYSIS');
 
 -- CreateEnum
 CREATE TYPE "LostDocumentCaseStatus" AS ENUM ('SUBMITTED', 'COMPLETED');
@@ -32,7 +32,7 @@ CREATE TYPE "ClaimStatus" AS ENUM ('PENDING_VERIFICATION', 'VERIFIED', 'PAYMENT_
 CREATE TYPE "VerificationVerdict" AS ENUM ('STRONG_MATCH', 'LIKELY_MATCH', 'UNCERTAIN', 'NO_MATCH', 'INSUFFICIENT_DATA');
 
 -- CreateEnum
-CREATE TYPE "AIInteractionType" AS ENUM ('DOCUMENT_EXTRACTION', 'DOCUMENT_MATCHING', 'CLAIM_VERIFICATION', 'IMAGE_ANALYSIS', 'SECURITY_QUESTIONS_GEN', 'DISPUTE_ANALYSIS', 'USER_QUERY_RESPONSE', 'ALTERNATIVE_MATCHES');
+CREATE TYPE "AIInteractionType" AS ENUM ('DATA_EXTRACTION', 'CONFIDENCE_SCORE', 'DOCUMENT_MATCHING', 'CLAIM_VERIFICATION', 'IMAGE_ANALYSIS', 'SECURITY_QUESTIONS_GEN', 'DISPUTE_ANALYSIS', 'USER_QUERY_RESPONSE', 'ALTERNATIVE_MATCHES');
 
 -- CreateEnum
 CREATE TYPE "HandoverStatus" AS ENUM ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
@@ -237,9 +237,6 @@ CREATE TABLE "Document" (
     "placeOfBirth" TEXT,
     "gender" TEXT,
     "ownerName" TEXT,
-    "aiExtractionPrompt" TEXT,
-    "aiExtractedData" JSONB,
-    "extractionConfidence" JSONB NOT NULL,
     "issuer" TEXT,
     "typeId" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
@@ -281,18 +278,23 @@ CREATE TABLE "Image" (
 -- CreateTable
 CREATE TABLE "AIExtraction" (
     "id" TEXT NOT NULL,
-    "documentId" TEXT NOT NULL,
-    "aiModel" TEXT NOT NULL,
-    "modelVersion" TEXT NOT NULL,
-    "rawInput" JSONB NOT NULL,
-    "rawOutput" JSONB NOT NULL,
-    "extractedData" JSONB NOT NULL,
-    "confidence" JSONB NOT NULL,
-    "status" "AIExtractionStatus" NOT NULL DEFAULT 'SUCCESS',
-    "errorMessage" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AIExtraction_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AIExtractionInteraction" (
+    "id" TEXT NOT NULL,
+    "aiInteractionId" TEXT NOT NULL,
+    "aiExtractionId" TEXT NOT NULL,
+    "extractionData" JSONB,
+    "success" BOOLEAN NOT NULL DEFAULT true,
+    "errorMessage" TEXT,
+    "extractionType" "AIExtractionInteractionType" NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AIExtractionInteraction_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -325,6 +327,7 @@ CREATE TABLE "LostDocumentCase" (
 CREATE TABLE "FoundDocumentCase" (
     "id" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
+    "extractionId" TEXT NOT NULL,
     "status" "FoundDocumentCaseStatus" NOT NULL DEFAULT 'DRAFT',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -423,7 +426,7 @@ CREATE TABLE "AIInteraction" (
     "userId" TEXT,
     "interactionType" "AIInteractionType" NOT NULL,
     "aiModel" TEXT NOT NULL,
-    "modelVersion" TEXT NOT NULL,
+    "modelVersion" TEXT,
     "entityType" TEXT,
     "entityId" TEXT,
     "prompt" TEXT NOT NULL,
@@ -679,12 +682,6 @@ CREATE UNIQUE INDEX "Document_caseId_key" ON "Document"("caseId");
 CREATE UNIQUE INDEX "DocumentField_documentId_fieldName_key" ON "DocumentField"("documentId", "fieldName");
 
 -- CreateIndex
-CREATE INDEX "AIExtraction_documentId_idx" ON "AIExtraction"("documentId");
-
--- CreateIndex
-CREATE INDEX "AIExtraction_status_idx" ON "AIExtraction"("status");
-
--- CreateIndex
 CREATE INDEX "DocumentCase_eventDate_idx" ON "DocumentCase"("eventDate");
 
 -- CreateIndex
@@ -862,7 +859,10 @@ ALTER TABLE "DocumentField" ADD CONSTRAINT "DocumentField_documentId_fkey" FOREI
 ALTER TABLE "Image" ADD CONSTRAINT "Image_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AIExtraction" ADD CONSTRAINT "AIExtraction_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AIExtractionInteraction" ADD CONSTRAINT "AIExtractionInteraction_aiInteractionId_fkey" FOREIGN KEY ("aiInteractionId") REFERENCES "AIInteraction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AIExtractionInteraction" ADD CONSTRAINT "AIExtractionInteraction_aiExtractionId_fkey" FOREIGN KEY ("aiExtractionId") REFERENCES "AIExtraction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DocumentCase" ADD CONSTRAINT "DocumentCase_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -875,6 +875,9 @@ ALTER TABLE "LostDocumentCase" ADD CONSTRAINT "LostDocumentCase_caseId_fkey" FOR
 
 -- AddForeignKey
 ALTER TABLE "FoundDocumentCase" ADD CONSTRAINT "FoundDocumentCase_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "DocumentCase"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FoundDocumentCase" ADD CONSTRAINT "FoundDocumentCase_extractionId_fkey" FOREIGN KEY ("extractionId") REFERENCES "AIExtraction"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "FoundDocumentCase" ADD CONSTRAINT "FoundDocumentCase_pickupStationId_fkey" FOREIGN KEY ("pickupStationId") REFERENCES "PickupStation"("id") ON DELETE SET NULL ON UPDATE CASCADE;

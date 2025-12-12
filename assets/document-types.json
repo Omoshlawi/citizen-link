@@ -1,0 +1,212 @@
+[
+  {
+    "name": "Passport",
+    "category": "IDENTITY",
+    "description": "International travel document issued by government authorities. Critical for international travel and identification abroad.",
+    "icon": "passport",
+    "loyaltyPoints": 500,
+    "replacementInstructions": "Contact your country's passport office or embassy. Requires application form, photos, proof of identity, and fees. Processing can take 4-8 weeks or longer. For urgent travel, expedited services may be available at additional cost.",
+    "averageReplacementCost": 150.0,
+    "verificationStrategy": {
+      "strictFields": ["passportNumber", "dateOfBirth"],
+      "flexibleFields": ["name", "placeOfBirth"],
+      "requiredFields": ["passportNumber", "name", "dateOfBirth"]
+    }
+  },
+  {
+    "name": "National ID",
+    "category": "IDENTITY",
+    "description": "Government-issued identification card proving citizenship and identity. Essential for voting, banking, and official transactions.",
+    "icon": "id-card",
+    "loyaltyPoints": 400,
+    "replacementInstructions": "Visit your local registration office or apply online. Requires application form, photos, proof of citizenship, and fees. Processing typically takes 2-4 weeks. Temporary ID may be issued immediately.",
+    "averageReplacementCost": 25.0,
+    "verificationStrategy": {
+      "strictFields": ["idNumber", "dateOfBirth"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["idNumber", "name", "dateOfBirth"]
+    }
+  },
+  {
+    "name": "Birth Certificate",
+    "category": "IDENTITY",
+    "description": "Official document certifying the details of a person's birth. Required for obtaining other identification documents and legal purposes.",
+    "icon": "certificate",
+    "loyaltyPoints": 350,
+    "replacementInstructions": "Contact the vital records office in the state/country where you were born. Requires application form, proof of identity, and fees. Processing can take 2-6 weeks. May require notarized copies for official use.",
+    "averageReplacementCost": 30.0,
+    "verificationStrategy": {
+      "strictFields": ["certificateNumber", "dateOfBirth"],
+      "flexibleFields": ["name", "placeOfBirth", "parentNames"],
+      "requiredFields": ["certificateNumber", "name", "dateOfBirth"]
+    }
+  },
+  {
+    "name": "School ID",
+    "category": "ACADEMIC",
+    "description": "Student identification card issued by educational institutions. Used for campus access, library services, and student discounts.",
+    "icon": "school",
+    "loyaltyPoints": 200,
+    "replacementInstructions": "Contact your school's registrar or student services office. Usually requires application form and may have a small fee. Processing typically takes 1-2 weeks. Some schools issue temporary IDs immediately.",
+    "averageReplacementCost": 15.0,
+    "verificationStrategy": {
+      "strictFields": ["studentId", "schoolName"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["studentId", "name", "schoolName"]
+    }
+  },
+  {
+    "name": "Driving Licence",
+    "category": "VEHICLE",
+    "description": "Official authorization to operate motor vehicles. Required for legal driving and often used as identification.",
+    "icon": "driving-licence",
+    "loyaltyPoints": 300,
+    "replacementInstructions": "Visit your local motor vehicle department or apply online. Requires application form, proof of identity, and fees. Processing typically takes 1-3 weeks. Temporary license may be issued immediately. May require retaking written or practical test if expired.",
+    "averageReplacementCost": 40.0,
+    "verificationStrategy": {
+      "strictFields": ["licenseNumber", "dateOfBirth"],
+      "flexibleFields": ["name", "address"],
+      "requiredFields": ["licenseNumber", "name", "dateOfBirth"]
+    }
+  },
+  {
+    "name": "University ID",
+    "category": "ACADEMIC",
+    "description": "Student or staff identification card for university or college. Provides access to campus facilities, library, and academic services.",
+    "icon": "university",
+    "loyaltyPoints": 250,
+    "replacementInstructions": "Contact your university's student services or ID card office. Requires application form and may have a replacement fee. Processing typically takes 3-7 business days. Temporary access may be granted while waiting.",
+    "averageReplacementCost": 20.0,
+    "verificationStrategy": {
+      "strictFields": ["studentId", "universityName"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["studentId", "name", "universityName"]
+    }
+  },
+  {
+    "name": "Work ID",
+    "category": "PROFESSIONAL",
+    "description": "Employee identification card issued by employer. Used for building access, time tracking, and employee benefits.",
+    "icon": "work-id",
+    "loyaltyPoints": 200,
+    "replacementInstructions": "Contact your HR department or security office. Usually requires a simple request form. Processing typically takes 1-3 business days. Temporary access may be arranged immediately.",
+    "averageReplacementCost": 10.0,
+    "verificationStrategy": {
+      "strictFields": ["employeeId", "companyName"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["employeeId", "name", "companyName"]
+    }
+  },
+  {
+    "name": "Professional License",
+    "category": "PROFESSIONAL",
+    "description": "License to practice a profession (e.g., medical, legal, engineering). Required for legal practice in regulated fields.",
+    "icon": "professional-license",
+    "loyaltyPoints": 400,
+    "replacementInstructions": "Contact the licensing board for your profession. Requires application form, proof of identity, and fees. Processing can take 2-6 weeks. May require verification of credentials and continuing education records.",
+    "averageReplacementCost": 75.0,
+    "verificationStrategy": {
+      "strictFields": ["licenseNumber", "profession"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["licenseNumber", "name", "profession"]
+    }
+  },
+  {
+    "name": "Marriage Certificate",
+    "category": "LEGAL",
+    "description": "Official document certifying a marriage. Required for name changes, spousal benefits, and legal purposes.",
+    "icon": "marriage-certificate",
+    "loyaltyPoints": 350,
+    "replacementInstructions": "Contact the vital records office where the marriage was registered. Requires application form, proof of identity, and fees. Processing can take 2-6 weeks. May require notarized copies for official use.",
+    "averageReplacementCost": 35.0,
+    "verificationStrategy": {
+      "strictFields": ["certificateNumber", "marriageDate"],
+      "flexibleFields": ["spouseNames", "placeOfMarriage"],
+      "requiredFields": ["certificateNumber", "spouseNames", "marriageDate"]
+    }
+  },
+  {
+    "name": "Diploma",
+    "category": "ACADEMIC",
+    "description": "Official document certifying completion of an educational program. Important for employment and further education.",
+    "icon": "diploma",
+    "loyaltyPoints": 300,
+    "replacementInstructions": "Contact your educational institution's registrar office. Requires application form, proof of identity, and fees. Processing can take 2-4 weeks. Official transcripts may be required as proof of completion.",
+    "averageReplacementCost": 50.0,
+    "verificationStrategy": {
+      "strictFields": ["diplomaNumber", "institutionName"],
+      "flexibleFields": ["name", "degreeType"],
+      "requiredFields": ["diplomaNumber", "name", "institutionName"]
+    }
+  },
+  {
+    "name": "Transcript",
+    "category": "ACADEMIC",
+    "description": "Official academic record showing courses taken and grades earned. Required for transfer credits and graduate applications.",
+    "icon": "transcript",
+    "loyaltyPoints": 250,
+    "replacementInstructions": "Contact your educational institution's registrar office. Requires application form, proof of identity, and fees. Processing typically takes 1-2 weeks. Official transcripts are usually sealed and may require special handling.",
+    "averageReplacementCost": 25.0,
+    "verificationStrategy": {
+      "strictFields": ["studentId", "institutionName"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["studentId", "name", "institutionName"]
+    }
+  },
+  {
+    "name": "Alien Registration Card",
+    "category": "IDENTITY",
+    "description": "Identification card for non-citizens legally residing in a country. Essential for work authorization and legal status.",
+    "icon": "alien-card",
+    "loyaltyPoints": 450,
+    "replacementInstructions": "Contact immigration services or the appropriate government agency. Requires application form, proof of legal status, photos, and fees. Processing can take 4-8 weeks or longer. May require biometric appointment.",
+    "averageReplacementCost": 100.0,
+    "verificationStrategy": {
+      "strictFields": ["alienNumber", "dateOfBirth"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["alienNumber", "name", "dateOfBirth"]
+    }
+  },
+  {
+    "name": "Social Security Card",
+    "category": "IDENTITY",
+    "description": "Government-issued card with Social Security Number. Required for employment, tax purposes, and government benefits.",
+    "icon": "ssn-card",
+    "loyaltyPoints": 400,
+    "replacementInstructions": "Contact Social Security Administration office or apply online. Requires application form, proof of identity and citizenship, and may have fees. Processing typically takes 1-2 weeks. Limited replacements allowed per year.",
+    "averageReplacementCost": 0.0,
+    "verificationStrategy": {
+      "strictFields": ["ssn", "dateOfBirth"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["ssn", "name", "dateOfBirth"]
+    }
+  },
+  {
+    "name": "Health Insurance Card",
+    "category": "MEDICAL",
+    "description": "Insurance card providing proof of health coverage. Required for medical services and prescription medications.",
+    "icon": "health-insurance",
+    "loyaltyPoints": 200,
+    "replacementInstructions": "Contact your insurance provider by phone or online portal. Usually free replacement. Processing typically takes 5-10 business days. Temporary card may be available immediately via email or app.",
+    "averageReplacementCost": 0.0,
+    "verificationStrategy": {
+      "strictFields": ["policyNumber", "memberId"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["policyNumber", "memberId", "name"]
+    }
+  },
+  {
+    "name": "Vaccination Card",
+    "category": "MEDICAL",
+    "description": "Official record of vaccinations received. Important for travel, school enrollment, and health records.",
+    "icon": "vaccination-card",
+    "loyaltyPoints": 150,
+    "replacementInstructions": "Contact your healthcare provider or local health department. May require contacting multiple providers if vaccinated at different locations. Processing can take 1-2 weeks. Records may be available electronically.",
+    "averageReplacementCost": 15.0,
+    "verificationStrategy": {
+      "strictFields": ["dateOfBirth"],
+      "flexibleFields": ["name"],
+      "requiredFields": ["name", "dateOfBirth"]
+    }
+  }
+]

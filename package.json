@@ -11,6 +11,7 @@
     "db": "prisma",
     "db:seed": "node seed.js",
     "db:seed:locales": "node seed-address-locales.js",
+    "db:seed:document-types": "node seed-document-types.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

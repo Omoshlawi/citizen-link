@@ -304,7 +304,6 @@ model Document {
   createdAt        DateTime        @default(now())
   images           Image[]
   additionalFields DocumentField[]
-  aiextractions    AIExtraction[]
 }
 
 // Dynamic Field Values - stores actual values for document-specific fields
@@ -338,25 +337,37 @@ model Image {
 model AIExtraction {
   id String @id @default(uuid())
 
+  createdAt DateTime @default(now())
+
+  foundDocumentCases       FoundDocumentCase[]
+  aiextractionInteractions AIExtractionInteraction[]
+}
+
+model AIExtractionInteraction {
+  id              String        @id @default(uuid())
   // Related ai Interaction
-  aiInteractionId String         @unique
-  aiInteraction   AIInteraction? @relation(fields: [aiInteractionId], references: [id])
+  aiInteractionId String
+  aiInteraction   AIInteraction @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
 
-  // Extraction Data
-  extractedData Json? // Parsed extracted fields
-  confidence    Json? // Per-field confidence scores
-  imageAnalysis Json? // Image analysis results
+  // Related ai extraction
+  aiExtractionId String
+  aiExtraction   AIExtraction @relation(fields: [aiExtractionId], references: [id], onDelete: Cascade)
 
-  // status
+  extractionData Json? // Parsed extracted fields 
+
+  // Interaction and prompt might pass but parsing/validating ai response might fail hance status fields
   success      Boolean @default(true)
   errorMessage String? @db.Text
 
-  createdAt          DateTime            @default(now())
-  document           Document?           @relation(fields: [documentId], references: [id])
-  documentId         String?
-  foundDocumentCases FoundDocumentCase[]
+  extractionType AIExtractionInteractionType
 
-  @@index([aiInteractionId])
+  createdAt DateTime @default(now())
+}
+
+enum AIExtractionInteractionType {
+  DATA_EXTRACTION
+  CONFIDENCE_SCORE
+  IMAGE_ANALYSIS
 }
 
 model DocumentCase {
@@ -689,8 +700,8 @@ model AIInteraction {
   errorMessage String? @db.Text
   retryCount   Int     @default(0)
 
-  createdAt    DateTime      @default(now())
-  aiextraction AIExtraction?
+  createdAt              DateTime                  @default(now())
+  extractionInteractions AIExtractionInteraction[]
 
   @@index([userId])
   @@index([interactionType])
@@ -700,7 +711,8 @@ model AIInteraction {
 }
 
 enum AIInteractionType {
-  DOCUMENT_EXTRACTION // Extracting data from lost/found document images
+  DATA_EXTRACTION // Extracting data from found document images
+  CONFIDENCE_SCORE // Calculating confidence score for extracted data
   DOCUMENT_MATCHING // Finding matches between lost and found
   CLAIM_VERIFICATION // Verifying user's security answers
   IMAGE_ANALYSIS // Analyzing document image quality/authenticity

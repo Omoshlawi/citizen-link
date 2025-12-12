@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import { ZodValidationException } from 'nestjs-zod';
 import type { Request, Response } from 'express';
