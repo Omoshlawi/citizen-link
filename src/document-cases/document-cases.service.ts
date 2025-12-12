@@ -14,8 +14,7 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
-import { AiConfig } from '../ai/ai.config';
-import { AiService } from '../ai/ai.service';
+import { AiExtractionService } from '../ai/ai.extraction.service';
 import { DocAiExtractDto } from '../ai/ocr.dto';
 import { OcrService } from '../ai/ocr.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
@@ -45,10 +44,9 @@ export class DocumentCasesService {
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
     private readonly ocrService: OcrService,
-    private readonly aiService: AiService,
+    private readonly aiExtractionService: AiExtractionService,
     private readonly s3Service: S3Service,
     private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
-    private readonly aiConfig: AiConfig,
   ) {}
 
   private async filesExists(images: string[]): Promise<void> {
@@ -91,7 +89,7 @@ export class DocumentCasesService {
         return { buffer, mimeType };
       }),
     );
-    const extraction = await this.aiService.extractInformation({
+    const extraction = await this.aiExtractionService.extractInformation({
       source: 'img',
       files: _extractionTasks,
     });
