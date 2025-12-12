@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   BadRequestException,
@@ -12,7 +13,7 @@ import {
   LostDocumentCaseStatus,
   MatchStatus,
 } from '../../generated/prisma/client';
-import { AiService } from '../ai/ai.service';
+import { AiMatchingService } from '../ai/ai.matching.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -43,7 +44,7 @@ export class MatchesService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
-    private readonly aiService: AiService,
+    private readonly matchDocumentsService: AiMatchingService,
     private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
   ) {}
 
@@ -105,7 +106,7 @@ export class MatchesService {
       // Use AI to determine match confidence
       // Type assertion needed because Prisma types don't exactly match AI service types
       // but the runtime structure is compatible (we've already checked document is not null)
-      const aiResult = await this.aiService.matchDocuments(
+      const aiResult = await this.matchDocumentsService.matchDocuments(
         foundCase as any,
         lostCase as any,
       );

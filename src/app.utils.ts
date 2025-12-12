@@ -70,3 +70,34 @@ export function nullToUndefined<T>(input: T): T {
 
   return input;
 }
+
+// Safe pars JSON
+
+type SafeParseJsonSuccess<T> = {
+  success: true;
+  data: T;
+};
+type SafeParseJsonError = {
+  success: false;
+  error: Error;
+};
+
+type SafeParseJsonResult<T> = SafeParseJsonSuccess<T> | SafeParseJsonError;
+type SafeParseJsonOptions = {
+  transformNullToUndefined?: boolean;
+};
+
+export const safeParseJson = <T>(
+  json: string,
+  options: SafeParseJsonOptions = { transformNullToUndefined: false },
+): SafeParseJsonResult<T> => {
+  try {
+    const data = JSON.parse(json);
+    if (options.transformNullToUndefined) {
+      return { success: true, data: nullToUndefined(data) };
+    }
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: error as Error };
+  }
+};

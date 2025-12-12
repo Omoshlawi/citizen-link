@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   BadRequestException,
   Injectable,
@@ -6,25 +6,23 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { pick } from 'lodash';
-import { FunctionFirstArgument } from '../query-builder/query-builder.types';
-import { PrismaService } from '../prisma/prisma.service';
-import { PaginationService } from '../query-builder/pagination.service';
-import { CustomRepresentationQueryDto } from '../query-builder/query-builder.utils';
-import { CustomRepresentationService } from '../query-builder/representation.service';
-import { SortService } from '../query-builder/sort.service';
-import {
-  CreateDocumentImageDto,
-  QueryDocumentImageDto,
-} from './document-images.dto';
-import { OcrService } from '../ai/ocr.service';
-import { AiService } from '../ai/ai.service';
-import { S3Service } from '../s3/s3.service';
-import dayjs from 'dayjs';
 import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
-import { DocAiExtractDto } from 'src/ai/ocr.dto';
+import { AiService } from '../ai/ai.service';
+import { OcrService } from '../ai/ocr.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { PaginationService } from '../query-builder/pagination.service';
+import { FunctionFirstArgument } from '../query-builder/query-builder.types';
+import { CustomRepresentationQueryDto } from '../query-builder/query-builder.utils';
+import { CustomRepresentationService } from '../query-builder/representation.service';
+import { SortService } from '../query-builder/sort.service';
+import { S3Service } from '../s3/s3.service';
+import {
+  CreateDocumentImageDto,
+  QueryDocumentImageDto,
+} from './document-images.dto';
 
 @Injectable()
 export class DocumentImagesService {
@@ -114,7 +112,7 @@ export class DocumentImagesService {
     // });
     // const { additionalFields, securityQuestions, typeId, ...documentpayload } =
     //   info;
-
+    /*
     const _extractionTasks = await Promise.all(
       createDocumentImageDto.images.map(async (image) => {
         const url = await this.s3Service.generateDownloadSignedUrl(image);
@@ -209,6 +207,7 @@ export class DocumentImagesService {
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
       }),
     };
+    */
   }
 
   async findAll(

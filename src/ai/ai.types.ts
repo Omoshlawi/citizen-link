@@ -93,10 +93,15 @@ export interface VerificationResult {
   flexibilityApplied: string[];
 }
 
-export type OcrExtractionInput = { source: 'ocr'; extractedText: string };
+export type OcrExtractionInput = {
+  source: 'ocr';
+  extractedText: string;
+  userId?: string;
+};
 export type ImageExtractionInput = {
   source: 'img';
   files: Array<{ buffer: Buffer; mimeType: string }>;
+  userId?: string;
 };
 
 export type ExtractInformationInput = OcrExtractionInput | ImageExtractionInput;

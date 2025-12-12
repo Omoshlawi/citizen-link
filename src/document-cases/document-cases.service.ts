@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Injectable,
@@ -10,12 +10,12 @@ import dayjs from 'dayjs';
 import { pick } from 'lodash';
 import {
   ActorType,
+  AIInteractionType,
   DocumentCase,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
 import { AiExtractionService } from '../ai/ai.extraction.service';
-import { DocAiExtractDto } from '../ai/ocr.dto';
 import { OcrService } from '../ai/ocr.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -34,6 +34,7 @@ import {
   QueryDocumentCaseDto,
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
+import { DataExtractionDto, ImageAnalysisDto } from '../ai/ocr.dto';
 
 @Injectable()
 export class DocumentCasesService {
@@ -94,7 +95,16 @@ export class DocumentCasesService {
       files: _extractionTasks,
     });
     const { additionalFields, securityQuestions, ...documentpayload } =
-      extraction.extractedData as DocAiExtractDto['data'];
+      extraction.aiextractionInteractions.find(
+        (interaction) =>
+          interaction.aiInteraction.interactionType ===
+          AIInteractionType.DATA_EXTRACTION,
+      )?.extractionData as unknown as DataExtractionDto;
+    const imageAnalysis = extraction.aiextractionInteractions.find(
+      (interaction) =>
+        interaction.aiInteraction.interactionType ===
+        AIInteractionType.IMAGE_ANALYSIS,
+    )?.extractionData as unknown as ImageAnalysisDto;
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         ...caseData,
@@ -125,9 +135,9 @@ export class DocumentCasesService {
                       url: image,
                       metadata: {
                         // ocrText: extractionTasks[i]
-                        imageAnalysis: (
-                          extraction.imageAnalysis as DocAiExtractDto['imageAnalysis']
-                        ).find((image) => image.index === i),
+                        imageAnalysis: imageAnalysis.find(
+                          (imageAnalysis) => imageAnalysis.index === i,
+                        ),
                       },
                     })),
                   },
@@ -149,11 +159,6 @@ export class DocumentCasesService {
       include: {
         document: true,
       },
-    });
-    // update the ai extraction document id
-    await this.prismaService.aIExtraction.update({
-      where: { id: extraction.id },
-      data: { documentId: documentCase.document!.id! },
     });
     return await this.findOne(documentCase.id, query, userId);
   }
