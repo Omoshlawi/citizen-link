@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { GenerateContentConfig, GenerateContentResponse } from '@google/genai';
-import { BadRequestException, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Logger } from '@nestjs/common';
 import z from 'zod';
 import {
   AIExtractionInteractionType,
@@ -32,6 +32,7 @@ export class AiExtractionService {
   private readonly logger = new Logger(AiExtractionService.name);
   constructor(
     private readonly aiService: AiService,
+    @Inject(PrismaService)
     private readonly prismaService: PrismaService,
   ) {}
 
