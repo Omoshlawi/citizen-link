@@ -1,11 +1,12 @@
-require('dotenv').config();
-const { PrismaPg } = require('@prisma/adapter-pg');
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import type { PrismaClient } from '../generated/prisma/client';
 
-function loadPrismaClient() {
+function loadPrismaClient(): typeof PrismaClient {
   try {
     const { PrismaClient } = require('../dist/generated/prisma/client');
     return PrismaClient;
-  } catch (distError) {
+  } catch (distError: any) {
     const isMissingDistClient =
       distError?.code === 'MODULE_NOT_FOUND' &&
       distError.message?.includes('../dist/generated/prisma/client');
@@ -29,6 +30,8 @@ function loadPrismaClient() {
 }
 
 const PrismaClientClass = loadPrismaClient();
-const prisma = new PrismaClientClass({adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })});
+const prisma = new PrismaClientClass({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+}) as PrismaClient;
 
-module.exports = prisma;
+export default prisma;

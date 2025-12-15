@@ -1,14 +1,33 @@
-const path = require('path');
-const fs = require('fs');
-const prisma = require('./prisma-instance');
+import path from 'path';
+import fs from 'fs';
+import prisma from './prisma-instance';
 
-async function seedAddressLocales() {
-  const filePath = path.resolve(__dirname, '..', 'assets', 'address-locales.json');
+declare const __dirname: string;
+
+interface AddressLocale {
+  code: string;
+  country: string;
+  regionName: string;
+  description: string;
+  formatSpec: string;
+  examples: string[];
+  tags?: string[];
+}
+
+async function seedAddressLocales(): Promise<void> {
+  const filePath = path.resolve(
+    __dirname,
+    '..',
+    'assets',
+    'address-locales.json',
+  );
   if (!fs.existsSync(filePath)) {
     throw new Error('Missing assets/address-locales.json seed file');
   }
 
-  const payload = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  const payload: AddressLocale[] = JSON.parse(
+    fs.readFileSync(filePath, 'utf-8'),
+  );
 
   console.log(`🌐 Seeding ${payload.length} address locale templates...`);
   for (const locale of payload) {

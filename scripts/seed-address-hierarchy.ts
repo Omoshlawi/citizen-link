@@ -1,10 +1,27 @@
-const prisma = require('./prisma-instance');
+import prisma from './prisma-instance';
 
-async function seedAddressHierarchy() {
+interface County {
+  code: string;
+  name: string;
+  subCounties?: SubCounty[];
+}
+
+interface SubCounty {
+  code: string;
+  name: string;
+  wards?: Ward[];
+}
+
+interface Ward {
+  code: string;
+  name: string;
+}
+
+async function seedAddressHierarchy(): Promise<void> {
   try {
     console.log('🌍 Seeding Kenya Address Hierarchy...');
     const COUNTRY_CODE = 'KE';
-    const counties = require('../assets/kenyan-counties-subcounties-wards.json');
+    const counties: County[] = require('../assets/kenyan-counties-subcounties-wards.json');
 
     for (const county of counties) {
       const countyCode = `${COUNTRY_CODE}-${county.code}`;
@@ -73,8 +90,7 @@ async function seedAddressHierarchy() {
   }
 }
 
-seedAddressHierarchy()
-  .catch((err) => {
-    console.error('Failed seeding address hierarchy', err);
-    process.exitCode = 1;
-  });
+seedAddressHierarchy().catch((err) => {
+  console.error('Failed seeding address hierarchy', err);
+  process.exitCode = 1;
+});
