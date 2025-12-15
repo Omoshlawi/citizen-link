@@ -30,7 +30,7 @@ export const DataExtractionSchema = z.object({
   documentNumber: z.string().optional(),
   batchNumber: z.string().optional(),
   issuer: z.string().optional(),
-  ownerName: z.string(),
+  ownerName: z.string().optional(),
   dateOfBirth: z.string().optional(),
   placeOfBirth: z.string().optional(),
   placeOfIssue: z.string().optional(),
@@ -62,22 +62,26 @@ export const ConfidenceSchema = z.object({
   issuer: z.number().optional(),
   typeId: z.number().optional(),
   expiryDate: z.number().optional(),
-  additionalFields: z.array(
-    z.object({
-      fieldName: z.string(),
-      fieldValue: z.string(),
-      nameScore: z.number(),
-      valueScore: z.number(),
-    }),
-  ),
-  securityQuestions: z.array(
-    z.object({
-      question: z.string(),
-      answer: z.string(),
-      questionScore: z.number(),
-      answerScore: z.number(),
-    }),
-  ),
+  additionalFields: z
+    .array(
+      z.object({
+        fieldName: z.string(),
+        fieldValue: z.string(),
+        nameScore: z.number(),
+        valueScore: z.number(),
+      }),
+    )
+    .optional(),
+  securityQuestions: z
+    .array(
+      z.object({
+        question: z.string(),
+        answer: z.string(),
+        questionScore: z.number(),
+        answerScore: z.number(),
+      }),
+    )
+    .optional(),
 });
 
 export const ImageAnalysisSchema = z

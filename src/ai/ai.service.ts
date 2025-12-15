@@ -1,4 +1,9 @@
-import { GenerateContentConfig, GoogleGenAI, Part } from '@google/genai';
+import {
+  GenerateContentConfig,
+  GenerateContentResponse,
+  GoogleGenAI,
+  Part,
+} from '@google/genai';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
 import { AIOptions } from './ai.types';
@@ -39,12 +44,27 @@ export class AiService implements OnModuleInit {
       .replace(/\s*```$/, '');
   }
 
-  generateContentStream(contents: Part[], config: GenerateContentConfig) {
-    return this.genai.models.generateContentStream({
-      model: this._options.model,
-      contents: [{ role: 'user', parts: contents }],
-      config,
-    });
+  async generateContentStream(
+    contents: Part[],
+    config: GenerateContentConfig,
+  ): Promise<GenerateContentResponse> {
+    let response: GenerateContentResponse | null = null;
+    let responseText: string = '';
+    try {
+      const stream = await this.genai.models.generateContentStream({
+        model: this._options.model,
+        contents: [{ role: 'user', parts: contents }],
+        config,
+      });
+      for await (const chunk of stream) {
+        responseText += chunk.text?.trim() ?? '';
+        response = chunk;
+      }
+      return { ...response, text: responseText } as GenerateContentResponse;
+    } catch (error) {
+      this.logger.error(`Error generating content: ${error}`);
+      throw error;
+    }
   }
 
   generateContent(contents: Part[], config: GenerateContentConfig) {

@@ -35,8 +35,9 @@ export const AI_DATA_EXTRACT_CONFIG: GenerateContentConfig = {
       },
       ownerName: {
         type: Type.STRING,
-        description: "Owner's full name as printed on the document",
+        description: "Owner's full name as printed on the document (optional)",
         title: 'Owner Name',
+        nullable: true,
       },
       dateOfBirth: {
         type: Type.STRING,

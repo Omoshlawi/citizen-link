@@ -91,8 +91,8 @@ export class DocumentCasesService {
       }),
     );
     const extraction = await this.aiExtractionService.extractInformation({
-      source: 'img',
       files: _extractionTasks,
+      userId,
     });
     const { additionalFields, securityQuestions, ...documentpayload } =
       extraction.aiextractionInteractions.find(

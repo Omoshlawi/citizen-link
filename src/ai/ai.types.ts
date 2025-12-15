@@ -99,9 +99,8 @@ export type OcrExtractionInput = {
   userId?: string;
 };
 export type ImageExtractionInput = {
-  source: 'img';
   files: Array<{ buffer: Buffer; mimeType: string }>;
   userId?: string;
 };
 
-export type ExtractInformationInput = OcrExtractionInput | ImageExtractionInput;
+export type ExtractInformationInput = ImageExtractionInput;

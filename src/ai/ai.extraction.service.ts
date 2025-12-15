@@ -17,13 +17,10 @@ import {
   AI_IMAGE_ANALYSIS_CONFIG,
 } from './ai.contants';
 import { AiService } from './ai.service';
-import {
-  ExtractInformationInput,
-  ImageExtractionInput,
-  OcrExtractionInput,
-} from './ai.types';
+import { ExtractInformationInput } from './ai.types';
 import {
   ConfidenceSchema,
+  DataExtractionDto,
   DataExtractionSchema,
   ImageAnalysisSchema,
 } from './ocr.dto';
@@ -38,211 +35,278 @@ export class AiExtractionService {
 
   private getDataExtractionPrompt(
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
-    source: 'ocr' | 'img',
-    extractedText?: string,
   ): string {
     const baseInstructions = `
-        You are a specialized document data extraction AI. Extract ONLY the document information.
+        You are an advanced document information extraction AI with expert-level OCR (Optical Character Recognition) and document understanding capabilities.
 
-        DOCUMENT TYPES TO HANDLE:
-        ${documentTypes.map((type) => `- ${type.id}: ${type.name} (${type.category})`).join('\n')}
+        TASK:
+        Analyze the provided image(s) of original personal/official documents. Extract and return all relevant information by visually interpreting the content. Your goal is to accurately recognize text, fields, and layout, and convert this information into a structured data object according to the described schema.
 
-        EXTRACTION RULES:
-        1. Extract ALL relevant personal identification information
-        2. Format dates as ISO strings (YYYY-MM-DD)
-        3. For "gender", only use: "Male", "Female", or "Unknown"
-        4. "ownerName" and "typeId" are REQUIRED
-        5. If you cannot find a field, omit it (don't include undefined/null)
-        6. Generate 3-5 security questions based on EXTRACTED information only
-        7. Security questions should be specific and verifiable from the document
-        8. Prioritize less obvious questions (avoid "What is your name?")
+        HANDLED DOCUMENT TYPES (examples, not limited to):
+            - National ID cards
+            - Passports
+            - Driver's licenses
+            - Student IDs
+            - Birth certificates
+            - Marriage certificates
+            - Professional licenses/certificates
+            - Insurance cards
+            - Social security/pension documents
+            - Work permits/visas
+            - Vaccination/medical records
+            - Any other personally identifiable documents
 
-        OUTPUT SCHEMA (return ONLY valid JSON, no markdown):
+        IMPORTANT INSTRUCTIONS:
+        - Use your vision capabilities to read and interpret images, NOT just metadata or file names.
+        - Handle blurred, skewed, or partially obscured documents; do your best to interpret visually.
+        - Recognize typical fields and their variants, even if formatting or placement varies.
+        - Account for official seals, logos, stamps, and barcodes/QRs to help deduce issuer/type.
+        - Use visual context to deduce field semantics, even if not explicitly labeled.
+        - Parse handwritten and printed text.
+        - Return date fields in ISO format (YYYY-MM-DD).
+        - If a field is uncertain or illegible, omit it or set its value to null. Do NOT hallucinate.
+        - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
+        - Prioritize less obvious questions e.g what is the owners phone number;which is very obvious
+
+        SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
         {
-        "serialNumber": "string (optional)",
-        "documentNumber": "string (optional)",
-        "batchNumber": "string (optional)",
-        "issuer": "string (optional)",
-        "ownerName": "REQUIRED string",
-        "dateOfBirth": "YYYY-MM-DD (optional)",
-        "placeOfBirth": "string (optional)",
-        "placeOfIssue": "string (optional)",
-        "gender": "Male" | "Female" | "Unknown" (optional),
-        "note": "string (optional)",
-        "typeId": "REQUIRED string from document types list",
-        "issuanceDate": "YYYY-MM-DD (optional)",
-        "expiryDate": "YYYY-MM-DD (optional)",
-        "additionalFields": [
+            "serialNumber": string,              // Serial number on the document (if present)
+            "documentNumber": string,            // Primary document number (passport/ID/license etc.)
+            "batchNumber": string,               // Batch/lot/barcode/QR batch info
+            "issuer": string,                    // Issuing country, authority, institution, or agency 
+            "ownerName": string,                 // Person's full name as shown on document
+            "dateOfBirth": string,               // Owner's birth date (YYYY-MM-DD)
+            "placeOfBirth": string,              // Owner's place of birth (city/country, as shown)
+            "placeOfIssue": string,              // Place where document is issued
+            "gender": "Male" | "Female" | "Unknown", // Owner's gender (Unknown if not found)
+            "note": string,                      // Any noted remarks or visible comments (optional)
+            "typeId": string,                    // Use the "id" from this list of supported document types: ${JSON.stringify(documentTypes, null, 2)}
+            "issuanceDate": string,              // Document's date of issue (YYYY-MM-DD)
+            "expiryDate": string,                // Expiry/valid until (YYYY-MM-DD)
+            "additionalFields": [                // Other fields as visually extracted, format:
             {
-            "fieldName": "string",
-            "fieldValue": "string"
+                "fieldName": string,
+                "fieldValue": string
             }
-        ],
-        "securityQuestions": [
+            ],
+            "securityQuestions": [               // Make 1-2 questions/answers based on data you extract, format:
             {
-            "question": "string",
-            "answer": "string (from extracted data)"
+                "question": string,
+                "answer": string
             }
-        ]
+            ]
         }
 
-        EXAMPLE OUTPUT:
+        EXAMPLES OF GOOD OUTPUT:
+
+        1. For a clear passport photo: 
         {
-        "documentNumber": "12345678",
-        "issuer": "REPUBLIC OF KENYA",
-        "ownerName": "JOHN KAMAU DOE",
-        "dateOfBirth": "1990-01-15",
-        "gender": "Male",
-        "placeOfBirth": "NAIROBI",
-        "typeId": "uuid-of-national-id-type",
-        "issuanceDate": "2018-03-20",
-        "serialNumber": "A1234567",
-        "additionalFields": [
-            {
-            "fieldName": "District",
-            "fieldValue": "NAIROBI"
-            }
-        ],
-        "securityQuestions": [
-            {
-            "question": "What is your ID serial number?",
-            "answer": "A1234567"
-            },
-            {
-            "question": "In which year was your ID issued?",
-            "answer": "2018"
-            },
-            {
-            "question": "What district is listed on your ID?",
-            "answer": "NAIROBI"
-            }
-        ]
+            "documentNumber": "A12345678",
+            "ownerName": "JOHN DOE",
+            "dateOfBirth": "1990-01-01",
+            "nationality": "Countryland",
+            "typeId": "<type id for passport>", 
+            "issuer": "Countryland Government",
+            "expiryDate": "2032-12-31",
+            "securityQuestions": [
+            { "question": "What is the document number?", "answer": "A12345678" },
+            { "question": "What is the document expiry date?", "answer": "2032-12-31" },
+            { "question": "What is the owner's date of birth?", "answer": "1990-01-01" }
+            ]
         }
+
+        2. For a license image with both front and back:
+        {
+            "documentNumber": "D1234567",
+            "ownerName": "JANE DOE",
+            "dateOfBirth": "1985-02-15",
+            "typeId": "<type id for driver's license>",
+            "issuer": "STATE OF EXAMPLE",
+            "expiryDate": "2026-06-30",
+            "additionalFields": [
+            { "fieldName": "Address", "fieldValue": "123 MAIN ST, ANYTOWN" },
+            { "fieldName": "License Class", "fieldValue": "C" }
+            ],
+            "securityQuestions": [
+            { "question": "What is the document number?", "answer": "D1234567" },
+            { "question": "What is the owner's date of birth?", "answer": "1985-02-15" },
+            { "question": "What is the document expiry date?", "answer": "2026-06-30" }
+            ]
+        }
+
+        PROCESS:
+        - Visually analyze all uploaded images.
+        - Use your expert OCR, context awareness, and reasoning to organize the fields.
+        - Output a single, valid JSON object conforming to the schema above.
+        - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
+        
     `;
 
-    if (source === 'ocr') {
-      return `
-        ${baseInstructions}
-
-        OCR CONSIDERATIONS:
-        - Text contains OCR errors (O vs 0, I vs 1 vs l, etc.)
-        - Missing or extra spaces, merged/split words
-        - Be flexible and recognize fields despite errors
-        - Attempt to correct obvious OCR mistakes
-
-        TEXT TO ANALYZE:
-        ${extractedText}
-
-        Extract the information and return ONLY valid JSON.
-        `;
-    } else {
-      return `
-        ${baseInstructions}
-
-        IMAGE ANALYSIS INSTRUCTIONS:
-        - Use your vision capabilities to read the document images
-        - Handle blurred, skewed, or partially obscured documents
-        - Parse both handwritten and printed text
-        - Recognize official seals, logos, stamps to deduce issuer/type
-        - If text is illegible, omit that field
-
-        Analyze the provided images and return ONLY valid JSON.
-        `;
-    }
+    return baseInstructions;
   }
 
-  private getConfidencePrompt(extractedData: any, imageCount: number): string {
+  private getConfidencePrompt(extractedData: DataExtractionDto): string {
     return `
-        You are an AI confidence scorer. Evaluate the confidence of each extracted field.
+        You are an advanced document information extraction AI with expert-level OCR (Optical Character Recognition) and document understanding capabilities.
+        Your task is to evaluate confidence scores as integer percentages (from 1 to 100, no decimals, no points) for EVERY field in the extracted data by VISUALLY VERIFYING each extracted value against the document images.
 
-        EXTRACTED DATA:
-        ${JSON.stringify(extractedData, null, 2)}
+        TASK:
+        Evaluate the confidence scores for EVERY field in the extracted data by VISUALLY VERIFYING each extracted value against the document images. Each confidence score must be a whole number integer from 1 to 100 (no decimals, no points).
 
-        NUMBER OF IMAGES ANALYZED: ${imageCount}
+        CRITICAL VERIFICATION PROCESS:
+        - For EACH field in the extracted data, visually locate it in the provided document images
+        - Compare the extracted value against what you can actually see in the images
+        - Verify the accuracy of the extraction by checking:
+          - Does the extracted text match what's visible in the image?
+          - Is the field clearly readable in the image?
+          - Are there any discrepancies between extracted value and image content?
+          - How confident are you that the extraction is correct based on visual inspection?
+        - Use the images as the PRIMARY source for determining confidence scores
+        - If you cannot find a field in the images, significantly reduce its confidence score
+        - If the extracted value doesn't match what you see, reduce the confidence score accordingly
 
-        CONFIDENCE SCORING RULES:
-        1. Score each field from 0.0 to 1.0
-        2. Consider:
-        - Text clarity and readability
-        - Whether field was clearly visible
-        - OCR quality (if applicable)
-        - Consistency across multiple images
-        - Document quality
-
-        3. Scoring Guidelines:
-        - 0.95-1.0: Extremely clear, no doubt
-        - 0.85-0.94: Very clear, minor uncertainty
-        - 0.70-0.84: Readable but some quality issues
-        - 0.50-0.69: Difficult to read, uncertain
-        - 0.0-0.49: Very poor quality, guessing
-
-        4. Lower scores if:
-        - Text was blurred or damaged
-        - OCR errors likely
-        - Field partially obscured
-        - Unusual formatting
-
-        OUTPUT FORMAT (return ONLY valid JSON, no markdown):
+        RETURN ONLY THE JSON OBJECT WITH THE CONFIDENCE SCORES:
         {
-        "serialNumber": 0.95,
-        "documentNumber": 0.99,
-        "ownerName": 0.92,
-        "dateOfBirth": 0.98,
-        "gender": 0.99,
-        "placeOfBirth": 0.88,
-        "issuer": 0.96,
-        "typeId": 1.0,
-        "issuanceDate": 0.94,
-        "expiryDate": 0.90
+          "serialNumber": 95,
+          "documentNumber": 99,
+          "batchNumber": 88,
+          "issuer": 96,
+          "ownerName": 92,
+          "dateOfBirth": 98,
+          "placeOfBirth": 88,
+          "placeOfIssue": 85,
+          "gender": 99,
+          "note": 90,
+          "typeId": 100,
+          "issuanceDate": 94,
+          "expiryDate": 90,
+          "additionalFields": [
+            {
+              "fieldName": "District",
+              "nameScore": 95,
+              "fieldValue": "NAIROBI",
+              "valueScore": 92
+            }
+          ],
+          "securityQuestions": [
+            {
+              "question": "What is your ID serial number?",
+              "questionScore": 98,
+              "answer": "A1234567",
+              "answerScore": 95
+            }
+          ]
         }
 
-        IMPORTANT:
-        - Include scores for ALL fields in the extracted data
-        - If a field was omitted due to poor quality, don't include it
-        - Be conservative - better to underestimate than overestimate
-        - Return ONLY the JSON object, no explanations    
+        IMPORTANT REQUIREMENTS:
+        - All confidence scores MUST be whole number integers from 1 to 100 (no decimals or points)
+        - Return ONLY the JSON object, no markdown formatting, no code blocks
+        - Include confidence scores for EVERY field that exists in the extracted data
+        - If a field was not in the extracted data, DO NOT include it in the confidence response
+        - The "additionalFields" array MUST include ALL items from extracted data with nameScore and valueScore for each
+        - The "securityQuestions" array MUST include ALL questions from extracted data with questionScore and answerScore for each
+
+        EXTRACTED DATA TO VERIFY AND SCORE:
+        ${JSON.stringify(extractedData, null, 2)}
+
+        CRITICAL SCORING REQUIREMENTS:
+        1. You MUST provide integer confidence scores for ALL fields present in the extracted data
+        2. Score each field as an integer from 1 to 100 (no decimals)
+        3. For "additionalFields" array: You MUST provide integer scores for EACH item with:
+           - "nameScore": integer confidence that the field name was correctly identified (verify in images)
+           - "valueScore": integer confidence that the field value matches what's visible in images
+        4. For "securityQuestions" array: You MUST provide integer scores for EACH question with:
+           - "questionScore": integer confidence that the question is well-formed and verifiable
+           - "answerScore": integer confidence that the answer matches what's visible in the images
+
+        CONFIDENCE EVALUATION FACTORS:
+        When scoring, consider:
+        - Visual verification: Does extracted value match what's in the images?
+        - Text clarity and readability in the source images
+        - Whether field was clearly visible and unambiguous in images
+
+        SCORING GUIDELINES (all as integers, no decimals or points):
+        - 95-100: Extracted value exactly matches image, extremely clear, no doubt, perfect quality
+        - 85-94: Extracted value matches image, very clear, minor uncertainty, excellent quality
+        - 70-84: Extracted value mostly matches image, readable but some quality issues, good confidence
+        - 50-69: Extracted value partially matches or unclear in image, difficult to verify, moderate confidence
+        - 1-49: Cannot verify in image, mismatch detected, or very poor quality, low confidence
+
+        REDUCE SCORES IF:
+        - Extracted value doesn't match what's visible in the images
+        - Field cannot be located or verified in the provided images
+        - Text was blurred, damaged, or partially obscured in images
+        - OCR errors are detected when comparing extraction to image
+        - Field is in an unusual format or location that makes verification difficult
+        - Multiple interpretations are possible based on image content
+        - Field appears incomplete or truncated in the images
+        - Significant discrepancy between extracted value and image content
+
+        REQUIRED OUTPUT STRUCTURE (return ONLY valid JSON, no markdown, no code blocks, scores as integers):
+        {
+          "serialNumber": 95,
+          "documentNumber": 99,
+          "batchNumber": 88,
+          "issuer": 96,
+          "ownerName": 92,
+          "dateOfBirth": 98,
+          "placeOfBirth": 88,
+          "placeOfIssue": 85,
+          "gender": 99,
+          "note": 90,
+          "typeId": 100,
+          "issuanceDate": 94,
+          "expiryDate": 90,
+          "additionalFields": [
+            {
+              "fieldName": "District",
+              "nameScore": 95,
+              "fieldValue": "NAIROBI",
+              "valueScore": 92
+            }
+          ],
+          "securityQuestions": [
+            {
+              "question": "What is your ID serial number?",
+              "questionScore": 98,
+              "answer": "A1234567",
+              "answerScore": 95
+            }
+          ]
+        }
+
+        IMPORTANT REQUIREMENTS:
+        - Include confidence scores as integers for EVERY field that exists in the extracted data
+        - If a field was not in the extracted data, DO NOT include it in the confidence response
+        - The "additionalFields" array MUST include ALL items from extracted data with nameScore and valueScore for each, as integers from 1-100
+        - The "securityQuestions" array MUST include ALL questions from extracted data with questionScore and answerScore for each, as integers from 1-100
+        - Be conservative - better to underestimate than overestimate confidence
+        - Return ONLY the JSON object, no explanations, no markdown formatting
+        - All scores must be whole number integers between 1 and 100 (inclusive), absolutely NO decimals
     `;
   }
 
-  private getImageAnalysisPrompt(
-    extractedData: any,
-    imageCount: number,
-  ): string {
+  private getImageAnalysisPrompt(): string {
     return `
-        You are an image quality analysis AI. Analyze the quality of document images used for extraction.
+        You are an advanced image analysis AI with expert-level image understanding capabilities.
 
-        NUMBER OF IMAGES: ${imageCount}
+        TASK:
+        Analyze ALL images and return a complete analysis for each one.
 
-        EXTRACTED DATA (for context):
-        ${JSON.stringify(extractedData, null, 2)}
+        For EACH image, you MUST evaluate and provide:
+        1. "index" (REQUIRED): Sequential number starting from 0 (0, 1, 2, ...)
+        2. "quality" (REQUIRED): Overall image quality score 0.0-1.0 (resolution, clarity, sharpness)
+        3. "readability" (REQUIRED): Text readability score 0.0-1.0 (how easy it is to read text)
+        4. "focus" (optional): Number 0.0-1.0 - image sharpness and focus quality
+        5. "lighting" (optional): Number 0.0-1.0 - exposure quality, glare, shadows
+        6. "tamperingDetected" (REQUIRED): Boolean - true if any signs of manipulation detected
+        7. "warnings" (REQUIRED): Array of strings - specific issues found (empty array [] if none) (should be as few as possible e.g "slight blur on bottom corner")
+        8. "imageType" (optional): String - e.g., "front", "back", "side", etc.
+        9. "usableForExtraction" (optional): Boolean - whether image is usable for data extraction
 
-        ANALYSIS REQUIREMENTS:
-        For EACH image, evaluate:
-        1. Overall quality (0.0-1.0): Resolution, clarity, sharpness
-        2. Readability (0.0-1.0): How easy to read text
-        3. Focus (0.0-1.0): Image sharpness
-        4. Lighting (0.0-1.0): Proper exposure, no glare
-        5. Tampering detection: Any signs of digital manipulation
-        7. Warnings: Specific issues noticed
-        8. Usable: Whether image is good enough for extraction
-
-        QUALITY SCORING:
-        - 0.90-1.0: Excellent quality
-        - 0.75-0.89: Good quality
-        - 0.60-0.74: Acceptable but has issues
-        - 0.40-0.59: Poor quality
-        - 0.0-0.39: Very poor, unusable
-
-        TAMPERING INDICATORS:
-        - Inconsistent lighting/shadows
-        - Mismatched fonts or colors
-        - Copy-paste artifacts
-        - Pixelation inconsistencies
-        - Unnatural edges or boundaries
-
-        OUTPUT FORMAT (return ONLY valid JSON array, no markdown):
+        REQUIRED OUTPUT STRUCTURE (return ONLY valid JSON array, no markdown, no code blocks):
         [
-        {
+          {
             "index": 0,
             "imageType": "front",
             "quality": 0.88,
@@ -252,8 +316,8 @@ export class AiExtractionService {
             "tamperingDetected": false,
             "warnings": ["slight blur on bottom corner"],
             "usableForExtraction": true
-        },
-        {
+          },
+          {
             "index": 1,
             "imageType": "back",
             "quality": 0.92,
@@ -263,15 +327,14 @@ export class AiExtractionService {
             "tamperingDetected": false,
             "warnings": [],
             "usableForExtraction": true
-        }
+          }
         ]
 
-        IMPORTANT:
-        - Return an array with ${imageCount} objects
-        - Each object represents one image in order (index 0, 1, 2, ...)
-        - Be honest about quality issues
-        - Flag tampering if you see ANY suspicious indicators
-        - Return ONLY the JSON array, no explanations
+        CRITICAL REQUIREMENTS:
+        - You MUST analyze ALL images and return a complete analysis for each one.
+        - You MUST return an array with EXACTLY objects
+        - Each object MUST have: index, imageType, quality, readability, focus, lighting, tamperingDetected, warnings, usableForExtraction        
+        - Return ONLY the JSON array, no explanations, no markdown formatting
     `;
   }
 
@@ -310,11 +373,12 @@ export class AiExtractionService {
           : []),
       ];
 
-      aiResponse = await this.aiService.generateContent(
+      aiResponse = await this.aiService.generateContentStream(
         parts,
         this.getInteructionConfig(interactionType),
       );
       responseText = aiResponse.text?.trim() ?? '';
+      this.logger.log(`AI Response: ${responseText}`);
 
       return await this.prismaService.aIInteraction.create({
         data: {
@@ -358,15 +422,11 @@ export class AiExtractionService {
     // ============= STEP 1: EXTRACT DATA =============
     this.logger.log('Step 1: Extracting document data...');
 
-    const dataPrompt = this.getDataExtractionPrompt(
-      documentTypes,
-      input.source,
-      (input as OcrExtractionInput).extractedText,
-    );
+    const dataPrompt = this.getDataExtractionPrompt(documentTypes);
 
     const dataResult = await this.callAIAndStore(
       dataPrompt,
-      input.source === 'img' ? input.files : undefined,
+      input.files,
       AIInteractionType.DATA_EXTRACTION,
       'Document',
       input.userId,
@@ -453,14 +513,11 @@ export class AiExtractionService {
     // ============= STEP 2: CALCULATE CONFIDENCE =============
     this.logger.log('Step 2: Calculating confidence scores...');
 
-    const confidencePrompt = this.getConfidencePrompt(
-      extractedData,
-      (input as ImageExtractionInput).files?.length ?? 1,
-    );
+    const confidencePrompt = this.getConfidencePrompt(extractedData);
 
     const confidenceResult = await this.callAIAndStore(
       confidencePrompt,
-      input.source === 'img' ? input.files : undefined,
+      input.files,
       AIInteractionType.CONFIDENCE_SCORE,
       'Document',
       input.userId,
@@ -548,14 +605,11 @@ export class AiExtractionService {
     // ============= STEP 3: ANALYZE IMAGES =============
     this.logger.log('Step 3: Analyzing image quality...');
 
-    const imagePrompt = this.getImageAnalysisPrompt(
-      extractedData,
-      (input as ImageExtractionInput).files?.length ?? 1,
-    );
+    const imagePrompt = this.getImageAnalysisPrompt();
 
     const imageResult = await this.callAIAndStore(
       imagePrompt,
-      input.source === 'img' ? input.files : undefined,
+      input.files,
       AIInteractionType.IMAGE_ANALYSIS,
       'Document',
       input.userId,
