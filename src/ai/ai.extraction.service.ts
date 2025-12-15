@@ -255,27 +255,27 @@ export class AiExtractionService {
 
         For EACH image, you MUST evaluate and provide:
         1. "index" (REQUIRED): Sequential number starting from 0 (0, 1, 2, ...)
-        2. "quality" (REQUIRED): Overall image quality score 0.0-1.0 (resolution, clarity, sharpness)
-        3. "readability" (REQUIRED): Text readability score 0.0-1.0 (how easy it is to read text)
-        4. "focus" (optional): Number 0.0-1.0 - image sharpness and focus quality
-        5. "lighting" (optional): Number 0.0-1.0 - exposure quality, glare, shadows
+        2. "quality" (REQUIRED): Overall image quality score as an integer confidence percentage between 0 and 100 (resolution, clarity, sharpness)
+        3. "readability" (REQUIRED): Text readability score as an integer confidence percentage between 0 and 100 (how easy it is to read text)
+        4. "focus" (optional): Integer confidence percentage between 0 and 100 - image sharpness and focus quality
+        5. "lighting" (optional): Integer confidence percentage between 0 and 100 - exposure quality, glare, shadows
         6. "tamperingDetected" (REQUIRED): Boolean - true if any signs of manipulation detected
         7. "warnings" (REQUIRED): Array of strings 
-            - specific issues found (empty array [] if none) (
-            - should be as few as maximum of 5 major issues and that is majourly affect extraction greatly than the others
-            - each issue shouuld be very brief and to the point i.e not more that 5 words)
+            - specific issues found (empty array [] if none)
+            - should be as few as a maximum of 5 major issues, focusing on those that greatly affect extraction
+            - each issue should be very brief and to the point (not more than 5 words)
         8. "imageType" (optional): String - e.g., "front", "back", "side", etc.
         9. "usableForExtraction" (optional): Boolean - whether image is usable for data extraction
 
-        REQUIRED OUTPUT STRUCTURE (return ONLY valid JSON array, no markdown, no code blocks):
+        REQUIRED OUTPUT STRUCTURE (return ONLY valid JSON array, no markdown, no code blocks, confidence as integer percentages 0-100):
         [
           {
             "index": 0,
             "imageType": "front",
-            "quality": 0.88,
-            "readability": 0.92,
-            "focus": 0.85,
-            "lighting": 0.90,
+            "quality": 88,
+            "readability": 92,
+            "focus": 85,
+            "lighting": 90,
             "tamperingDetected": false,
             "warnings": ["slight blur on bottom corner"],
             "usableForExtraction": true
@@ -283,10 +283,10 @@ export class AiExtractionService {
           {
             "index": 1,
             "imageType": "back",
-            "quality": 0.92,
-            "readability": 0.95,
-            "focus": 0.90,
-            "lighting": 0.88,
+            "quality": 92,
+            "readability": 95,
+            "focus": 90,
+            "lighting": 88,
             "tamperingDetected": false,
             "warnings": [],
             "usableForExtraction": true
@@ -296,7 +296,8 @@ export class AiExtractionService {
         CRITICAL REQUIREMENTS:
         - You MUST analyze ALL images and return a complete analysis for each one.
         - You MUST return an array with EXACTLY objects
-        - Each object MUST have: index, imageType, quality, readability, focus, lighting, tamperingDetected, warnings, usableForExtraction        
+        - Each object MUST have: index, imageType, quality, readability, focus, lighting, tamperingDetected, warnings, usableForExtraction
+        - The confidence scores ("quality", "readability", "focus", "lighting") MUST be whole number integers between 0 and 100 (no decimals).
         - Return ONLY the JSON array, no explanations, no markdown formatting
     `;
   }

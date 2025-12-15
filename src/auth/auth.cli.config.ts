@@ -4,8 +4,12 @@ import { admin, bearer, jwt, openAPI, username } from 'better-auth/plugins';
 import { PrismaClient } from '../../generated/prisma/client';
 import { adminConfig } from './auth.contants';
 import { BetterAuthWithPlugins } from './auth.types';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-const prisma = new PrismaClient();
+const connectionString = `${process.env.DATABASE_URL}`;
+const adapter = new PrismaPg({ connectionString });
+
+const prisma = new PrismaClient({ adapter });
 
 export const auth: BetterAuthWithPlugins = betterAuth({
   database: prismaAdapter(prisma, {

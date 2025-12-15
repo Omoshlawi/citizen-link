@@ -1,0 +1,1 @@
+export const PRISMA_CONFIG_TOKEN = 'PRISMA_CONFIG';

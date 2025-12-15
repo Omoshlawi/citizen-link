@@ -2,7 +2,6 @@ import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
 import { Image } from '../../generated/prisma/browser';
-import { JsonValue } from '@prisma/client/runtime/library';
 import { ApiProperty } from '@nestjs/swagger';
 
 export const QueryDocumentImageSchema = z.object({
@@ -24,7 +23,7 @@ export class GetDocumentImageResponseDto implements Image {
   @ApiProperty()
   blurredUrl: string | null;
   @ApiProperty()
-  aiAnalysis: JsonValue;
+  aiAnalysis: any;
   @ApiProperty()
   imageType: string | null;
   @ApiProperty()
@@ -34,7 +33,7 @@ export class GetDocumentImageResponseDto implements Image {
   @ApiProperty()
   documentId: string | null;
   @ApiProperty()
-  metadata: JsonValue;
+  metadata: any;
   @ApiProperty()
   createdAt: Date;
   @ApiProperty()

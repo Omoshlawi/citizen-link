@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { DynamicModule } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
 import {
@@ -94,7 +98,7 @@ export class AuthModule {
             hooks,
             emailAndPassword: {
               enabled: true,
-              // eslint-disable-next-line @typescript-eslint/require-await
+              // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
               async sendResetPassword({ token }, _) {
                 // http://localhost:8090/api/auth/reset-password/4IlzTEQRdCSm4B1fy4YqrVUF?callbackURL=%2Freset-password
                 console.log('Token ---------', token);
@@ -103,7 +107,7 @@ export class AuthModule {
               requireEmailVerification: false,
             },
             emailVerification: {
-              // eslint-disable-next-line @typescript-eslint/require-await
+              // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
               async sendVerificationEmail({ token, url }, _) {
                 console.log('Token ---------', token);
                 console.log('URL ---------', url);

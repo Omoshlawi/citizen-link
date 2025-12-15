@@ -1,39 +1,10 @@
-require('dotenv').config();
+const prisma = require('./prisma-instance');
 
-function loadPrismaClient() {
-  try {
-    const { PrismaClient } = require('./dist/generated/prisma/client');
-    return PrismaClient;
-  } catch (distError) {
-    const isMissingDistClient =
-      distError?.code === 'MODULE_NOT_FOUND' &&
-      distError.message?.includes('./dist/generated/prisma/client');
-
-    if (!isMissingDistClient) {
-      throw distError;
-    }
-
-    try {
-      require('ts-node/register');
-    } catch (tsNodeError) {
-      throw new Error(
-        'Missing compiled Prisma client. Either run `pnpm build` to generate `dist/generated/prisma`, or install dev dependencies so `ts-node/register` is available.',
-        { cause: tsNodeError },
-      );
-    }
-
-    const { PrismaClient } = require('./generated/prisma/client');
-    return PrismaClient;
-  }
-}
-
-const prisma = new (loadPrismaClient())();
-
-async function seed() {
+async function seedAddressHierarchy() {
   try {
     console.log('🌍 Seeding Kenya Address Hierarchy...');
     const COUNTRY_CODE = 'KE';
-    const counties = require('./assets/kenyan-counties-subcounties-wards.json');
+    const counties = require('../assets/kenyan-counties-subcounties-wards.json');
 
     for (const county of counties) {
       const countyCode = `${COUNTRY_CODE}-${county.code}`;
@@ -95,10 +66,15 @@ async function seed() {
 
     console.log('🎉 Kenya Address Hierarchy Seed Completed!');
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.error('Error seeding address hierarchy:', error);
+    throw error;
   } finally {
     await prisma.$disconnect();
   }
 }
 
-seed();
+seedAddressHierarchy()
+  .catch((err) => {
+    console.error('Failed seeding address hierarchy', err);
+    process.exitCode = 1;
+  });

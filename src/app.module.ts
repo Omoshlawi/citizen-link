@@ -20,11 +20,21 @@ import { DocumentTypesModule } from './document-types/document-types.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QueryBuilderModule } from './query-builder';
 import { S3Module } from './s3/s3.module';
+import { PrismaConfig } from './prisma/prisma.config';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 @Module({
   imports: [
     ConfigifyModule.forRootAsync(),
-    PrismaModule,
+    PrismaModule.forRootAsync({
+      global: true,
+      useFactory: (config: PrismaConfig) => {
+        return {
+          adapter: new PrismaPg({ connectionString: config.databaseUrl }),
+        };
+      },
+      inject: [PrismaConfig],
+    }),
     QueryBuilderModule.register({ global: true }),
     ScheduleModule.forRoot(),
     AuthModule.forRoot(),

@@ -14,7 +14,6 @@ import {
   LostDocumentCase,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
-import { JsonValue } from '@prisma/client/runtime/library';
 
 export const QueryDocumentCaseSchema = z
   .object({
@@ -139,7 +138,7 @@ export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
   @ApiProperty()
   pointAwarded: number;
   @ApiProperty({ isArray: true, type: SecurityQuestionDto })
-  securityQuestion: JsonValue;
+  securityQuestion: any;
   @ApiProperty()
   id: string;
   @ApiProperty()

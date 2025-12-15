@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { ApiProperty } from '@nestjs/swagger';
-import { JsonValue } from '@prisma/client/runtime/library';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import {
@@ -56,13 +54,13 @@ export class GetCaseStatusTransitionResponseDto
   @ApiProperty()
   deviceLocation: string | null;
   @ApiProperty()
-  deviceMetadata: JsonValue;
+  deviceMetadata: any;
   @ApiProperty()
-  verificationResult: JsonValue | null;
+  verificationResult: any;
   @ApiProperty()
   notes: string;
   @ApiProperty()
-  metadata: JsonValue | null;
+  metadata: any;
   @ApiProperty()
   createdAt: Date;
 }

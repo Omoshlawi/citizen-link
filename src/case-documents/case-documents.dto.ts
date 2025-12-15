@@ -3,7 +3,6 @@ import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
 import { ApiProperty } from '@nestjs/swagger';
 import { Document, DocumentField } from '../../generated/prisma/client';
-import { JsonValue } from '@prisma/client/runtime/library';
 
 export const QueryCaseDocumentSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -84,9 +83,9 @@ export class GetCaseDocumentResponseDto implements Document {
   @ApiProperty()
   aiExtractionPrompt: string | null;
   @ApiProperty()
-  aiExtractedData: JsonValue;
+  aiExtractedData: any;
   @ApiProperty()
-  extractionConfidence: JsonValue;
+  extractionConfidence: any;
   @ApiProperty()
   caseId: string;
   @ApiProperty()
