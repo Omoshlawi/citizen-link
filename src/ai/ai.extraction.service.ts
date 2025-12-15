@@ -205,42 +205,10 @@ export class AiExtractionService {
         - If a field was not in the extracted data, DO NOT include it in the confidence response
         - The "additionalFields" array MUST include ALL items from extracted data with nameScore and valueScore for each
         - The "securityQuestions" array MUST include ALL questions from extracted data with questionScore and answerScore for each
+        - Return ONLY the JSON object, no explanations, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
 
         EXTRACTED DATA TO VERIFY AND SCORE:
         ${JSON.stringify(extractedData, null, 2)}
-
-        CRITICAL SCORING REQUIREMENTS:
-        1. You MUST provide integer confidence scores for ALL fields present in the extracted data
-        2. Score each field as an integer from 1 to 100 (no decimals)
-        3. For "additionalFields" array: You MUST provide integer scores for EACH item with:
-           - "nameScore": integer confidence that the field name was correctly identified (verify in images)
-           - "valueScore": integer confidence that the field value matches what's visible in images
-        4. For "securityQuestions" array: You MUST provide integer scores for EACH question with:
-           - "questionScore": integer confidence that the question is well-formed and verifiable
-           - "answerScore": integer confidence that the answer matches what's visible in the images
-
-        CONFIDENCE EVALUATION FACTORS:
-        When scoring, consider:
-        - Visual verification: Does extracted value match what's in the images?
-        - Text clarity and readability in the source images
-        - Whether field was clearly visible and unambiguous in images
-
-        SCORING GUIDELINES (all as integers, no decimals or points):
-        - 95-100: Extracted value exactly matches image, extremely clear, no doubt, perfect quality
-        - 85-94: Extracted value matches image, very clear, minor uncertainty, excellent quality
-        - 70-84: Extracted value mostly matches image, readable but some quality issues, good confidence
-        - 50-69: Extracted value partially matches or unclear in image, difficult to verify, moderate confidence
-        - 1-49: Cannot verify in image, mismatch detected, or very poor quality, low confidence
-
-        REDUCE SCORES IF:
-        - Extracted value doesn't match what's visible in the images
-        - Field cannot be located or verified in the provided images
-        - Text was blurred, damaged, or partially obscured in images
-        - OCR errors are detected when comparing extraction to image
-        - Field is in an unusual format or location that makes verification difficult
-        - Multiple interpretations are possible based on image content
-        - Field appears incomplete or truncated in the images
-        - Significant discrepancy between extracted value and image content
 
         REQUIRED OUTPUT STRUCTURE (return ONLY valid JSON, no markdown, no code blocks, scores as integers):
         {
@@ -274,15 +242,7 @@ export class AiExtractionService {
             }
           ]
         }
-
-        IMPORTANT REQUIREMENTS:
-        - Include confidence scores as integers for EVERY field that exists in the extracted data
-        - If a field was not in the extracted data, DO NOT include it in the confidence response
-        - The "additionalFields" array MUST include ALL items from extracted data with nameScore and valueScore for each, as integers from 1-100
-        - The "securityQuestions" array MUST include ALL questions from extracted data with questionScore and answerScore for each, as integers from 1-100
-        - Be conservative - better to underestimate than overestimate confidence
-        - Return ONLY the JSON object, no explanations, no markdown formatting
-        - All scores must be whole number integers between 1 and 100 (inclusive), absolutely NO decimals
+        
     `;
   }
 
@@ -300,7 +260,10 @@ export class AiExtractionService {
         4. "focus" (optional): Number 0.0-1.0 - image sharpness and focus quality
         5. "lighting" (optional): Number 0.0-1.0 - exposure quality, glare, shadows
         6. "tamperingDetected" (REQUIRED): Boolean - true if any signs of manipulation detected
-        7. "warnings" (REQUIRED): Array of strings - specific issues found (empty array [] if none) (should be as few as possible e.g "slight blur on bottom corner")
+        7. "warnings" (REQUIRED): Array of strings 
+            - specific issues found (empty array [] if none) (
+            - should be as few as maximum of 5 major issues and that is majourly affect extraction greatly than the others
+            - each issue shouuld be very brief and to the point i.e not more that 5 words)
         8. "imageType" (optional): String - e.g., "front", "back", "side", etc.
         9. "usableForExtraction" (optional): Boolean - whether image is usable for data extraction
 
