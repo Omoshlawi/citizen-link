@@ -6,4 +6,7 @@ import { Configuration, Value } from '@itgorillaz/configify';
 export class AiConfig {
   @Value('GEMINI_API_KEY', { parse: z.string().nonempty().parse })
   geminiApiKey: string;
+
+  @Value('DEEPSEEK_API_KEY', { parse: z.string().nonempty().parse })
+  deepSeekApiKey: string;
 }
