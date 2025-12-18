@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { GenerateContentConfig, GenerateContentResponse } from '@google/genai';
 import { BadRequestException, Inject, Logger } from '@nestjs/common';
 import z from 'zod';
 import {
@@ -17,10 +15,13 @@ import {
   AI_IMAGE_ANALYSIS_CONFIG,
 } from './ai.contants';
 import { AiService } from './ai.service';
-import { ExtractInformationInput } from './ai.types';
+import {
+  ExtractInformationInput,
+  GenerateContentConfig,
+  GenerateContentResponse,
+} from './ai.types';
 import {
   ConfidenceSchema,
-  DataExtractionDto,
   DataExtractionSchema,
   ImageAnalysisSchema,
 } from './ocr.dto';
@@ -145,7 +146,9 @@ export class AiExtractionService {
     return baseInstructions;
   }
 
-  private getConfidencePrompt(extractedData: DataExtractionDto): string {
+  private getConfidencePrompt(
+    extractedData: z.infer<typeof DataExtractionSchema>,
+  ): string {
     return `
         You are an advanced document information extraction AI with expert-level OCR (Optical Character Recognition) and document understanding capabilities.
         Your task is to evaluate confidence scores as integer percentages (from 1 to 100, no decimals, no points) for EVERY field in the extracted data by VISUALLY VERIFYING each extracted value against the document images.
@@ -307,11 +310,17 @@ export class AiExtractionService {
   ): GenerateContentConfig {
     switch (interactionType) {
       case AIInteractionType.DATA_EXTRACTION:
-        return AI_DATA_EXTRACT_CONFIG;
+        return {
+          ...AI_DATA_EXTRACT_CONFIG,
+        };
       case AIInteractionType.CONFIDENCE_SCORE:
-        return AI_CONFIDENCE_CONFIG;
+        return {
+          ...AI_CONFIDENCE_CONFIG,
+        };
       case AIInteractionType.IMAGE_ANALYSIS:
-        return AI_IMAGE_ANALYSIS_CONFIG;
+        return {
+          ...AI_IMAGE_ANALYSIS_CONFIG,
+        };
       default:
         throw new BadRequestException('Invalid interaction type');
     }
@@ -337,7 +346,7 @@ export class AiExtractionService {
           : []),
       ];
 
-      aiResponse = await this.aiService.generateContentStream(
+      aiResponse = await this.aiService.generateContent(
         parts,
         this.getInteructionConfig(interactionType),
       );

@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import {
   Document,
@@ -8,21 +7,21 @@ import {
 } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
+import { AiService } from './ai.service';
 import { AIOptions } from './ai.types';
 
 @Injectable()
 export class AiMatchingService implements OnModuleInit {
   private readonly logger = new Logger(AiMatchingService.name);
-  private genai: GoogleGenAI;
   constructor(
     @Inject(AI_OPTIONS_TOKEN)
     private readonly options: AIOptions,
     private readonly prismaService: PrismaService,
+    private readonly aiService: AiService,
   ) {}
+
   onModuleInit() {
-    this.genai = new GoogleGenAI({
-      apiKey: this.options.geminiApiKey,
-    });
+    // No initialization needed - AiService handles OpenAI client
   }
 
   private getMatchingPrompt(
@@ -189,14 +188,9 @@ export class AiMatchingService implements OnModuleInit {
     },
   ): Promise<{ confidence: number; reasons: string[] }> {
     const prompt = this.getMatchingPrompt(foundCase, lostCase);
-    const response = await this.genai.models.generateContent({
-      model: this.options.model,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.1,
-        responseMimeType: 'application/json',
-        maxOutputTokens: 2048,
-      },
+    const response = await this.aiService.generateContent([{ text: prompt }], {
+      temperature: 0.1,
+      max_completion_tokens: 2048,
     });
     const responseText = response.text!;
     const matchResult = JSON.parse(responseText) as {

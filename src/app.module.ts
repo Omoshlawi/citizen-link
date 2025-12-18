@@ -49,9 +49,9 @@ import { PrismaPg } from '@prisma/adapter-pg';
       global: true,
       useFactory: (config: AiConfig) => {
         return {
-          geminiApiKey: config.geminiApiKey,
-          model: 'gemini-2.5-flash',
-          // model: 'gemini-2.0-flash-001',
+          apiKey: config.openaiApiKey,
+          baseURL: config.aiBaseUrl,
+          model: config.aiModel || 'gpt-4o', // Default to GPT-4o, can be overridden via env var
         };
       },
       inject: [AiConfig],

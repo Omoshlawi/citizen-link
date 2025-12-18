@@ -1,14 +1,12 @@
 import { Provider, Type } from '@nestjs/common';
 import { DocumentCategory } from '../../generated/prisma/enums';
+import { ChatModel } from 'openai/resources/chat/chat';
+import OpenAI from 'openai';
 
 export type AIOptions = {
-  geminiApiKey: string;
-  model:
-    | 'gemini-2.5-flash'
-    | 'gemini-2.5-pro'
-    | 'gemini-2.5-pro-exp'
-    | 'gemini-2.0-flash-001'
-    | 'deepseek-chat';
+  apiKey: string;
+  baseURL?: string; // For OpenAI-compatible APIs (e.g., DeepSeek, local proxies)
+  model: ChatModel; // Flexible model name - can be any OpenAI-compatible model
 };
 
 export type AiModuleOptions = {
@@ -21,6 +19,37 @@ export type AiModuleOptions = {
   imports?: Type<any>[];
   providers?: Array<Provider>;
 };
+
+export interface Part {
+  text?: string;
+  image?: {
+    url: string;
+  };
+}
+
+export type GenerateContentConfig = Pick<
+  OpenAI.Chat.Completions.ChatCompletionCreateParams,
+  'temperature' | 'max_completion_tokens'
+>;
+
+export interface GenerateContentResponse {
+  text?: string;
+  modelVersion?: string;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+}
+export interface GenerateParsedContentResponse<T> {
+  data?: T;
+  modelVersion?: string;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+}
 
 // ============= TYPE DEFINITIONS =============
 
