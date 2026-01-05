@@ -1,7 +1,11 @@
 import { Provider, Type } from '@nestjs/common';
-import { DocumentCategory } from '../../generated/prisma/enums';
+import {
+  AIInteractionType,
+  DocumentCategory,
+} from '../../generated/prisma/enums';
 import { ChatModel } from 'openai/resources/chat/chat';
 import OpenAI from 'openai';
+import { AIInteraction } from 'generated/prisma/client';
 
 export type AIOptions = {
   apiKey: string;
@@ -128,9 +132,19 @@ export type OcrExtractionInput = {
   extractedText: string;
   userId?: string;
 };
+
+export type ExtractionOptions = {
+  onBeforeInteractionHook?:
+    | ((type: AIInteractionType) => void)
+    | ((type: AIInteractionType) => Promise<void>);
+  onAfterInteractionHook?:
+    | ((type: AIInteractionType, interaction: AIInteraction) => void)
+    | ((type: AIInteractionType, interaction: AIInteraction) => Promise<void>);
+};
 export type ImageExtractionInput = {
   files: Array<{ buffer: Buffer; mimeType: string }>;
   userId?: string;
+  options?: ExtractionOptions;
 };
 
 export type ExtractInformationInput = ImageExtractionInput;

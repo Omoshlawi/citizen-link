@@ -367,6 +367,7 @@ enum AIExtractionInteractionType {
   DATA_EXTRACTION
   CONFIDENCE_SCORE
   IMAGE_ANALYSIS
+  SECURITY_QUESTIONS
 }
 
 model DocumentCase {

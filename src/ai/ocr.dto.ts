@@ -46,13 +46,16 @@ export const DataExtractionSchema = z.object({
     })
     .array()
     .optional(),
-  securityQuestions: z
+});
+
+export const SecurityQuestionsSchema = z.object({
+  questions: z
     .object({
       question: z.string(),
       answer: z.string(),
     })
     .array()
-    .optional(),
+    .nonempty('At least one question is required'),
 });
 
 export const ConfidenceSchema = z.object({
@@ -103,6 +106,10 @@ export class DataExtractionDto extends createZodDto(DataExtractionSchema) {}
 export class ImageAnalysisDto extends createZodDto(ImageAnalysisSchema) {}
 
 export class ConfidenceDto extends createZodDto(ConfidenceSchema) {}
+
+export class SecurityQuestionsDto extends createZodDto(
+  SecurityQuestionsSchema,
+) {}
 
 export const OCRImageProcessingOptions = ImageProcessOptionsSchema.extend({
   path: z

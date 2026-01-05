@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   BadRequestException,
   Injectable,
@@ -34,7 +32,12 @@ import {
   QueryDocumentCaseDto,
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
-import { DataExtractionDto, ImageAnalysisDto } from '../ai/ocr.dto';
+import {
+  DataExtractionDto,
+  ImageAnalysisDto,
+  SecurityQuestionsDto,
+} from '../ai/ocr.dto';
+import { DocumentCaseGateway } from './document-case.gateway';
 
 @Injectable()
 export class DocumentCasesService {
@@ -48,6 +51,7 @@ export class DocumentCasesService {
     private readonly aiExtractionService: AiExtractionService,
     private readonly s3Service: S3Service,
     private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
+    private readonly caseGateway: DocumentCaseGateway,
   ) {}
 
   private async filesExists(images: string[]): Promise<void> {
@@ -68,18 +72,8 @@ export class DocumentCasesService {
     userId: string,
   ) {
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
+    this.caseGateway.publishFoundCaseStatus('validate-images');
     await this.filesExists(images);
-    // const extractionTasks = await Promise.all(
-    //   images.map(async (image) => {
-    //     const url = await this.s3Service.generateDownloadSignedUrl(image);
-    //     const text = await this.ocrService.recognizeFromUrl(url);
-    //     return text;
-    //   }),
-    // );
-    // const info = await this.aiService.extractInformation({
-    //   source: 'ocr',
-    //   extractedText: extractionTasks.join('\n\n'),
-    // });
     const _extractionTasks = await Promise.all(
       images.map(async (image) => {
         const url = await this.s3Service.generateDownloadSignedUrl(image);
@@ -93,8 +87,50 @@ export class DocumentCasesService {
     const extraction = await this.aiExtractionService.extractInformation({
       files: _extractionTasks,
       userId,
+      options: {
+        onBeforeInteractionHook: (type) => {
+          switch (type) {
+            case AIInteractionType.IMAGE_ANALYSIS:
+              this.caseGateway.publishFoundCaseStatus('analyse-images');
+              break;
+            case AIInteractionType.CONFIDENCE_SCORE:
+              this.caseGateway.publishFoundCaseStatus('confidence-score');
+              break;
+            case AIInteractionType.DATA_EXTRACTION:
+              this.caseGateway.publishFoundCaseStatus('extract-data');
+              break;
+            case AIInteractionType.SECURITY_QUESTIONS_GEN:
+              this.caseGateway.publishFoundCaseStatus(
+                'extract-security-questions',
+              );
+              break;
+            default:
+              this.logger.warn('');
+          }
+        },
+        onAfterInteractionHook: (type) => {
+          switch (type) {
+            case AIInteractionType.IMAGE_ANALYSIS:
+              this.caseGateway.publishFoundCaseStatus('analyse-images');
+              break;
+            case AIInteractionType.CONFIDENCE_SCORE:
+              this.caseGateway.publishFoundCaseStatus('confidence-score');
+              break;
+            case AIInteractionType.DATA_EXTRACTION:
+              this.caseGateway.publishFoundCaseStatus('extract-data');
+              break;
+            case AIInteractionType.SECURITY_QUESTIONS_GEN:
+              this.caseGateway.publishFoundCaseStatus(
+                'extract-security-questions',
+              );
+              break;
+            default:
+              this.logger.warn('');
+          }
+        },
+      },
     });
-    const { additionalFields, securityQuestions, ...documentpayload } =
+    const { additionalFields, ...documentpayload } =
       extraction.aiextractionInteractions.find(
         (interaction) =>
           interaction.aiInteraction.interactionType ===
@@ -105,13 +141,18 @@ export class DocumentCasesService {
         interaction.aiInteraction.interactionType ===
         AIInteractionType.IMAGE_ANALYSIS,
     )?.extractionData as unknown as ImageAnalysisDto;
+    const securityQuestions = extraction.aiextractionInteractions.find(
+      (interaction) =>
+        interaction.aiInteraction.interactionType ===
+        AIInteractionType.SECURITY_QUESTIONS_GEN,
+    )?.extractionData as unknown as SecurityQuestionsDto;
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         ...caseData,
         eventDate: dayjs(eventDate).toDate(),
         foundDocumentCase: {
           create: {
-            securityQuestion: securityQuestions,
+            securityQuestion: securityQuestions.questions,
             extractionId: extraction.id,
           },
         },
@@ -160,6 +201,7 @@ export class DocumentCasesService {
         document: true,
       },
     });
+
     return await this.findOne(documentCase.id, query, userId);
   }
 

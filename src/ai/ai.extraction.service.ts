@@ -24,6 +24,7 @@ import {
   ConfidenceSchema,
   DataExtractionSchema,
   ImageAnalysisSchema,
+  SecurityQuestionsSchema,
 } from './ocr.dto';
 
 export class AiExtractionService {
@@ -33,6 +34,91 @@ export class AiExtractionService {
     @Inject(PrismaService)
     private readonly prismaService: PrismaService,
   ) {}
+  /**
+   * Returns a prompt to generate probing security questions about a document,
+   * based on the already-extracted data.
+   *
+   * @param extractedData - Structured data extracted from the document
+   * @returns string prompt for an AI model
+   */
+  private async getSecurityQuestionsPromt(
+    extractedData: z.infer<typeof DataExtractionSchema>,
+  ): Promise<string> {
+    const documentType = await this.prismaService.documentType.findUnique({
+      where: {
+        id: extractedData.typeId,
+      },
+    });
+    if (!documentType) {
+      throw new BadRequestException('Document type not found');
+    }
+    return `
+        You are an advanced AI tasked with generating probing, context-aware security questions about a person, based strictly on the following extracted document data:
+
+        DOCUMENT TYPE: ${documentType.name}
+        DOCUMENT CATEGORY: ${documentType.category}
+        DOCUMENT DATA: ${JSON.stringify(extractedData, null, 2)}
+
+        Your goals:
+        - Generate challenging, non-obvious security questions, FOCUSED on this individual and document, such as "What is the owner's date of birth?", "Who is the document issuer?", or, if available, "What is the document place of issue?".
+        - Use ONLY the information found above. Do NOT hallucinate questions about information that is missing or set to null.
+        - Make 3 to 5 questions (if information allows), and prioritize details that are not always obvious or could distinguish this person.
+        - Format output as a JSON object with the following structure: { "questions": [{ "question": string, "answer": string }] }
+        - Do NOT include any extra text, notes, or explanation.
+        - Prioritize less obvious questions e.g what is the owners phone number;which is very obvious
+        - Correct formated date values e.g 20.11.2025 to 2025-11-20, 20/11/2025 to 2025-11-20, etc.
+        - Return date VALUES in ISO format (YYYY-MM-DD).
+        - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
+
+        SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
+        {
+            "questions": [
+                { "question": string, "answer": string }
+            ]
+        }
+
+        EXAMPLES OF GOOD OUTPUT:
+        1. For a clear passport photo with data: 
+        {
+            "documentNumber": "A12345678",
+            "ownerName": "JOHN DOE",
+            "dateOfBirth": "1990-01-01",
+            "nationality": "Countryland",
+            "typeId": "<type id for passport>", 
+            "issuer": "Countryland Government",
+            "expiryDate": "2032-12-31",
+        }
+        SECURITY QUESTIONS:
+        {
+            "questions": [
+              { "question": "What is the document number?", "answer": "A12345678" },
+              { "question": "What is the document expiry date?", "answer": "2032-12-31" },
+              { "question": "What is the owner's date of birth?", "answer": "1990-01-01" }
+            ]
+        }
+
+        2. For a clear license photo with data:
+        {
+            "documentNumber": "D1234567",
+            "ownerName": "JANE DOE",
+            "dateOfBirth": "1985-02-15",
+            "typeId": "<type id for driver's license>",
+            "issuer": "STATE OF EXAMPLE",
+            "expiryDate": "2026-06-30",
+        }
+        SECURITY QUESTIONS:
+        {
+            "questions": [
+              { "question": "What is the document number?", "answer": "D1234567" },
+              { "question": "What is the owner's date of birth?", "answer": "1985-02-15" },
+              { "question": "What is the document expiry date?", "answer": "2026-06-30" }
+            ]
+        }
+
+        
+        Generate the questions now, drawing only from the document fields that are actually present.
+      `;
+  }
 
   private getDataExtractionPrompt(
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
@@ -64,10 +150,10 @@ export class AiExtractionService {
         - Account for official seals, logos, stamps, and barcodes/QRs to help deduce issuer/type.
         - Use visual context to deduce field semantics, even if not explicitly labeled.
         - Parse handwritten and printed text.
+        - Correct formated date values for fields 'expiryDate', 'issuanceDate', 'dateOfBirth' and other date fields in 'aditionalFields' array e.g 20.11.2025 to 2025-11-20, 20/11/2025 to 2025-11-20, etc.
         - Return date fields in ISO format (YYYY-MM-DD).
         - If a field is uncertain or illegible, omit it or set its value to null. Do NOT hallucinate.
         - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
-        - Prioritize less obvious questions e.g what is the owners phone number;which is very obvious
 
         SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
         {
@@ -85,17 +171,11 @@ export class AiExtractionService {
             "issuanceDate": string,              // Document's date of issue (YYYY-MM-DD)
             "expiryDate": string,                // Expiry/valid until (YYYY-MM-DD)
             "additionalFields": [                // Other fields as visually extracted, format:
-            {
-                "fieldName": string,
-                "fieldValue": string
-            }
+              {
+                  "fieldName": string,
+                  "fieldValue": string
+              }
             ],
-            "securityQuestions": [               // Make 1-2 questions/answers based on data you extract, format:
-            {
-                "question": string,
-                "answer": string
-            }
-            ]
         }
 
         EXAMPLES OF GOOD OUTPUT:
@@ -108,12 +188,7 @@ export class AiExtractionService {
             "nationality": "Countryland",
             "typeId": "<type id for passport>", 
             "issuer": "Countryland Government",
-            "expiryDate": "2032-12-31",
-            "securityQuestions": [
-            { "question": "What is the document number?", "answer": "A12345678" },
-            { "question": "What is the document expiry date?", "answer": "2032-12-31" },
-            { "question": "What is the owner's date of birth?", "answer": "1990-01-01" }
-            ]
+            "expiryDate": "2032-12-31"
         }
 
         2. For a license image with both front and back:
@@ -125,13 +200,8 @@ export class AiExtractionService {
             "issuer": "STATE OF EXAMPLE",
             "expiryDate": "2026-06-30",
             "additionalFields": [
-            { "fieldName": "Address", "fieldValue": "123 MAIN ST, ANYTOWN" },
-            { "fieldName": "License Class", "fieldValue": "C" }
-            ],
-            "securityQuestions": [
-            { "question": "What is the document number?", "answer": "D1234567" },
-            { "question": "What is the owner's date of birth?", "answer": "1985-02-15" },
-            { "question": "What is the document expiry date?", "answer": "2026-06-30" }
+              { "fieldName": "Address", "fieldValue": "123 MAIN ST, ANYTOWN" },
+              { "fieldName": "License Class", "fieldValue": "C" }
             ]
         }
 
@@ -140,7 +210,8 @@ export class AiExtractionService {
         - Use your expert OCR, context awareness, and reasoning to organize the fields.
         - Output a single, valid JSON object conforming to the schema above.
         - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
-        
+        - CORRECT formated date VALUES for fields 'expiryDate', 'issuanceDate', 'dateOfBirth' and other date fields in 'aditionalFields' array e.g 20.11.2025 to 2025-11-20, 20/11/2025 to 2025-11-20, etc.
+        - Return date VALUES in ISO format (YYYY-MM-DD).
     `;
 
     return baseInstructions;
@@ -190,14 +261,6 @@ export class AiExtractionService {
               "fieldValue": "NAIROBI",
               "valueScore": 92
             }
-          ],
-          "securityQuestions": [
-            {
-              "question": "What is your ID serial number?",
-              "questionScore": 98,
-              "answer": "A1234567",
-              "answerScore": 95
-            }
           ]
         }
 
@@ -207,7 +270,6 @@ export class AiExtractionService {
         - Include confidence scores for EVERY field that exists in the extracted data
         - If a field was not in the extracted data, DO NOT include it in the confidence response
         - The "additionalFields" array MUST include ALL items from extracted data with nameScore and valueScore for each
-        - The "securityQuestions" array MUST include ALL questions from extracted data with questionScore and answerScore for each
         - Return ONLY the JSON object, no explanations, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
 
         EXTRACTED DATA TO VERIFY AND SCORE:
@@ -234,14 +296,6 @@ export class AiExtractionService {
               "nameScore": 95,
               "fieldValue": "NAIROBI",
               "valueScore": 92
-            }
-          ],
-          "securityQuestions": [
-            {
-              "question": "What is your ID serial number?",
-              "questionScore": 98,
-              "answer": "A1234567",
-              "answerScore": 95
             }
           ]
         }
@@ -310,6 +364,10 @@ export class AiExtractionService {
   ): GenerateContentConfig {
     switch (interactionType) {
       case AIInteractionType.DATA_EXTRACTION:
+        return {
+          ...AI_DATA_EXTRACT_CONFIG,
+        };
+      case AIInteractionType.SECURITY_QUESTIONS_GEN:
         return {
           ...AI_DATA_EXTRACT_CONFIG,
         };
@@ -386,7 +444,7 @@ export class AiExtractionService {
   }
 
   async extractInformation(input: ExtractInformationInput) {
-    this.logger.log('Starting three-step extraction process...');
+    this.logger.log('Starting four-step extraction process...');
     // Get document types once
     const documentTypes = await this.prismaService.documentType.findMany({
       select: { id: true, name: true, category: true },
@@ -394,7 +452,9 @@ export class AiExtractionService {
 
     // ============= STEP 1: EXTRACT DATA =============
     this.logger.log('Step 1: Extracting document data...');
-
+    await input?.options?.onBeforeInteractionHook?.(
+      AIInteractionType.DATA_EXTRACTION,
+    );
     const dataPrompt = this.getDataExtractionPrompt(documentTypes);
 
     const dataResult = await this.callAIAndStore(
@@ -483,8 +543,99 @@ export class AiExtractionService {
     const extractedData = dataValidation.data;
     this.logger.log('Step 1 completed: Data extracted successfully');
 
-    // ============= STEP 2: CALCULATE CONFIDENCE =============
-    this.logger.log('Step 2: Calculating confidence scores...');
+    // ============= STEP 2: GENERATE SECURITY QUESTIONS =============
+    this.logger.log('Step 2: Generating security questions...');
+    const securityQuestionsPrompt =
+      await this.getSecurityQuestionsPromt(extractedData);
+    const securityQuestionsResult = await this.callAIAndStore(
+      securityQuestionsPrompt,
+      [],
+      AIInteractionType.SECURITY_QUESTIONS_GEN,
+      'Document',
+      input.userId,
+    );
+
+    // Parse and validate security questions
+    const cleanedSecurityQuestionsResponse = this.aiService.cleanResponseText(
+      securityQuestionsResult.response,
+    );
+    const securityQuestionsParsedResult = safeParseJson<Record<string, any>>(
+      cleanedSecurityQuestionsResponse,
+      { transformNullToUndefined: true },
+    );
+    if (!securityQuestionsParsedResult.success) {
+      await this.prismaService.aIExtraction.create({
+        data: {
+          aiextractionInteractions: {
+            createMany: {
+              data: [
+                {
+                  aiInteractionId: dataResult.id,
+                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                  extractionData: extractedData,
+                },
+                {
+                  aiInteractionId: securityQuestionsResult.id,
+                  extractionType:
+                    AIExtractionInteractionType.SECURITY_QUESTIONS,
+                  errorMessage: securityQuestionsParsedResult.error.message,
+                  success: false,
+                },
+              ],
+            },
+          },
+        },
+      });
+      this.logger.error(
+        'Security questions parsing failed:',
+        securityQuestionsParsedResult.error,
+      );
+      throw new BadRequestException(
+        `Security questions parsing failed: ${securityQuestionsParsedResult.error.message}`,
+      );
+    }
+    const securityQuestionsValidation =
+      await SecurityQuestionsSchema.safeParseAsync(
+        securityQuestionsParsedResult.data,
+      );
+    if (!securityQuestionsValidation.success) {
+      await this.prismaService.aIExtraction.create({
+        data: {
+          aiextractionInteractions: {
+            createMany: {
+              data: [
+                {
+                  aiInteractionId: dataResult.id,
+                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                  extractionData: extractedData,
+                },
+                {
+                  aiInteractionId: securityQuestionsResult.id,
+                  extractionType:
+                    AIExtractionInteractionType.SECURITY_QUESTIONS,
+                  errorMessage: JSON.stringify(
+                    z.formatError(securityQuestionsValidation.error),
+                  ),
+                  success: false,
+                },
+              ],
+            },
+          },
+        },
+      });
+      this.logger.error(
+        'Security questions validation failed:',
+        securityQuestionsValidation.error,
+      );
+      throw new BadRequestException(
+        `Security questions validation failed: ${JSON.stringify(securityQuestionsValidation.error.issues)}`,
+      );
+    }
+    const securityQuestions = securityQuestionsValidation.data;
+    this.logger.log('Step 2 completed: Security questions generated');
+
+    // ============= STEP 3: CALCULATE CONFIDENCE =============
+    this.logger.log('Step 3: Calculating confidence scores...');
 
     const confidencePrompt = this.getConfidencePrompt(extractedData);
 
@@ -515,6 +666,12 @@ export class AiExtractionService {
                   aiInteractionId: dataResult.id,
                   extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
                   extractionData: extractedData,
+                },
+                {
+                  aiInteractionId: securityQuestionsResult.id,
+                  extractionType:
+                    AIExtractionInteractionType.SECURITY_QUESTIONS,
+                  extractionData: securityQuestions,
                 },
                 {
                   aiInteractionId: confidenceResult.id,
@@ -551,6 +708,12 @@ export class AiExtractionService {
                   extractionData: extractedData,
                 },
                 {
+                  aiInteractionId: securityQuestionsResult.id,
+                  extractionType:
+                    AIExtractionInteractionType.SECURITY_QUESTIONS,
+                  extractionData: securityQuestions,
+                },
+                {
                   aiInteractionId: confidenceResult.id,
                   extractionType: AIExtractionInteractionType.CONFIDENCE_SCORE,
                   errorMessage: JSON.stringify(
@@ -573,10 +736,10 @@ export class AiExtractionService {
     }
 
     const confidence = confidenceValidation.data;
-    this.logger.log('Step 2 completed: Confidence scores calculated');
+    this.logger.log('Step 3 completed: Confidence scores calculated');
 
-    // ============= STEP 3: ANALYZE IMAGES =============
-    this.logger.log('Step 3: Analyzing image quality...');
+    // ============= STEP 4: ANALYZE IMAGES =============
+    this.logger.log('Step 4: Analyzing image quality...');
 
     const imagePrompt = this.getImageAnalysisPrompt();
 
@@ -607,6 +770,12 @@ export class AiExtractionService {
                   aiInteractionId: dataResult.id,
                   extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
                   extractionData: extractedData,
+                },
+                {
+                  aiInteractionId: securityQuestionsResult.id,
+                  extractionType:
+                    AIExtractionInteractionType.SECURITY_QUESTIONS,
+                  extractionData: securityQuestions,
                 },
                 {
                   aiInteractionId: confidenceResult.id,
@@ -649,6 +818,12 @@ export class AiExtractionService {
                   extractionData: extractedData,
                 },
                 {
+                  aiInteractionId: securityQuestionsResult.id,
+                  extractionType:
+                    AIExtractionInteractionType.SECURITY_QUESTIONS,
+                  extractionData: securityQuestions,
+                },
+                {
                   aiInteractionId: confidenceResult.id,
                   extractionType: AIExtractionInteractionType.CONFIDENCE_SCORE,
                   extractionData: confidence,
@@ -676,7 +851,7 @@ export class AiExtractionService {
     }
 
     const imageAnalysis = imageValidation.data;
-    this.logger.log('Step 3 completed: Image analysis finished');
+    this.logger.log('Step 4 completed: Image analysis finished');
 
     // ============= CREATE FINAL EXTRACTION RECORD =============
     this.logger.log('Creating final extraction record...');
@@ -690,6 +865,11 @@ export class AiExtractionService {
                 aiInteractionId: dataResult.id,
                 extractionData: extractedData,
                 extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+              },
+              {
+                aiInteractionId: securityQuestionsResult.id,
+                extractionData: securityQuestions,
+                extractionType: AIExtractionInteractionType.SECURITY_QUESTIONS,
               },
               {
                 aiInteractionId: confidenceResult.id,
