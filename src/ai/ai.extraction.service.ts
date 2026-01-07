@@ -452,9 +452,6 @@ export class AiExtractionService {
 
     // ============= STEP 1: EXTRACT DATA =============
     this.logger.log('Step 1: Extracting document data...');
-    await input?.options?.onBeforeInteractionHook?.(
-      AIInteractionType.DATA_EXTRACTION,
-    );
     const dataPrompt = this.getDataExtractionPrompt(documentTypes);
 
     const dataResult = await this.callAIAndStore(
@@ -478,6 +475,10 @@ export class AiExtractionService {
           },
         },
       });
+      // await input?.options?.onAfterInteractionHook?.(
+      //   AIInteractionType.DATA_EXTRACTION,
+      //   ()=>
+      // );
       throw new BadRequestException(
         `Data extraction failed: ${dataResult.errorMessage}`,
       );

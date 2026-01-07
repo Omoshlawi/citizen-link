@@ -14,6 +14,11 @@ import {
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
 import { AiExtractionService } from '../ai/ai.extraction.service';
+import {
+  DataExtractionDto,
+  ImageAnalysisDto,
+  SecurityQuestionsDto,
+} from '../ai/ocr.dto';
 import { OcrService } from '../ai/ocr.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,12 +37,6 @@ import {
   QueryDocumentCaseDto,
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
-import {
-  DataExtractionDto,
-  ImageAnalysisDto,
-  SecurityQuestionsDto,
-} from '../ai/ocr.dto';
-import { DocumentCaseGateway } from './document-case.gateway';
 
 @Injectable()
 export class DocumentCasesService {
@@ -51,7 +50,6 @@ export class DocumentCasesService {
     private readonly aiExtractionService: AiExtractionService,
     private readonly s3Service: S3Service,
     private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
-    private readonly caseGateway: DocumentCaseGateway,
   ) {}
 
   private async filesExists(images: string[]): Promise<void> {
@@ -70,9 +68,9 @@ export class DocumentCasesService {
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     userId: string,
+    onPublishEvent?: (event: string, ...args: Array<any>) => void,
   ) {
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
-    this.caseGateway.publishFoundCaseStatus('validate-images');
     await this.filesExists(images);
     const _extractionTasks = await Promise.all(
       images.map(async (image) => {
@@ -87,48 +85,6 @@ export class DocumentCasesService {
     const extraction = await this.aiExtractionService.extractInformation({
       files: _extractionTasks,
       userId,
-      options: {
-        onBeforeInteractionHook: (type) => {
-          switch (type) {
-            case AIInteractionType.IMAGE_ANALYSIS:
-              this.caseGateway.publishFoundCaseStatus('analyse-images');
-              break;
-            case AIInteractionType.CONFIDENCE_SCORE:
-              this.caseGateway.publishFoundCaseStatus('confidence-score');
-              break;
-            case AIInteractionType.DATA_EXTRACTION:
-              this.caseGateway.publishFoundCaseStatus('extract-data');
-              break;
-            case AIInteractionType.SECURITY_QUESTIONS_GEN:
-              this.caseGateway.publishFoundCaseStatus(
-                'extract-security-questions',
-              );
-              break;
-            default:
-              this.logger.warn('');
-          }
-        },
-        onAfterInteractionHook: (type) => {
-          switch (type) {
-            case AIInteractionType.IMAGE_ANALYSIS:
-              this.caseGateway.publishFoundCaseStatus('analyse-images');
-              break;
-            case AIInteractionType.CONFIDENCE_SCORE:
-              this.caseGateway.publishFoundCaseStatus('confidence-score');
-              break;
-            case AIInteractionType.DATA_EXTRACTION:
-              this.caseGateway.publishFoundCaseStatus('extract-data');
-              break;
-            case AIInteractionType.SECURITY_QUESTIONS_GEN:
-              this.caseGateway.publishFoundCaseStatus(
-                'extract-security-questions',
-              );
-              break;
-            default:
-              this.logger.warn('');
-          }
-        },
-      },
     });
     const { additionalFields, ...documentpayload } =
       extraction.aiextractionInteractions.find(
