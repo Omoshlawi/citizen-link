@@ -1,34 +1,34 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { BadRequestException, Inject, Logger } from '@nestjs/common';
-import z from 'zod';
 import {
-  AIExtractionInteractionType,
-  AIInteractionType,
-  DocumentType,
-} from '../../generated/prisma/client';
-import { safeParseJson } from '../app.utils';
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  AI_CONFIDENCE_CONFIG,
-  AI_DATA_EXTRACT_CONFIG,
-  AI_IMAGE_ANALYSIS_CONFIG,
-} from './ai.contants';
-import { AiService } from './ai.service';
-import {
-  ExtractInformationInput,
-  GenerateContentConfig,
-  GenerateContentResponse,
-} from './ai.types';
+import z from 'zod';
 import {
   ConfidenceSchema,
   DataExtractionSchema,
   ImageAnalysisSchema,
   SecurityQuestionsSchema,
-} from './ocr.dto';
+} from './extraction.dto';
+import {
+  AIExtractionInteractionType,
+  AIInteractionType,
+  DocumentType,
+} from '../../generated/prisma/client';
+import { GenerateContentResponse } from '../ai/ai.types';
+import { AI_DATA_EXTRACT_CONFIG } from '../ai/ai.contants';
+import { ExtractInformationInput } from './extraction.interface';
+import { safeParseJson } from '../app.utils';
 
-export class AiExtractionService {
-  private readonly logger = new Logger(AiExtractionService.name);
+@Injectable()
+export class ExtractionService {
+  private readonly logger = new Logger(ExtractionService.name);
   constructor(
     private readonly aiService: AiService,
     @Inject(PrismaService)
@@ -359,31 +359,6 @@ export class AiExtractionService {
     `;
   }
 
-  private getInteructionConfig(
-    interactionType: AIInteractionType,
-  ): GenerateContentConfig {
-    switch (interactionType) {
-      case AIInteractionType.DATA_EXTRACTION:
-        return {
-          ...AI_DATA_EXTRACT_CONFIG,
-        };
-      case AIInteractionType.SECURITY_QUESTIONS_GEN:
-        return {
-          ...AI_DATA_EXTRACT_CONFIG,
-        };
-      case AIInteractionType.CONFIDENCE_SCORE:
-        return {
-          ...AI_CONFIDENCE_CONFIG,
-        };
-      case AIInteractionType.IMAGE_ANALYSIS:
-        return {
-          ...AI_IMAGE_ANALYSIS_CONFIG,
-        };
-      default:
-        throw new BadRequestException('Invalid interaction type');
-    }
-  }
-
   private async callAIAndStore(
     prompt: string,
     files: Array<{ buffer: Buffer; mimeType: string }> | undefined,
@@ -406,7 +381,7 @@ export class AiExtractionService {
 
       aiResponse = await this.aiService.generateContent(
         parts,
-        this.getInteructionConfig(interactionType),
+        AI_DATA_EXTRACT_CONFIG,
       );
       responseText = aiResponse.text?.trim() ?? '';
       this.logger.log(`AI Response: ${responseText}`);
@@ -443,6 +418,21 @@ export class AiExtractionService {
     }
   }
 
+  async getOrCreateAiExtraction(extractionId?: string) {
+    if (extractionId) {
+      const extraction = await this.prismaService.aIExtraction.findUnique({
+        where: { id: extractionId },
+        include: { aiextractionInteractions: true },
+      });
+      if (!extraction)
+        throw new NotFoundException('extraction with id not found');
+    }
+    return await this.prismaService.aIExtraction.create({
+      data: {},
+      include: { aiextractionInteractions: true },
+    });
+  }
+
   async extractInformation(input: ExtractInformationInput) {
     this.logger.log('Starting four-step extraction process...');
     // Get document types once
@@ -452,6 +442,10 @@ export class AiExtractionService {
 
     // ============= STEP 1: EXTRACT DATA =============
     this.logger.log('Step 1: Extracting document data...');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'DATA_EXTRACTION',
+      state: { isLoading: true },
+    });
     const dataPrompt = this.getDataExtractionPrompt(documentTypes);
 
     const dataResult = await this.callAIAndStore(
@@ -463,7 +457,8 @@ export class AiExtractionService {
     );
 
     if (!dataResult.success) {
-      await this.prismaService.aIExtraction.create({
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             create: {
@@ -475,6 +470,16 @@ export class AiExtractionService {
           },
         },
       });
+      input?.options?.onPublishProgressEvent?.({
+        key: 'DATA_EXTRACTION',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Data extraction failed: ${dataResult.errorMessage}`,
+          ),
+        },
+      });
+
       // await input?.options?.onAfterInteractionHook?.(
       //   AIInteractionType.DATA_EXTRACTION,
       //   ()=>
@@ -494,7 +499,8 @@ export class AiExtractionService {
     );
 
     if (!dataParsedResult.success) {
-      await this.prismaService.aIExtraction.create({
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             create: {
@@ -510,6 +516,15 @@ export class AiExtractionService {
         'Data extraction validation failed:',
         dataParsedResult.error,
       );
+      input?.options?.onPublishProgressEvent?.({
+        key: 'DATA_EXTRACTION',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Data extraction failed: ${dataResult.errorMessage}`,
+          ),
+        },
+      });
       throw new BadRequestException(
         `Data extraction failed: ${dataParsedResult.error.message}`,
       );
@@ -520,7 +535,8 @@ export class AiExtractionService {
     );
 
     if (!dataValidation.success) {
-      await this.prismaService.aIExtraction.create({
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             create: {
@@ -536,6 +552,15 @@ export class AiExtractionService {
         'Data extraction validation failed:',
         dataValidation.error,
       );
+      input?.options?.onPublishProgressEvent?.({
+        key: 'DATA_EXTRACTION',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Data extraction validation failed: ${JSON.stringify(dataValidation.error.issues)}`,
+          ),
+        },
+      });
       throw new BadRequestException(
         `Data extraction validation failed: ${JSON.stringify(dataValidation.error.issues)}`,
       );
@@ -543,9 +568,20 @@ export class AiExtractionService {
 
     const extractedData = dataValidation.data;
     this.logger.log('Step 1 completed: Data extracted successfully');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'DATA_EXTRACTION',
+      state: {
+        isLoading: false,
+        data: dataResult,
+      },
+    });
 
     // ============= STEP 2: GENERATE SECURITY QUESTIONS =============
     this.logger.log('Step 2: Generating security questions...');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'SECURITY_QUESTIONS',
+      state: { isLoading: true },
+    });
     const securityQuestionsPrompt =
       await this.getSecurityQuestionsPromt(extractedData);
     const securityQuestionsResult = await this.callAIAndStore(
@@ -565,7 +601,17 @@ export class AiExtractionService {
       { transformNullToUndefined: true },
     );
     if (!securityQuestionsParsedResult.success) {
-      await this.prismaService.aIExtraction.create({
+      input?.options?.onPublishProgressEvent?.({
+        key: 'SECURITY_QUESTIONS',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Security questions parsing failed: ${securityQuestionsParsedResult.error.message}`,
+          ),
+        },
+      });
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             createMany: {
@@ -600,7 +646,17 @@ export class AiExtractionService {
         securityQuestionsParsedResult.data,
       );
     if (!securityQuestionsValidation.success) {
-      await this.prismaService.aIExtraction.create({
+      input?.options?.onPublishProgressEvent?.({
+        key: 'SECURITY_QUESTIONS',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Security questions validation failed: ${JSON.stringify(securityQuestionsValidation.error.issues)}`,
+          ),
+        },
+      });
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             createMany: {
@@ -634,9 +690,20 @@ export class AiExtractionService {
     }
     const securityQuestions = securityQuestionsValidation.data;
     this.logger.log('Step 2 completed: Security questions generated');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'SECURITY_QUESTIONS',
+      state: {
+        isLoading: false,
+        data: securityQuestionsResult,
+      },
+    });
 
     // ============= STEP 3: CALCULATE CONFIDENCE =============
     this.logger.log('Step 3: Calculating confidence scores...');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'CONFIDENCE_SCORE',
+      state: { isLoading: true },
+    });
 
     const confidencePrompt = this.getConfidencePrompt(extractedData);
 
@@ -657,7 +724,17 @@ export class AiExtractionService {
     );
 
     if (!confidenceParsedResult.success) {
-      await this.prismaService.aIExtraction.create({
+      input?.options?.onPublishProgressEvent?.({
+        key: 'CONFIDENCE_SCORE',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Confidence parsing failed: ${confidenceParsedResult.error.message}`,
+          ),
+        },
+      });
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             createMany: {
@@ -698,7 +775,17 @@ export class AiExtractionService {
     );
 
     if (!confidenceValidation.success) {
-      await this.prismaService.aIExtraction.create({
+      input?.options?.onPublishProgressEvent?.({
+        key: 'CONFIDENCE_SCORE',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Confidence validation failed: ${JSON.stringify(confidenceValidation.error.issues)}`,
+          ),
+        },
+      });
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             createMany: {
@@ -738,9 +825,20 @@ export class AiExtractionService {
 
     const confidence = confidenceValidation.data;
     this.logger.log('Step 3 completed: Confidence scores calculated');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'CONFIDENCE_SCORE',
+      state: {
+        isLoading: false,
+        data: confidenceResult,
+      },
+    });
 
     // ============= STEP 4: ANALYZE IMAGES =============
     this.logger.log('Step 4: Analyzing image quality...');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'IMAGE_ANALYSIS',
+      state: { isLoading: true },
+    });
 
     const imagePrompt = this.getImageAnalysisPrompt();
 
@@ -761,7 +859,17 @@ export class AiExtractionService {
       { transformNullToUndefined: true },
     );
     if (!imageParsedResult.success) {
-      await this.prismaService.aIExtraction.create({
+      input?.options?.onPublishProgressEvent?.({
+        key: 'IMAGE_ANALYSIS',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Image analysis parsing failed: ${imageParsedResult.error.message}`,
+          ),
+        },
+      });
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             createMany: {
@@ -807,7 +915,17 @@ export class AiExtractionService {
     );
 
     if (!imageValidation.success) {
-      await this.prismaService.aIExtraction.create({
+      input?.options?.onPublishProgressEvent?.({
+        key: 'IMAGE_ANALYSIS',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Image analysis validation failed: ${JSON.stringify(imageValidation.error.issues)}`,
+          ),
+        },
+      });
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
             createMany: {
@@ -853,11 +971,19 @@ export class AiExtractionService {
 
     const imageAnalysis = imageValidation.data;
     this.logger.log('Step 4 completed: Image analysis finished');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'IMAGE_ANALYSIS',
+      state: {
+        isLoading: false,
+        data: imageResult,
+      },
+    });
 
     // ============= CREATE FINAL EXTRACTION RECORD =============
     this.logger.log('Creating final extraction record...');
 
-    const extraction = await this.prismaService.aIExtraction.create({
+    const extraction = await this.prismaService.aIExtraction.update({
+      where: { id: input.extractionId },
       data: {
         aiextractionInteractions: {
           createMany: {

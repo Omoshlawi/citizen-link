@@ -2,10 +2,15 @@ import { Module } from '@nestjs/common';
 import { CaseStatusTransitionsModule } from '../case-status-transitions/case-status-transitions.module';
 import { DocumentCasesController } from './document-cases.controller';
 import { DocumentCasesService } from './document-cases.service';
+import { ExtractionModule } from '../extraction/extraction.module';
 import { DocumentCaseGateway } from './document-case.gateway';
 
 @Module({
-  imports: [CaseStatusTransitionsModule, CaseStatusTransitionsModule],
+  imports: [
+    CaseStatusTransitionsModule,
+    CaseStatusTransitionsModule,
+    ExtractionModule,
+  ],
   controllers: [DocumentCasesController],
   providers: [DocumentCasesService, DocumentCaseGateway],
 })

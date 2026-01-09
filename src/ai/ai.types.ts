@@ -128,13 +128,3 @@ export type OcrExtractionInput = {
   extractedText: string;
   userId?: string;
 };
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type ExtractionOptions = {};
-export type ImageExtractionInput = {
-  files: Array<{ buffer: Buffer; mimeType: string }>;
-  userId?: string;
-  options?: ExtractionOptions;
-};
-
-export type ExtractInformationInput = ImageExtractionInput;

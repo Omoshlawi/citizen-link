@@ -97,6 +97,9 @@ export class QueryDocumentCaseDto extends createZodDto(
 export class CreateFoundDocumentCaseDto extends createZodDto(
   FoundDocumentCaseSchema,
 ) {}
+export class WsCreateFoundDocumentCaseDto extends createZodDto(
+  FoundDocumentCaseSchema.extend({ extractionId: z.uuid() }),
+) {}
 
 export class CreateLostDocumentCaseDto extends createZodDto(
   LostDocumentCaseSchema,

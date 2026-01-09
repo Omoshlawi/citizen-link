@@ -31,21 +31,27 @@ import {
 } from './document-cases.dto';
 import { DocumentCasesService } from './document-cases.service';
 import { RequireSystemPermission } from '../auth/auth.decorators';
+import { ExtractionService } from '../extraction/extraction.service';
 
 @Controller('documents/cases')
 export class DocumentCasesController {
-  constructor(private readonly documentCasesService: DocumentCasesService) {}
+  constructor(
+    private readonly documentCasesService: DocumentCasesService,
+    private readonly extractionService: ExtractionService,
+  ) {}
 
   @Post('found')
   @ApiOperation({ summary: 'Report Found Document Case' })
   @ApiCreatedResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse({ badRequest: true })
-  reportFoundDocumentCase(
+  async reportFoundDocumentCase(
     @Body() createFoundDocumentCaseDto: CreateFoundDocumentCaseDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.reportFoundDocumentCase(
+    const extraction = await this.extractionService.getOrCreateAiExtraction();
+    return await this.documentCasesService.reportFoundDocumentCase(
+      extraction.id,
       createFoundDocumentCaseDto,
       query,
       user.id,

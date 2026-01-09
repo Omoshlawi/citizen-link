@@ -13,12 +13,6 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
-import { AiExtractionService } from '../ai/ai.extraction.service';
-import {
-  DataExtractionDto,
-  ImageAnalysisDto,
-  SecurityQuestionsDto,
-} from '../ai/ocr.dto';
 import { OcrService } from '../ai/ocr.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -37,6 +31,13 @@ import {
   QueryDocumentCaseDto,
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
+import { ExtractionService } from '../extraction/extraction.service';
+import {
+  DataExtractionDto,
+  ImageAnalysisDto,
+  SecurityQuestionsDto,
+} from '../extraction/extraction.dto';
+import { ProgressEvent } from '../extraction/extraction.interface';
 
 @Injectable()
 export class DocumentCasesService {
@@ -47,31 +48,57 @@ export class DocumentCasesService {
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
     private readonly ocrService: OcrService,
-    private readonly aiExtractionService: AiExtractionService,
+    private readonly extractionService: ExtractionService,
     private readonly s3Service: S3Service,
     private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
   ) {}
 
-  private async filesExists(images: string[]): Promise<void> {
+  private async filesExists(
+    images: string[],
+    onFailed?: () => void,
+  ): Promise<void> {
     this.logger.debug('Checking if images exist', images);
     const exists = await Promise.all(
       images.map((image) => this.s3Service.fileExists(image)),
     );
     const allExists = exists.every(Boolean);
     if (!allExists) {
-      throw new BadRequestException('One or more images do not exist');
+      if (!onFailed)
+        throw new BadRequestException('One or more images do not exist');
+      else onFailed();
     }
     this.logger.debug('All images exist');
   }
 
   async reportFoundDocumentCase(
+    extractionId: string,
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     userId: string,
-    onPublishEvent?: (event: string, ...args: Array<any>) => void,
+    onPublishProgressEvent?: (data: ProgressEvent) => void,
   ) {
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
-    await this.filesExists(images);
+    onPublishProgressEvent?.({
+      key: 'IMAGE_VALIDATION',
+      state: { isLoading: true },
+    });
+    await this.filesExists(images, () => {
+      onPublishProgressEvent?.({
+        key: 'IMAGE_VALIDATION',
+        state: {
+          isLoading: false,
+          error: new Error('One or more images do not exist'),
+        },
+      });
+      throw new BadRequestException('One or more images do not exist');
+    });
+    onPublishProgressEvent?.({
+      key: 'IMAGE_VALIDATION',
+      state: {
+        isLoading: false,
+        data: 'Image validation succesfull',
+      },
+    });
     const _extractionTasks = await Promise.all(
       images.map(async (image) => {
         const url = await this.s3Service.generateDownloadSignedUrl(image);
@@ -82,9 +109,11 @@ export class DocumentCasesService {
         return { buffer, mimeType };
       }),
     );
-    const extraction = await this.aiExtractionService.extractInformation({
+    const extraction = await this.extractionService.extractInformation({
+      extractionId,
       files: _extractionTasks,
       userId,
+      options: { onPublishProgressEvent },
     });
     const { additionalFields, ...documentpayload } =
       extraction.aiextractionInteractions.find(

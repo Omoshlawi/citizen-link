@@ -22,6 +22,7 @@ import { QueryBuilderModule } from './query-builder';
 import { S3Module } from './s3/s3.module';
 import { PrismaConfig } from './prisma/prisma.config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { ExtractionModule } from './extraction/extraction.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
       inject: [AiConfig],
     }),
     DocumentImagesModule,
+    ExtractionModule,
     // MatchesModule,
   ],
   controllers: [AppController],
