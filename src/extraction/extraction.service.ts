@@ -87,11 +87,14 @@ export class ExtractionService {
             "typeId": "<type id for passport>", 
             "issuer": "Countryland Government",
             "expiryDate": "2032-12-31",
+            "additionalFields": [
+              { "fieldName": "Passport No", "fieldValue": "A12345678" },
+            ]
         }
         SECURITY QUESTIONS:
         {
             "questions": [
-              { "question": "What is the document number?", "answer": "A12345678" },
+              { "question": "What is the document passport number?", "answer": "A12345678" },
               { "question": "What is the document expiry date?", "answer": "2032-12-31" },
               { "question": "What is the owner's date of birth?", "answer": "1990-01-01" }
             ]
@@ -123,6 +126,19 @@ export class ExtractionService {
   private getDataExtractionPrompt(
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
   ): string {
+    /**
+     * - National ID cards
+          - Passports
+          - Driver's licenses
+          - Student IDs
+          - Birth certificates
+          - Marriage certificates
+          - Professional licenses/certificates
+          - Insurance cards
+          - Social security/pension documents
+          - Work permits/visas
+          - Vaccination/medical records
+     */
     const baseInstructions = `
         You are an advanced document information extraction AI with expert-level OCR (Optical Character Recognition) and document understanding capabilities.
 
@@ -130,17 +146,7 @@ export class ExtractionService {
         Analyze the provided image(s) of original personal/official documents. Extract and return all relevant information by visually interpreting the content. Your goal is to accurately recognize text, fields, and layout, and convert this information into a structured data object according to the described schema.
 
         HANDLED DOCUMENT TYPES (examples, not limited to):
-            - National ID cards
-            - Passports
-            - Driver's licenses
-            - Student IDs
-            - Birth certificates
-            - Marriage certificates
-            - Professional licenses/certificates
-            - Insurance cards
-            - Social security/pension documents
-            - Work permits/visas
-            - Vaccination/medical records
+            ${documentTypes.map((t) => ' - ' + t.name + ' (Category:' + t.category + ', ID: ' + t.id + ')').join('\n\t')}
             - Any other personally identifiable documents
 
         IMPORTANT INSTRUCTIONS:
@@ -153,6 +159,7 @@ export class ExtractionService {
         - Correct formated date values for fields 'expiryDate', 'issuanceDate', 'dateOfBirth' and other date fields in 'aditionalFields' array e.g 20.11.2025 to 2025-11-20, 20/11/2025 to 2025-11-20, etc.
         - Return date fields in ISO format (YYYY-MM-DD).
         - If a field is uncertain or illegible, omit it or set its value to null. Do NOT hallucinate.
+        - Include if exist extracted document number value as "fieldValue", extracted field name from the document as "fieldName"  in "aditionalFields" array for semantics e.g for school ids we are likely to have "Reg no", "Registration No", e.t.c as "fieldName" of document number
         - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
 
         SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
@@ -167,7 +174,7 @@ export class ExtractionService {
             "placeOfIssue": string,              // Place where document is issued
             "gender": "Male" | "Female" | "Unknown", // Owner's gender (Unknown if not found)
             "note": string,                      // Any noted remarks or visible comments (optional)
-            "typeId": string,                    // Use the "id" from this list of supported document types: ${JSON.stringify(documentTypes, null, 2)}
+            "typeId": string,                    // MUST be valid uuid. Use the "id" from this list of handled document types. MUST be in handled document
             "issuanceDate": string,              // Document's date of issue (YYYY-MM-DD)
             "expiryDate": string,                // Expiry/valid until (YYYY-MM-DD)
             "additionalFields": [                // Other fields as visually extracted, format:
@@ -186,9 +193,12 @@ export class ExtractionService {
             "ownerName": "JOHN DOE",
             "dateOfBirth": "1990-01-01",
             "nationality": "Countryland",
-            "typeId": "<type id for passport>", 
+            "typeId": "<type id for passport (uuid)>", 
             "issuer": "Countryland Government",
             "expiryDate": "2032-12-31"
+            "additionalFields": [
+              { "fieldName": "Passport No", "fieldValue": "A12345678" },
+            ]
         }
 
         2. For a license image with both front and back:
@@ -196,10 +206,11 @@ export class ExtractionService {
             "documentNumber": "D1234567",
             "ownerName": "JANE DOE",
             "dateOfBirth": "1985-02-15",
-            "typeId": "<type id for driver's license>",
+            "typeId": "<type id for driver's license>(uuid)",
             "issuer": "STATE OF EXAMPLE",
             "expiryDate": "2026-06-30",
             "additionalFields": [
+              { "fieldName": "Licence Number", "fieldValue": "D1234567" },
               { "fieldName": "Address", "fieldValue": "123 MAIN ST, ANYTOWN" },
               { "fieldName": "License Class", "fieldValue": "C" }
             ]
@@ -212,6 +223,8 @@ export class ExtractionService {
         - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
         - CORRECT formated date VALUES for fields 'expiryDate', 'issuanceDate', 'dateOfBirth' and other date fields in 'aditionalFields' array e.g 20.11.2025 to 2025-11-20, 20/11/2025 to 2025-11-20, etc.
         - Return date VALUES in ISO format (YYYY-MM-DD).
+        - "typeId" MUST bellong to one of the handled document types provided
+        - Include if exist extracted document number value as "fieldValue", extracted field name from the document as "fieldName"  in "aditionalFields" array for semantics e.g for school ids we are likely to have "Reg no", "Registration No", e.t.c as "fieldName" of document number
     `;
 
     return baseInstructions;
