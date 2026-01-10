@@ -292,13 +292,14 @@ model Document {
   issuer       String?
   // Document Type Information
   typeId       String
-  type         DocumentType @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  caseId       String       @unique
-  case         DocumentCase @relation(fields: [caseId], onDelete: Cascade, references: [id])
+  type         DocumentType           @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  caseId       String                 @unique
+  case         DocumentCase           @relation(fields: [caseId], onDelete: Cascade, references: [id])
   issuanceDate DateTime?
   placeOfIssue String?
   expiryDate   DateTime?
   note         String? // Additional notes
+  embedding    Unsupported("vector")?
 
   createdAt        DateTime        @default(now())
   images           Image[]

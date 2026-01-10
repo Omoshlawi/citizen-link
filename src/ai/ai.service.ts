@@ -22,7 +22,7 @@ export class AiService implements OnModuleInit {
   onModuleInit() {
     this.openai = new OpenAI({
       apiKey: this._options.apiKey,
-      baseURL: this._options.baseURL,
+      baseURL: this._options.baseURL + '/v1',
     });
     this.logger.log(
       `OpenAI client initialized with options: ${JSON.stringify(this._options, null, 2)}`,
