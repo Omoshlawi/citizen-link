@@ -47,9 +47,36 @@ pnpm db migrate deploy
 pnpm db db pull
 ```
 
-instead of pulling via step 5, you can add the embedding field mannually to the schema file
+instead of pulling via step 5, you can add the embedding field mannually to the schema file, The introspection simply adds the fields to the schema
 
 ```prisma
 embedding    Unsupported("vector")?
+```
 
+**Optional but recomended steps**
+
+6. Create Vector Index migration
+
+```bash
+migrate dev --create-only --name add_vector_index
+```
+
+7. Paste bellow sql commands
+
+```sql
+
+-- migrations/XXXXXX_add_vector_index/migration.sql
+-- Create IVFFlat index for faster similarity searches
+-- Lists parameter should be roughly sqrt of expected number of rows
+-- Start with 100, adjust based on your data volume
+CREATE INDEX document_embedding_idx ON "Document"
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
+
+```
+
+8. Apply migration
+
+```bash
+pnpm db migrate dev
 ```
