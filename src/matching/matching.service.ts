@@ -33,7 +33,7 @@ export class MatchingService {
 
     const document = await this.prismaService.document.findUnique({
       where: { id: documentId },
-      include: { type: true, additionalFields: true },
+      include: { type: true, additionalFields: true, case: true },
     });
 
     if (!document) {

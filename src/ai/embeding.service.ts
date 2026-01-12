@@ -3,6 +3,7 @@ import axios from 'axios';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   Document,
+  DocumentCase,
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
@@ -36,6 +37,7 @@ export class EmbeddingService {
     document: Document & {
       additionalFields: Array<DocumentField>;
       type: DocumentType;
+      case: DocumentCase;
     },
   ): string {
     const parts = [
@@ -90,6 +92,13 @@ export class EmbeddingService {
       parts.push(`Issue Place: ${document.placeOfIssue}`);
     }
 
+    // Add Tags
+    if ((document.case.tags as Array<string>).length) {
+      parts.push(
+        `Tags/Keywords: ${(document.case.tags as Array<string>).join(', ')}`,
+      );
+    }
+
     return parts.join(' | ');
   }
 
@@ -103,6 +112,7 @@ export class EmbeddingService {
         include: {
           type: true,
           additionalFields: true,
+          case: true,
         },
       });
 
