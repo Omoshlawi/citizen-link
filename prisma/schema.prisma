@@ -501,7 +501,10 @@ enum ActorType {
 
 model Match {
   id          String @id @default(uuid())
-  matchNumber String @unique
+  matchNumber Int    @default(autoincrement())
+
+  aiInteractionId String        @unique
+  aiInteraction   AIInteraction @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
 
   lostDocumentCaseId  String
   foundDocumentCaseId String
@@ -509,7 +512,6 @@ model Match {
   foundDocumentCase   FoundDocumentCase @relation(fields: [foundDocumentCaseId], references: [id], onDelete: Cascade)
 
   // AI Matching Results
-  aiModel    String // AI model used for matching
   matchScore Float // 0-100, AI-determined confidence
 
   // Consolidated AI Analysis (all matching metadata in one place)
@@ -536,7 +538,6 @@ model Match {
   voided Boolean @default(false)
 
   @@unique([lostDocumentCaseId, foundDocumentCaseId])
-  @@index([aiModel])
   @@index([status])
 }
 
@@ -703,6 +704,7 @@ model AIInteraction {
 
   createdAt              DateTime                  @default(now())
   extractionInteractions AIExtractionInteraction[]
+  match                  Match?
 
   @@index([userId])
   @@index([interactionType])

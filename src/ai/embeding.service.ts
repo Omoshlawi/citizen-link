@@ -1,16 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
+import { PrismaService } from 'src/prisma/prisma.service';
 import {
   Document,
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
 import { AiConfig } from './ai.config';
-import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class EmbeddingService {
@@ -136,5 +132,26 @@ export class EmbeddingService {
       this.logger.error(`Failed to index document ${documentId}`, error);
       throw error;
     }
+  }
+
+  /**
+   * Batch index multiple documents
+   */
+  async batchIndexDocuments(documentIds: string[]): Promise<void> {
+    this.logger.log(`Batch indexing ${documentIds.length} documents`);
+
+    for (const documentId of documentIds) {
+      try {
+        await this.indexDocument(documentId);
+      } catch (error) {
+        this.logger.error(
+          `Failed to index document ${documentId} in batch`,
+          error,
+        );
+        // Continue with other documents
+      }
+    }
+
+    this.logger.log('Batch indexing completed');
   }
 }

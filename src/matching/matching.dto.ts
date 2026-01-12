@@ -12,8 +12,8 @@ export const MatchStatusSchema = z.enum([
 
 export const QueryMatchesSchema = z.object({
   ...QueryBuilderSchema.shape,
-  lostDocumentCaseId: z.string().uuid().optional(),
-  foundDocumentCaseId: z.string().uuid().optional(),
+  lostDocumentCaseId: z.uuid().optional(),
+  foundDocumentCaseId: z.uuid().optional(),
   status: MatchStatusSchema.optional(),
   minMatchScore: z.number().min(0).max(1).optional(),
   maxMatchScore: z.number().min(0).max(1).optional(),
@@ -25,9 +25,36 @@ export const QueryMatchesSchema = z.object({
     .optional(),
 });
 
+export const MatchResultSchema = z.object({
+  overallScore: z.number().min(0).max(100),
+  confidence: z.enum(['HIGH', 'MEDIUM', 'LOW', 'NO_MATCH']),
+  recommendation: z.enum([
+    'SAME_PERSON',
+    'LIKELY_SAME',
+    'POSSIBLY_SAME',
+    'DIFFERENT_PERSON',
+  ]),
+  reasoning: z.string(),
+  fieldAnalysis: z
+    .object({
+      fieldName: z.string(),
+      match: z.boolean(),
+      confidence: z.number().min(0).max(100),
+      note: z.string().optional(),
+    })
+    .array(),
+  matchingFields: z.array(z.string()),
+  conflictingFields: z.array(z.string()),
+  redFlags: z.array(z.string()),
+  confidenceFactors: z.object({
+    strengths: z.array(z.string()),
+    weaknesses: z.array(z.string()),
+  }),
+});
+
 const CreateMatchSchema = z.object({
-  lostDocumentCaseId: z.string().uuid(),
-  foundDocumentCaseId: z.string().uuid(),
+  lostDocumentCaseId: z.uuid(),
+  foundDocumentCaseId: z.uuid(),
   matchScore: z.number().min(0).max(1).optional(),
   aiMatchReasons: z.record(z.string(), z.any()).optional(),
 });
@@ -56,6 +83,9 @@ const AdminVerifyMatchSchema = z.object({
   verified: z.boolean(),
   notes: z.string().optional(),
 });
+
+export class MatchResultDto extends createZodDto(MatchResultSchema) {}
+
 export class QueryMatchesDto extends createZodDto(QueryMatchesSchema) {}
 
 export class CreateMatchDto extends createZodDto(CreateMatchSchema) {}

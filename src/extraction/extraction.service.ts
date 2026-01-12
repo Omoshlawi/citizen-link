@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Inject,
@@ -21,8 +19,6 @@ import {
   AIInteractionType,
   DocumentType,
 } from '../../generated/prisma/client';
-import { GenerateContentResponse } from '../ai/ai.types';
-import { AI_DATA_EXTRACT_CONFIG } from '../ai/ai.contants';
 import { ExtractInformationInput } from './extraction.interface';
 import { safeParseJson } from '../app.utils';
 
@@ -372,65 +368,6 @@ export class ExtractionService {
     `;
   }
 
-  private async callAIAndStore(
-    prompt: string,
-    files: Array<{ buffer: Buffer; mimeType: string }> | undefined,
-    interactionType: AIInteractionType,
-    entityType: string,
-    userId?: string,
-  ) {
-    let responseText = '';
-    let aiResponse: GenerateContentResponse | null = null;
-
-    try {
-      const parts = [
-        { text: prompt },
-        ...(files
-          ? files.map((file) =>
-              this.aiService.fileToGenerativePart(file.buffer, file.mimeType),
-            )
-          : []),
-      ];
-
-      aiResponse = await this.aiService.generateContent(
-        parts,
-        AI_DATA_EXTRACT_CONFIG,
-      );
-      responseText = aiResponse.text?.trim() ?? '';
-      this.logger.log(`AI Response: ${responseText}`);
-
-      return await this.prismaService.aIInteraction.create({
-        data: {
-          prompt: prompt.substring(0, 10000), // Truncate for storage
-          response: responseText,
-          aiModel: this.aiService.options.model,
-          modelVersion: aiResponse?.modelVersion,
-          interactionType,
-          entityType,
-          tokenUsage: aiResponse?.usageMetadata as any,
-          success: true,
-          userId,
-        },
-      });
-    } catch (error: any) {
-      this.logger.warn(`Error in ${interactionType}:`, error);
-      return await this.prismaService.aIInteraction.create({
-        data: {
-          prompt: prompt.substring(0, 10000),
-          response: responseText,
-          aiModel: this.aiService.options.model,
-          modelVersion: aiResponse?.modelVersion,
-          interactionType,
-          entityType,
-          tokenUsage: aiResponse?.usageMetadata as any,
-          errorMessage: error?.message ?? 'Unknown error',
-          success: false,
-          userId,
-        },
-      });
-    }
-  }
-
   async getOrCreateAiExtraction(extractionId?: string) {
     if (extractionId) {
       const extraction = await this.prismaService.aIExtraction.findUnique({
@@ -461,7 +398,7 @@ export class ExtractionService {
     });
     const dataPrompt = this.getDataExtractionPrompt(documentTypes);
 
-    const dataResult = await this.callAIAndStore(
+    const dataResult = await this.aiService.callAIAndStore(
       dataPrompt,
       input.files,
       AIInteractionType.DATA_EXTRACTION,
@@ -597,7 +534,7 @@ export class ExtractionService {
     });
     const securityQuestionsPrompt =
       await this.getSecurityQuestionsPromt(extractedData);
-    const securityQuestionsResult = await this.callAIAndStore(
+    const securityQuestionsResult = await this.aiService.callAIAndStore(
       securityQuestionsPrompt,
       [],
       AIInteractionType.SECURITY_QUESTIONS_GEN,
@@ -720,7 +657,7 @@ export class ExtractionService {
 
     const confidencePrompt = this.getConfidencePrompt(extractedData);
 
-    const confidenceResult = await this.callAIAndStore(
+    const confidenceResult = await this.aiService.callAIAndStore(
       confidencePrompt,
       input.files,
       AIInteractionType.CONFIDENCE_SCORE,
@@ -855,7 +792,7 @@ export class ExtractionService {
 
     const imagePrompt = this.getImageAnalysisPrompt();
 
-    const imageResult = await this.callAIAndStore(
+    const imageResult = await this.aiService.callAIAndStore(
       imagePrompt,
       input.files,
       AIInteractionType.IMAGE_ANALYSIS,

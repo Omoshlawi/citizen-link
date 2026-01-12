@@ -4,9 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  Inject,
-  forwardRef,
-  Optional,
 } from '@nestjs/common';
 import { pick } from 'lodash';
 import {
@@ -23,7 +20,6 @@ import {
   SortService,
 } from '../query-builder';
 import { QueryStatusTransitionDto } from './case-status-transitions.dto';
-import { MatchesService } from '../matches/matches.service';
 
 @Injectable()
 export class CaseStatusTransitionsService {
@@ -34,9 +30,6 @@ export class CaseStatusTransitionsService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
-    @Optional()
-    @Inject(forwardRef(() => MatchesService))
-    private readonly matchesService?: MatchesService,
   ) {}
   /**
    * Get status transition history for a case
@@ -247,44 +240,28 @@ export class CaseStatusTransitionsService {
     );
 
     // 6. Trigger matching if found document was verified
-    if (
-      currentStatus.caseType === CaseType.FOUND &&
-      toStatus === FoundDocumentCaseStatus.VERIFIED &&
-      this.matchesService
-    ) {
-      this.logger.log(
-        `Found document ${caseId} verified, triggering match search`,
-      );
-      // Run matching asynchronously to avoid blocking the response
-      this.matchesService
-        .findMatchesForFoundCase(caseId)
-        .catch((error: Error) => {
-          this.logger.error(
-            `Error finding matches for found case ${caseId}:`,
-            error,
-          );
-        });
-    }
+    // if (
+    //   currentStatus.caseType === CaseType.FOUND &&
+    //   toStatus === FoundDocumentCaseStatus.VERIFIED &&
+    // ) {
+    //   this.logger.log(
+    //     `Found document ${caseId} verified, triggering match search`,
+    //   );
+    //   // Run matching asynchronously to avoid blocking the response
+
+    // }
 
     // 7. Trigger matching if lost document was submitted
-    if (
-      currentStatus.caseType === CaseType.LOST &&
-      toStatus === LostDocumentCaseStatus.SUBMITTED &&
-      this.matchesService
-    ) {
-      this.logger.log(
-        `Lost document ${caseId} submitted, triggering match search`,
-      );
-      // Run matching asynchronously to avoid blocking the response
-      this.matchesService
-        .findMatchesForLostCase(caseId)
-        .catch((error: Error) => {
-          this.logger.error(
-            `Error finding matches for lost case ${caseId}:`,
-            error,
-          );
-        });
-    }
+    // if (
+    //   currentStatus.caseType === CaseType.LOST &&
+    //   toStatus === LostDocumentCaseStatus.SUBMITTED &&
+    // ) {
+    //   this.logger.log(
+    //     `Lost document ${caseId} submitted, triggering match search`,
+    //   );
+    //   // Run matching asynchronously to avoid blocking the response
+
+    // }
 
     // 8. Return updated case
     return updatedCase;

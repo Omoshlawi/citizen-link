@@ -23,6 +23,7 @@ import { S3Module } from './s3/s3.module';
 import { PrismaConfig } from './prisma/prisma.config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { ExtractionModule } from './extraction/extraction.module';
+import { MatchingModule } from './matching/matching.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { ExtractionModule } from './extraction/extraction.module';
     }),
     DocumentImagesModule,
     ExtractionModule,
+    MatchingModule,
     // MatchesModule,
   ],
   controllers: [AppController],

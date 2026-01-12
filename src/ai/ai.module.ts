@@ -4,7 +4,7 @@ import { AI_OPTIONS_TOKEN } from './ai.contants';
 import { AiModuleOptions } from './ai.types';
 import { OcrService } from './ocr.service';
 import { AiService } from './ai.service';
-import { AiMatchingService } from './ai.matching.service';
+import { EmbeddingService } from './embeding.service';
 
 @Module({})
 export class AiModule {
@@ -18,10 +18,10 @@ export class AiModule {
         this.createAsyncProvider(options),
         OcrService,
         AiService,
-        AiMatchingService,
+        EmbeddingService,
       ],
       imports: options.imports,
-      exports: [OcrService, AiService, AiMatchingService],
+      exports: [OcrService, AiService, EmbeddingService],
     };
   }
 

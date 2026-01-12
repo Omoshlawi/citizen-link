@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import OpenAI from 'openai';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
@@ -10,6 +12,9 @@ import {
 } from './ai.types';
 import z from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
+import { AIInteractionType } from '../../generated/prisma/client';
+import { AI_DATA_EXTRACT_CONFIG } from './ai.contants';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -18,6 +23,8 @@ export class AiService implements OnModuleInit {
   constructor(
     @Inject(AI_OPTIONS_TOKEN)
     private readonly _options: AIOptions,
+    @Inject(PrismaService)
+    private readonly prismaService: PrismaService,
   ) {}
   onModuleInit() {
     this.openai = new OpenAI({
@@ -227,5 +234,61 @@ export class AiService implements OnModuleInit {
 
   get options() {
     return this._options;
+  }
+
+  async callAIAndStore(
+    prompt: string,
+    files: Array<{ buffer: Buffer; mimeType: string }> | undefined,
+    interactionType: AIInteractionType,
+    entityType: string,
+    userId?: string,
+  ) {
+    let responseText = '';
+    let aiResponse: GenerateContentResponse | null = null;
+
+    try {
+      const parts = [
+        { text: prompt },
+        ...(files
+          ? files.map((file) =>
+              this.fileToGenerativePart(file.buffer, file.mimeType),
+            )
+          : []),
+      ];
+
+      aiResponse = await this.generateContent(parts, AI_DATA_EXTRACT_CONFIG);
+      responseText = aiResponse.text?.trim() ?? '';
+      this.logger.log(`AI Response: ${responseText}`);
+
+      return await this.prismaService.aIInteraction.create({
+        data: {
+          prompt: prompt.substring(0, 10000), // Truncate for storage
+          response: responseText,
+          aiModel: this.options.model,
+          modelVersion: aiResponse?.modelVersion,
+          interactionType,
+          entityType,
+          tokenUsage: aiResponse?.usageMetadata as any,
+          success: true,
+          userId,
+        },
+      });
+    } catch (error: any) {
+      this.logger.warn(`Error in ${interactionType}:`, error);
+      return await this.prismaService.aIInteraction.create({
+        data: {
+          prompt: prompt.substring(0, 10000),
+          response: responseText,
+          aiModel: this.options.model,
+          modelVersion: aiResponse?.modelVersion,
+          interactionType,
+          entityType,
+          tokenUsage: aiResponse?.usageMetadata as any,
+          errorMessage: error?.message ?? 'Unknown error',
+          success: false,
+          userId,
+        },
+      });
+    }
   }
 }

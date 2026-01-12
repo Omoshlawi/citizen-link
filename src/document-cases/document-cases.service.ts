@@ -38,6 +38,8 @@ import {
   SecurityQuestionsDto,
 } from '../extraction/extraction.dto';
 import { ProgressEvent } from '../extraction/extraction.interface';
+import { EmbeddingService } from '../ai/embeding.service';
+import { MatchingService } from '../matching/matching.service';
 
 @Injectable()
 export class DocumentCasesService {
@@ -51,6 +53,8 @@ export class DocumentCasesService {
     private readonly extractionService: ExtractionService,
     private readonly s3Service: S3Service,
     private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
+    private readonly embeddingService: EmbeddingService,
+    private readonly matchingService: MatchingService,
   ) {}
 
   private async filesExists(
@@ -437,7 +441,7 @@ export class DocumentCasesService {
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    return await this.prismaService.documentCase.create({
+    const documentCase = await this.prismaService.documentCase.create({
       data: {
         userId,
         eventDate: dayjs(createLostDocumentCaseDto.eventDate).toDate(),
@@ -482,8 +486,28 @@ export class DocumentCasesService {
           create: {},
         },
       },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      include: {
+        document: true,
+      },
     });
+    if (documentCase.document?.id) {
+      await this.embeddingService.indexDocument(documentCase.document.id);
+      const matches =
+        await this.matchingService.findMatchesForLostDocumentAndVerify(
+          documentCase.document.id,
+          userId,
+          {
+            limit: 20,
+            similarityThreshold: 0.5,
+            minVerificationScore: 0.6,
+          },
+        );
+      this.logger.debug(
+        `Found ${matches.length} matches for document ${documentCase.document.id}`,
+        matches,
+      );
+    }
+    return await this.findOne(documentCase.id, query, userId);
   }
 
   async submitFoundDocumentCase(
@@ -530,13 +554,47 @@ export class DocumentCasesService {
     userId: string,
   ) {
     this.logger.log(`Verifying found document case ${id} for user ${userId}`);
-    return await this.caseStatusTransitionsService.transitionStatus(
-      id,
-      FoundDocumentCaseStatus.VERIFIED,
-      ActorType.USER,
-      userId,
-      query?.v,
-    );
+    const documentCase = await this.prismaService.documentCase.findUnique({
+      where: { id, userId },
+      include: {
+        foundDocumentCase: true,
+        document: true,
+      },
+    });
+
+    if (!documentCase) {
+      throw new NotFoundException('Document case not found');
+    }
+
+    if (!documentCase.foundDocumentCase) {
+      throw new BadRequestException('This is not a found document case');
+    }
+    const statusTransition =
+      await this.caseStatusTransitionsService.transitionStatus(
+        id,
+        FoundDocumentCaseStatus.VERIFIED,
+        ActorType.USER,
+        userId,
+        query?.v,
+      );
+    if (documentCase.document?.id) {
+      await this.embeddingService.indexDocument(documentCase.document.id);
+      const matches =
+        await this.matchingService.findMatchesForFoundDocumentAndVerify(
+          documentCase.document.id,
+          userId,
+          {
+            limit: 20,
+            similarityThreshold: 0.5,
+            minVerificationScore: 0.6,
+          },
+        );
+      this.logger.debug(
+        `Found ${matches.length} matches for document ${documentCase.document.id}`,
+        matches,
+      );
+    }
+    return statusTransition;
   }
 
   async rejectFoundDocumentCase(
