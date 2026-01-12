@@ -81,7 +81,7 @@ export class MatchFoundDocumentService {
               SELECT COUNT(*) as count
               FROM "Document" d
               INNER JOIN "DocumentCase" dc ON d."caseId" = dc.id
-              INNER JOIN "FoundDocumentCase" fdc ON dc.  = fdc."caseId"
+              INNER JOIN "FoundDocumentCase" fdc ON dc.id = fdc."caseId"
               WHERE 
                 d.embedding IS NOT NULL
                 AND d."typeId" = $1
