@@ -425,7 +425,7 @@ export class DocumentCasesService {
     userId: string,
   ) {
     await this.canUpdateCase(id);
-    return await this.prismaService.documentCase.update({
+    const docCase = await this.prismaService.documentCase.update({
       where: { id, userId },
       data: {
         ...updateDocumentCaseDto,
@@ -433,8 +433,13 @@ export class DocumentCasesService {
           ? dayjs(updateDocumentCaseDto.eventDate).toDate()
           : undefined,
       },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      include: {
+        document: true,
+      },
     });
+    if (docCase.document?.id)
+      await this.embeddingService.indexDocument(docCase.document.id);
+    return await this.findOne(docCase.id, query, userId);
   }
   async reportLostDocumentCase(
     createLostDocumentCaseDto: CreateLostDocumentCaseDto,

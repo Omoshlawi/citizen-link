@@ -58,6 +58,9 @@ export class DocumentTypesService {
           },
         ],
       },
+      ...this.paginationService.buildPaginationQuery(query),
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      ...this.sortService.buildSortQuery(query?.orderBy),
     };
     const [data, totalCount] = await Promise.all([
       this.prismaService.documentType.findMany(dbQuery),

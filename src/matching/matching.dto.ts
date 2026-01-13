@@ -15,8 +15,8 @@ export const QueryMatchesSchema = z.object({
   lostDocumentCaseId: z.uuid().optional(),
   foundDocumentCaseId: z.uuid().optional(),
   status: MatchStatusSchema.optional(),
-  minMatchScore: z.number().min(0).max(1).optional(),
-  maxMatchScore: z.number().min(0).max(1).optional(),
+  minMatchScore: z.coerce.number().min(0).max(1).optional(),
+  maxMatchScore: z.coerce.number().min(0).max(1).optional(),
   adminVerified: z
     .stringbool({
       truthy: ['true', '1'],
@@ -24,6 +24,19 @@ export const QueryMatchesSchema = z.object({
     })
     .optional(),
 });
+
+export const QueryMatchesForCaseSchema = QueryMatchesSchema.omit({
+  adminVerified: true,
+  maxMatchScore: true,
+  status: true,
+});
+
+export const QueryMatechesForLostCaseSchema = QueryMatchesForCaseSchema.omit({
+  foundDocumentCaseId: true,
+}).required({ lostDocumentCaseId: true });
+export const QueryMatechesForFoundCaseSchema = QueryMatchesForCaseSchema.omit({
+  lostDocumentCaseId: true,
+}).required({ foundDocumentCaseId: true });
 
 export const MatchResultSchema = z.object({
   overallScore: z.number().min(0).max(100),
@@ -101,3 +114,9 @@ export class RejectMatchDto extends createZodDto(RejectMatchSchema) {}
 export class CompleteMatchDto extends createZodDto(CompleteMatchSchema) {}
 
 export class AdminVerifyMatchDto extends createZodDto(AdminVerifyMatchSchema) {}
+export class QueryMatechesForLostCaseDto extends createZodDto(
+  QueryMatechesForLostCaseSchema,
+) {}
+export class QueryMatechesForFoundCaseDto extends createZodDto(
+  QueryMatechesForFoundCaseSchema,
+) {}

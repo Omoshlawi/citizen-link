@@ -12,11 +12,13 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/enums';
+import { EmbeddingService } from 'src/ai/embeding.service';
 @Injectable()
 export class CaseDocumentsService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly representationService: CustomRepresentationService,
+    private readonly embedService: EmbeddingService,
   ) {}
 
   async findOne(
@@ -68,7 +70,7 @@ export class CaseDocumentsService {
     caseId: string,
   ) {
     const { additionalFields, ...data } = updateCaseDocumentDto;
-    return this.prismaService.document.update({
+    const doc = await this.prismaService.document.update({
       where: { id: documentId, caseId },
       data: {
         ...data,
@@ -90,5 +92,7 @@ export class CaseDocumentsService {
       },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
+    await this.embedService.indexDocument(documentId);
+    return doc;
   }
 }

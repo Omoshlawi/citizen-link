@@ -61,7 +61,6 @@ import { MatchingModule } from './matching/matching.module';
     DocumentImagesModule,
     ExtractionModule,
     MatchingModule,
-    // MatchesModule,
   ],
   controllers: [AppController],
   providers: [
