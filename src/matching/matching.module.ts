@@ -4,6 +4,7 @@ import { MatchFoundDocumentService } from './matching.found.service';
 import { MatchLostDocumentService } from './matching.lost.service';
 import { MatchingVerifierService } from './matching.verifier.service';
 import { MatchingController } from './matching.controller';
+import { MatchingStatisticsService } from './matching.statistics.service';
 
 @Module({
   providers: [
@@ -11,6 +12,7 @@ import { MatchingController } from './matching.controller';
     MatchFoundDocumentService,
     MatchLostDocumentService,
     MatchingVerifierService,
+    MatchingStatisticsService,
   ],
   exports: [MatchingService],
   controllers: [MatchingController],

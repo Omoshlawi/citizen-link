@@ -30,7 +30,6 @@ export class MatchFoundDocumentService {
     private readonly prismaService: PrismaService,
     private readonly embeddingService: EmbeddingService,
     private readonly matchVerifierService: MatchingVerifierService,
-
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
   ) {}

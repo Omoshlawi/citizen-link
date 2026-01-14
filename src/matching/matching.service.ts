@@ -1,17 +1,24 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { EmbeddingService } from '../ai/embeding.service';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { pick } from 'lodash';
+import { Match } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  CustomRepresentationQueryDto,
   CustomRepresentationService,
+  DeleteQueryDto,
+  FunctionFirstArgument,
   PaginationService,
+  SortService,
 } from '../query-builder';
 import {
+  QueryMatchesDto,
   QueryMatechesForFoundCaseDto,
   QueryMatechesForLostCaseDto,
 } from './matching.dto';
 import { MatchFoundDocumentService } from './matching.found.service';
 import { FindMatchesOptions, VerifyMatchesOptions } from './matching.interface';
 import { MatchLostDocumentService } from './matching.lost.service';
+import { MatchingStatisticsService } from './matching.statistics.service';
 
 @Injectable()
 export class MatchingService {
@@ -19,88 +26,24 @@ export class MatchingService {
 
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly embeddingService: EmbeddingService,
     private readonly matchFoundDocumentService: MatchFoundDocumentService,
     private readonly matchLostDocumentService: MatchLostDocumentService,
+    private readonly matchingStatistics: MatchingStatisticsService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
+    private readonly sortService: SortService,
   ) {}
 
-  /**
-   * Get match statistics
-   */
-  async getMatchStatistics(
+  getMatchStatistics(
     documentId: string,
     isLostDocument: boolean,
     options: { similarityThreshold?: number } = {},
-  ): Promise<{
-    totalPotentialMatches: number;
-    highSimilarityCount: number;
-    mediumSimilarityCount: number;
-    lowSimilarityCount: number;
-  }> {
-    const { similarityThreshold = 0.5 } = options;
-
-    const document = await this.prismaService.document.findUnique({
-      where: { id: documentId },
-      include: { type: true, additionalFields: true, case: true },
-    });
-
-    if (!document) {
-      throw new Error('Document not found');
-    }
-
-    const searchText = this.embeddingService.createDocumentText(document);
-    const searchEmbedding =
-      await this.embeddingService.generateEmbedding(searchText);
-    const vectorString = `[${searchEmbedding.join(',')}]`;
-
-    // Build query based on document type
-    const caseTypeTable = isLostDocument
-      ? 'FoundDocumentCase'
-      : 'LostDocumentCase';
-    const statusCondition = isLostDocument
-      ? `fdc.status IN ('VERIFIED')`
-      : `ldc.status = 'SUBMITTED'`;
-
-    const stats = await this.prismaService.$queryRawUnsafe<
-      Array<{
-        total: string;
-        high_similarity: string;
-        medium_similarity: string;
-        low_similarity: string;
-      }>
-    >(
-      `
-      SELECT 
-        COUNT(*) FILTER (WHERE 1 - (d.embedding <=> $1::vector) >= 0.85) as high_similarity,
-        COUNT(*) FILTER (WHERE 1 - (d.embedding <=> $1::vector) >= 0.70 AND 1 - (d.embedding <=> $1::vector) < 0.85) as medium_similarity,
-        COUNT(*) FILTER (WHERE 1 - (d.embedding <=> $1::vector) >= $4 AND 1 - (d.embedding <=> $1::vector) < 0.70) as low_similarity,
-        COUNT(*) as total
-      FROM "Document" d
-      INNER JOIN "DocumentCase" dc ON d."caseId" = dc.id
-      INNER JOIN "${caseTypeTable}" ${isLostDocument ? 'fdc' : 'ldc'} ON dc.id = ${isLostDocument ? 'fdc' : 'ldc'}."caseId"
-      WHERE 
-        d.embedding IS NOT NULL
-        AND d."typeId" = $2
-        AND ${statusCondition}
-        AND d.id != $3
-        AND 1 - (d.embedding <=> $1::vector) > $4
-      `,
-      vectorString,
-      document.typeId,
+  ) {
+    return this.matchingStatistics.getMatchStatistics(
       documentId,
-      similarityThreshold,
+      isLostDocument,
+      options,
     );
-
-    const result = stats[0] || {};
-
-    return {
-      totalPotentialMatches: Number(result.total || 0),
-      highSimilarityCount: Number(result.high_similarity || 0),
-      mediumSimilarityCount: Number(result.medium_similarity || 0),
-      lowSimilarityCount: Number(result.low_similarity || 0),
-    };
   }
 
   findMatchesForLostDocument(
@@ -148,5 +91,72 @@ export class MatchingService {
     return this.matchLostDocumentService.queryMatchesForFoundDocumentCase(
       query,
     );
+  }
+
+  async findAll(query: QueryMatchesDto, originalUrl: string) {
+    const dbQuery: FunctionFirstArgument<
+      typeof this.prismaService.match.findMany
+    > = {
+      where: {
+        AND: [
+          {
+            voided: query?.includeVoided ? undefined : false,
+            lostDocumentCaseId: query?.lostDocumentCaseId,
+            foundDocumentCaseId: query?.foundDocumentCaseId,
+            matchScore: { gte: query.minMatchScore, lte: query.maxMatchScore },
+          },
+        ],
+      },
+      ...this.paginationService.buildPaginationQuery(query),
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      ...this.sortService.buildSortQuery(query?.orderBy),
+    };
+    const [data, totalCount] = await Promise.all([
+      this.prismaService.match.findMany(dbQuery),
+      this.prismaService.match.count(pick(dbQuery, 'where')),
+    ]);
+    return {
+      results: data,
+      ...this.paginationService.buildPaginationControls(
+        totalCount,
+        originalUrl,
+        query,
+      ),
+    };
+  }
+
+  async findOne(id: string, query: CustomRepresentationQueryDto) {
+    const data = await this.prismaService.match.findUnique({
+      where: { id },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+    if (!data) throw new NotFoundException('Document type not found');
+    return data;
+  }
+
+  async remove(id: string, query: DeleteQueryDto) {
+    let data: Match;
+    if (query?.purge) {
+      data = await this.prismaService.match.delete({
+        where: { id },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+    } else {
+      data = await this.prismaService.match.update({
+        where: { id },
+        data: { voided: true },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+    }
+    return data;
+  }
+
+  async restore(id: string, query: CustomRepresentationQueryDto) {
+    const data = await this.prismaService.match.update({
+      where: { id },
+      data: { voided: false },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+    return data;
   }
 }

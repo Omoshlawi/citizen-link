@@ -1,6 +1,9 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../query-builder';
 import z from 'zod';
+import { Match, MatchStatus } from 'generated/prisma/client';
+import { JsonValue } from '@prisma/client/runtime/client';
+import { ApiProperty } from '@nestjs/swagger';
 
 export const MatchStatusSchema = z.enum([
   'PENDING',
@@ -23,6 +26,13 @@ export const QueryMatchesSchema = z.object({
       falsy: ['false', '0'],
     })
     .optional(),
+  includeVoided: z
+    .stringbool({
+      truthy: ['true', '1'],
+      falsy: ['false', '0'],
+    })
+    .optional()
+    .default(false),
 });
 
 export const QueryMatchesForCaseSchema = QueryMatchesSchema.omit({
@@ -120,3 +130,55 @@ export class QueryMatechesForLostCaseDto extends createZodDto(
 export class QueryMatechesForFoundCaseDto extends createZodDto(
   QueryMatechesForFoundCaseSchema,
 ) {}
+
+export class GetMatchResponseDto implements Match {
+  @ApiProperty()
+  id: string;
+  @ApiProperty()
+  lostDocumentCaseId: string;
+  @ApiProperty()
+  foundDocumentCaseId: string;
+  @ApiProperty()
+  matchScore: number;
+  @ApiProperty({ enum: MatchStatus })
+  status: MatchStatus;
+  @ApiProperty()
+  matchNumber: number;
+  @ApiProperty()
+  aiInteractionId: string;
+  @ApiProperty({ type: MatchResultDto })
+  aiAnalysis: JsonValue;
+  @ApiProperty()
+  createdAt: Date;
+  @ApiProperty()
+  updatedAt: Date;
+  @ApiProperty()
+  notifiedAt: Date | null;
+  @ApiProperty()
+  viewedAt: Date | null;
+  @ApiProperty()
+  voided: boolean;
+}
+
+export class QueryMatchesResponseDto {
+  @ApiProperty({ isArray: true, type: GetMatchResponseDto })
+  results: GetMatchResponseDto[];
+
+  @ApiProperty()
+  totalCount: number;
+
+  @ApiProperty()
+  totalPages: number;
+
+  @ApiProperty()
+  currentPage: number;
+
+  @ApiProperty()
+  pageSize: number;
+
+  @ApiProperty()
+  next: string | null;
+
+  @ApiProperty()
+  prev: string | null;
+}
