@@ -16,6 +16,11 @@ import {
 } from './matching.interface';
 import { MatchingVerifierService } from './matching.verifier.service';
 import { Match } from '../../generated/prisma/client';
+import {
+  CustomRepresentationService,
+  PaginationService,
+} from '../query-builder';
+import { QueryMatechesForLostCaseDto } from './matching.dto';
 
 @Injectable()
 export class MatchFoundDocumentService {
@@ -25,6 +30,9 @@ export class MatchFoundDocumentService {
     private readonly prismaService: PrismaService,
     private readonly embeddingService: EmbeddingService,
     private readonly matchVerifierService: MatchingVerifierService,
+
+    private readonly paginationService: PaginationService,
+    private readonly representationService: CustomRepresentationService,
   ) {}
 
   /**
@@ -266,5 +274,46 @@ export class MatchFoundDocumentService {
     );
 
     return verifiedMatches;
+  }
+
+  async queryMatchesForLostDocumentCase(query: QueryMatechesForLostCaseDto) {
+    const { lostDocumentCaseId, minMatchScore, v } = query;
+    const lostCase = await this.prismaService.lostDocumentCase.findUnique({
+      where: { id: lostDocumentCaseId },
+      include: {
+        case: {
+          include: {
+            document: true,
+          },
+        },
+      },
+    });
+    if (!lostCase) throw new NotFoundException('Lost case not found');
+    const lostDocumentId = lostCase.case.document?.id;
+    if (!lostDocumentId)
+      throw new NotFoundException('Lost case has no asociated document');
+    const { skip, take } = this.paginationService.buildPaginationQuery(query);
+    const matches = await this.findMatches(lostDocumentId, {
+      includeTotal: true,
+      limit: take,
+      skip,
+      similarityThreshold: minMatchScore,
+    });
+    const cases = await this.prismaService.documentCase.findMany({
+      where: {
+        document: {
+          id: {
+            in: matches.data.map((d) => d.documentId),
+          },
+        },
+      },
+      ...this.representationService.buildCustomRepresentationQuery(v),
+    });
+    return {
+      results: cases.map((c, i) => ({
+        ...c,
+        similarity: matches.data[i].similarity,
+      })),
+    };
   }
 }

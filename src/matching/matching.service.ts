@@ -1,17 +1,17 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EmbeddingService } from '../ai/embeding.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { MatchFoundDocumentService } from './matching.found.service';
-import { FindMatchesOptions, VerifyMatchesOptions } from './matching.interface';
-import { MatchLostDocumentService } from './matching.lost.service';
-import {
-  QueryMatechesForFoundCaseDto,
-  QueryMatechesForLostCaseDto,
-} from './matching.dto';
 import {
   CustomRepresentationService,
   PaginationService,
 } from '../query-builder';
+import {
+  QueryMatechesForFoundCaseDto,
+  QueryMatechesForLostCaseDto,
+} from './matching.dto';
+import { MatchFoundDocumentService } from './matching.found.service';
+import { FindMatchesOptions, VerifyMatchesOptions } from './matching.interface';
+import { MatchLostDocumentService } from './matching.lost.service';
 
 @Injectable()
 export class MatchingService {
@@ -139,84 +139,14 @@ export class MatchingService {
     );
   }
 
-  async queryMatchesForLostDocumentCase(query: QueryMatechesForLostCaseDto) {
-    const { lostDocumentCaseId, minMatchScore, v } = query;
-    const lostCase = await this.prismaService.lostDocumentCase.findUnique({
-      where: { id: lostDocumentCaseId },
-      include: {
-        case: {
-          include: {
-            document: true,
-          },
-        },
-      },
-    });
-    if (!lostCase) throw new NotFoundException('Lost case not found');
-    const lostDocumentId = lostCase.case.document?.id;
-    if (!lostDocumentId)
-      throw new NotFoundException('Lost case has no asociated document');
-    const { skip, take } = this.paginationService.buildPaginationQuery(query);
-    const matches = await this.findMatchesForLostDocument(lostDocumentId, {
-      includeTotal: true,
-      limit: take,
-      skip,
-      similarityThreshold: minMatchScore,
-    });
-    const cases = await this.prismaService.documentCase.findMany({
-      where: {
-        document: {
-          id: {
-            in: matches.data.map((d) => d.documentId),
-          },
-        },
-      },
-      ...this.representationService.buildCustomRepresentationQuery(v),
-    });
-    return {
-      results: cases.map((c, i) => ({
-        ...c,
-        similarity: matches.data[i].similarity,
-      })),
-    };
+  queryMatchesForLostDocumentCase(query: QueryMatechesForLostCaseDto) {
+    return this.matchFoundDocumentService.queryMatchesForLostDocumentCase(
+      query,
+    );
   }
-  async queryMatchesForFoundDocumentCase(query: QueryMatechesForFoundCaseDto) {
-    const { foundDocumentCaseId, minMatchScore, v } = query;
-    const founsCase = await this.prismaService.foundDocumentCase.findUnique({
-      where: { id: foundDocumentCaseId },
-      include: {
-        case: {
-          include: {
-            document: true,
-          },
-        },
-      },
-    });
-    if (!founsCase) throw new NotFoundException('Lost case not found');
-    const foundDocumentId = founsCase.case.document?.id;
-    if (!foundDocumentId)
-      throw new NotFoundException('Found case has no asociated document');
-    const { skip, take } = this.paginationService.buildPaginationQuery(query);
-    const matches = await this.findMatchesForFoundDocument(foundDocumentId, {
-      includeTotal: true,
-      limit: take,
-      skip,
-      similarityThreshold: minMatchScore,
-    });
-    const cases = await this.prismaService.documentCase.findMany({
-      where: {
-        document: {
-          id: {
-            in: matches.data.map((d) => d.documentId),
-          },
-        },
-      },
-      ...this.representationService.buildCustomRepresentationQuery(v),
-    });
-    return {
-      results: cases.map((c, i) => ({
-        ...c,
-        similarity: matches.data[i].similarity,
-      })),
-    };
+  queryMatchesForFoundDocumentCase(query: QueryMatechesForFoundCaseDto) {
+    return this.matchLostDocumentService.queryMatchesForFoundDocumentCase(
+      query,
+    );
   }
 }

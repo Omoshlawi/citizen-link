@@ -16,6 +16,11 @@ import {
 } from './matching.interface';
 import { MatchingVerifierService } from './matching.verifier.service';
 import { Match } from '../../generated/prisma/client';
+import {
+  CustomRepresentationService,
+  PaginationService,
+} from '../query-builder';
+import { QueryMatechesForFoundCaseDto } from './matching.dto';
 
 @Injectable()
 export class MatchLostDocumentService {
@@ -25,6 +30,8 @@ export class MatchLostDocumentService {
     private readonly prismaService: PrismaService,
     private readonly embeddingService: EmbeddingService,
     private readonly matchVerifierService: MatchingVerifierService,
+    private readonly paginationService: PaginationService,
+    private readonly representationService: CustomRepresentationService,
   ) {}
 
   /**
@@ -266,5 +273,45 @@ export class MatchLostDocumentService {
     );
 
     return verifiedMatches;
+  }
+  async queryMatchesForFoundDocumentCase(query: QueryMatechesForFoundCaseDto) {
+    const { foundDocumentCaseId, minMatchScore, v } = query;
+    const founsCase = await this.prismaService.foundDocumentCase.findUnique({
+      where: { id: foundDocumentCaseId },
+      include: {
+        case: {
+          include: {
+            document: true,
+          },
+        },
+      },
+    });
+    if (!founsCase) throw new NotFoundException('Lost case not found');
+    const foundDocumentId = founsCase.case.document?.id;
+    if (!foundDocumentId)
+      throw new NotFoundException('Found case has no asociated document');
+    const { skip, take } = this.paginationService.buildPaginationQuery(query);
+    const matches = await this.findMatches(foundDocumentId, {
+      includeTotal: true,
+      limit: take,
+      skip,
+      similarityThreshold: minMatchScore,
+    });
+    const cases = await this.prismaService.documentCase.findMany({
+      where: {
+        document: {
+          id: {
+            in: matches.data.map((d) => d.documentId),
+          },
+        },
+      },
+      ...this.representationService.buildCustomRepresentationQuery(v),
+    });
+    return {
+      results: cases.map((c, i) => ({
+        ...c,
+        similarity: matches.data[i].similarity,
+      })),
+    };
   }
 }
