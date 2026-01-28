@@ -1,6 +1,14 @@
 import { UserSession as BetterAuthUserSession } from '@thallesp/nestjs-better-auth';
 import { betterAuth } from 'better-auth';
-import { admin, bearer, jwt, openAPI, username } from 'better-auth/plugins';
+import {
+  admin,
+  bearer,
+  jwt,
+  openAPI,
+  phoneNumber,
+  twoFactor,
+  username,
+} from 'better-auth/plugins';
 import { adminConfig } from './auth.contants';
 
 export type BetterAuthWithPlugins = ReturnType<
@@ -11,6 +19,8 @@ export type BetterAuthWithPlugins = ReturnType<
       ReturnType<typeof bearer>,
       ReturnType<typeof openAPI>,
       ReturnType<typeof jwt>,
+      ReturnType<typeof twoFactor>,
+      ReturnType<typeof phoneNumber>,
     ];
   }>
 >;

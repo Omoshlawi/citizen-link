@@ -42,9 +42,15 @@ model User {
   transactions   Transaction[]
   disputes       Dispute[]
 
+  twoFactorEnabled    Boolean?    @default(false)
+  phoneNumber         String?
+  phoneNumberVerified Boolean?
+  twofactors          TwoFactor[]
+
   @@unique([email])
   @@unique([username])
   @@map("user")
+  @@unique([phoneNumber])
 }
 
 model Session {
@@ -129,6 +135,7 @@ model UserActivity {
 }
 
 // Universal Address Model with Hierarchical Support
+
 model Address {
   id String @id @default(uuid())
 
@@ -184,11 +191,12 @@ model Address {
 
   voided Boolean @default(false)
 
+  // For hierarchical queries
   @@index([userId])
   @@index([userId, preferred])
   @@index([country])
   @@index([localeId])
-  @@index([level1, level2, level3]) // For hierarchical queries
+  @@index([level1, level2, level3])
 }
 
 enum AddressType {
@@ -201,6 +209,7 @@ enum AddressType {
 }
 
 // Optional: Address Hierarchy Configuration (for dropdowns/autocomplete)
+
 model AddressHierarchy {
   id       String             @id @default(uuid())
   country  String // ISO country code
@@ -276,6 +285,7 @@ model DocumentType {
 
 // Common fields in PII Docs, helpfull in narrowing down search as cases grow and grow larger hence reducing primsps as well
 // E.g will look for docs with certain field values then on that naroowed search, perfom ai matching 
+
 model Document {
   id             String  @id @default(uuid())
   // Common Document Identifiers
@@ -307,6 +317,7 @@ model Document {
 }
 
 // Dynamic Field Values - stores actual values for document-specific fields
+
 model DocumentField {
   id         String   @id @default(uuid())
   documentId String
@@ -449,6 +460,7 @@ enum FoundDocumentCaseStatus {
 }
 
 // Status Transition History - tracks all status changes for audit and IoT integration
+
 model CaseStatusTransition {
   id     String       @id @default(uuid())
   caseId String
@@ -623,7 +635,7 @@ model AIVerification {
   aiInteractionId String        @unique
   aiInteraction   AIInteraction @relation(fields: [aiInteractionId], onDelete: Cascade, references: [id])
 
-  userResponses   Json // User's answers to security questions
+  userResponses Json // User's answers to security questions
 
   // AI Analysis
   aiAnalysis Json // AI's detailed analysis of each answer
@@ -665,6 +677,7 @@ enum VerificationVerdict {
 }
 
 //  AI INTERACTION LOGS
+
 model AIInteraction {
   id String @id @default(uuid())
 
@@ -701,11 +714,13 @@ model AIInteraction {
   match                  Match?
   aiverification         AIVerification?
 
+  // For analytics and cost tracking
+  // Quick filtering of failed requests
   @@index([userId])
   @@index([interactionType])
   @@index([entityType, entityId])
-  @@index([createdAt]) // For analytics and cost tracking
-  @@index([success]) // Quick filtering of failed requests
+  @@index([createdAt])
+  @@index([success])
 }
 
 enum AIInteractionType {
@@ -795,6 +810,7 @@ enum HandoverStatus {
 }
 
 // Notification model for user alerts
+
 model Transaction {
   id                String @id @default(uuid())
   transactionNumber String @unique
@@ -1006,4 +1022,14 @@ model Setting {
   updatedAt   DateTime @updatedAt
   updatedBy   String?
   voided      Boolean  @default(false)
+}
+
+model TwoFactor {
+  id          String @id
+  secret      String
+  backupCodes String
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("twoFactor")
 }

@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { DynamicModule } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
@@ -19,6 +20,8 @@ import {
   jwt,
   openAPI,
   username,
+  twoFactor,
+  phoneNumber,
 } from 'better-auth/plugins';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
@@ -93,12 +96,36 @@ export class AuthModule {
               bearer(),
               openAPI(),
               jwt(),
+              twoFactor({
+                otpOptions: {
+                  sendOTP({ user, otp }, request) {
+                    // console.log('Data ---------', user);
+                    console.log('OTP ---------', otp);
+                    // console.log('Request ---------', request);
+                  },
+                },
+              }),
+              phoneNumber({
+                sendOTP: ({ phoneNumber, code }, ctx) => {
+                  console.log('Phone Number ---------', phoneNumber);
+                  console.log('Code ---------', code);
+                },
+                // Optional: Auto-create user on verification
+                signUpOnVerification: {
+                  getTempEmail(phoneNumber) {
+                    return `${phoneNumber}@aicancerscreening.app`;
+                  },
+                  getTempName(phoneNumber) {
+                    return `${phoneNumber}@aicancerscreening.app`;
+                  },
+                },
+              }),
             ],
             advanced: { disableOriginCheck: true },
             hooks,
             emailAndPassword: {
               enabled: true,
-              // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
+              // eslint-disable-next-line @typescript-eslint/require-await
               async sendResetPassword({ token }, _) {
                 // http://localhost:8090/api/auth/reset-password/4IlzTEQRdCSm4B1fy4YqrVUF?callbackURL=%2Freset-password
                 console.log('Token ---------', token);
@@ -107,7 +134,7 @@ export class AuthModule {
               requireEmailVerification: false,
             },
             emailVerification: {
-              // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
+              // eslint-disable-next-line @typescript-eslint/require-await
               async sendVerificationEmail({ token, url }, _) {
                 console.log('Token ---------', token);
                 console.log('URL ---------', url);
