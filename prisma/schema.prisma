@@ -564,20 +564,15 @@ model Claim {
   matchId String
   match   Match  @relation(fields: [matchId], references: [id])
 
-  // AI-Powered Security Verification
-  verificationAttempts Int @default(0) // 
-  maxAttempts          Int @default(3)
-
-  verifiedAt         DateTime?
   verificationStatus ClaimVerificationStatus @default(PENDING)
 
   // AI tracks all verification attempts
-  verificationHistory AIVerificationAttempt[]
-
   // Pickup Details
   pickupStationId     String?
   pickupStation       PickupStation? @relation(fields: [pickupStationId], references: [id])
   preferredPickupDate DateTime?
+
+  // 
 
   // Status
   status ClaimStatus @default(PENDING_VERIFICATION)
@@ -592,8 +587,9 @@ model Claim {
   handover    Handover?
   dispute     Dispute?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  aiverification AIVerification?
 
   @@index([userId])
   @@index([foundDocumentCaseId])
@@ -618,36 +614,35 @@ enum ClaimStatus {
   DISPUTED
 }
 
-model AIVerificationAttempt {
+model AIVerification {
   id String @id @default(uuid())
 
-  claimId String
+  claimId String @unique
   claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
-  attemptNumber Int // 1, 2, 3...
+  aiInteractionId String        @unique
+  aiInteraction   AIInteraction @relation(fields: [aiInteractionId], onDelete: Cascade, references: [id])
 
-  // AI Model Info
-  aiModel      String
-  modelVersion String
-
-  // User's Answers
-  userResponses Json // User's answers to security questions
+  userResponses   Json // User's answers to security questions
 
   // AI Analysis
   aiAnalysis Json // AI's detailed analysis of each answer
   // Example: {
-  //   "question1": {
-  //     "expected": "John Michael Doe",
-  //     "provided": "Doe John Michael",
-  //     "match": true,
-  //     "confidence": 0.95,
-  //     "reasoning": "Names reordered but all components present and correct"
-  //   }
+  //   "questions": [
+  //       {
+  //         "question": "What is the name of the document owner"?
+  //           "expected": "John Michael Doe",
+  //           "provided": "Doe John Michael",
+  //           "match": true,
+  //           "confidence": 95,
+  //           "reasoning": "Names reordered but all components present and correct"
+  //         }
+  //    ]
   // }
 
   // AI Decision
   overallVerdict  VerificationVerdict
-  confidenceScore Float // 0-1, how confident AI is in its decision
+  confidenceScore Float // 0-100, how confident AI is in its decision
   reasoning       String              @db.Text // AI explains its decision
 
   // Flexibility Factors AI Considered
@@ -659,7 +654,6 @@ model AIVerificationAttempt {
   createdAt DateTime @default(now())
 
   @@index([claimId])
-  @@index([attemptNumber])
 }
 
 enum VerificationVerdict {
@@ -705,6 +699,7 @@ model AIInteraction {
   createdAt              DateTime                  @default(now())
   extractionInteractions AIExtractionInteraction[]
   match                  Match?
+  aiverification         AIVerification?
 
   @@index([userId])
   @@index([interactionType])

@@ -1,46 +1,27 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, Logger } from '@nestjs/common';
 import { Readable } from 'stream';
-import { createWorker } from 'tesseract.js';
 import { ImageProcessingOptionsDto } from './ocr.dto';
 import sharp from 'sharp';
+import { HttpService } from '@nestjs/axios';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class OcrService {
+  constructor(private readonly httpService: HttpService) {}
   private readonly logger = new Logger(OcrService.name);
-  async recognizeFromUrl(url: string) {
-    const worker = await createWorker();
-    const { data } = await worker.recognize(url);
-    await worker.terminate();
-    return data.text;
-  }
-
-  async recognizeFromBuffer(buffer: Buffer) {
-    const worker = await createWorker();
-    const { data } = await worker.recognize(buffer);
-    await worker.terminate();
-    return data.text;
-  }
 
   /**
-   * Download file from URL as a stream
+   * Download file from URL as a stream using HttpService
    */
   private async downloadFileAsStream(fileUrl: string): Promise<Readable> {
     try {
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        throw new Error(
-          `Failed to download file: ${response.status} ${response.statusText}`,
-        );
-      }
+      const source$ = this.httpService.get(fileUrl, {
+        responseType: 'stream',
+      });
 
-      if (!response.body) {
-        throw new Error('Response body is null');
-      }
-
-      // Convert web stream to Node.js Readable stream
-      return Readable.fromWeb(response.body as any);
+      const response = await lastValueFrom(source$);
+      return response.data as Readable;
     } catch (error) {
       this.logger.error(
         `Failed to download file from ${fileUrl}: ${error.message}`,
@@ -50,19 +31,16 @@ export class OcrService {
   }
 
   /**
-   * Download file from URL as a buffer
+   * Download file from URL as a buffer using HttpService
    */
   async downloadFileAsBuffer(fileUrl: string): Promise<Buffer> {
     try {
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        throw new Error(
-          `Failed to download file: ${response.status} ${response.statusText}`,
-        );
-      }
+      const source$ = this.httpService.get(fileUrl, {
+        responseType: 'arraybuffer',
+      });
 
-      const arrayBuffer = await response.arrayBuffer();
-      return Buffer.from(arrayBuffer);
+      const response = await lastValueFrom(source$);
+      return Buffer.from(response.data);
     } catch (error) {
       this.logger.error(
         `Failed to download file from ${fileUrl}: ${error.message}`,
@@ -87,6 +65,7 @@ export class OcrService {
       normalize,
       threshold,
     } = options;
+
     let sharpInstance = sharp(buffer)
       .grayscale(grayScale)
       .resize(width, height, { fit })
@@ -101,7 +80,6 @@ export class OcrService {
     if (contrast !== undefined) {
       // Sharp.js doesn't have a direct 'contrast' method.
       // We can approximate contrast adjustment using the 'linear' transformation.
-      // A multiplier > 1 increases contrast, and < 1 decreases it.
       const multiplier = contrast;
       const offset = -(128 * multiplier) + 128;
       sharpInstance = sharpInstance.linear(multiplier, offset);

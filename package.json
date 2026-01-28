@@ -1,8 +1,8 @@
 {
-  "name": "customer-registration-service",
+  "name": "citizen-link",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "Citizen link backend service",
+  "author": "Laurent Ouma",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -30,6 +30,7 @@
     "@aws-sdk/lib-storage": "^3.883.0",
     "@aws-sdk/s3-request-presigner": "^3.883.0",
     "@itgorillaz/configify": "^4.0.1",
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
@@ -75,7 +76,6 @@
     "prisma": "^7.1.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
-    "tesseract.js": "^6.0.1",
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",

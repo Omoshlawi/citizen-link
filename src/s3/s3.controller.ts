@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import { S3Service } from './s3.service';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { ApiErrorsResponse } from 'src/app.decorators';
+import { ApiErrorsResponse } from '../app.decorators';
 import {
   GetDownloadUrlDto,
   GetDownloadUrlResponseDto,

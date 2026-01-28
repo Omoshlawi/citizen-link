@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { ApiErrorsResponse } from 'src/app.decorators';
-import { CustomRepresentationQueryDto } from 'src/query-builder/query-builder.utils';
+import { ApiErrorsResponse } from '../app.decorators';
+import { CustomRepresentationQueryDto } from '../query-builder/query-builder.utils';
 import { OriginalUrl } from '../query-builder';
 import {
   CreateDocumentImageDto,

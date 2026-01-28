@@ -2,7 +2,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import OpenAI from 'openai';
-import { AI_OPTIONS_TOKEN } from './ai.contants';
+import { zodResponseFormat } from 'openai/helpers/zod';
+import z from 'zod';
+import { AIInteractionType } from '../../generated/prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { AI_DATA_EXTRACT_CONFIG, AI_OPTIONS_TOKEN } from './ai.contants';
 import {
   AIOptions,
   GenerateContentConfig,
@@ -10,11 +14,6 @@ import {
   GenerateParsedContentResponse,
   Part,
 } from './ai.types';
-import z from 'zod';
-import { zodResponseFormat } from 'openai/helpers/zod';
-import { AIInteractionType } from '../../generated/prisma/client';
-import { AI_DATA_EXTRACT_CONFIG } from './ai.contants';
-import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AiService implements OnModuleInit {

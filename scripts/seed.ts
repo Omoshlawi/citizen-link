@@ -1,5 +1,7 @@
-import 'dotenv/config';
+/* eslint-disable @typescript-eslint/no-floating-promises */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { spawn } from 'child_process';
+import 'dotenv/config';
 import path from 'path';
 
 declare const __dirname: string;

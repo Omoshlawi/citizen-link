@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EmbeddingService } from '../ai/embeding.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class MatchingStatisticsService {
@@ -33,8 +34,9 @@ export class MatchingStatisticsService {
     }
 
     const searchText = this.embeddingService.createDocumentText(document);
-    const searchEmbedding =
-      await this.embeddingService.generateEmbedding(searchText);
+    const searchEmbedding = await lastValueFrom(
+      this.embeddingService.generateEmbedding(searchText),
+    );
     const vectorString = `[${searchEmbedding.join(',')}]`;
 
     // Build query based on document type

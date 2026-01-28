@@ -5,6 +5,8 @@ import { AiModuleOptions } from './ai.types';
 import { OcrService } from './ocr.service';
 import { AiService } from './ai.service';
 import { EmbeddingService } from './embeding.service';
+import { HttpModule } from '@nestjs/axios';
+import { AiConfig } from './ai.config';
 
 @Module({})
 export class AiModule {
@@ -20,7 +22,15 @@ export class AiModule {
         AiService,
         EmbeddingService,
       ],
-      imports: options.imports,
+      imports: [
+        ...(options.imports ?? []),
+        HttpModule.registerAsync({
+          useFactory: (aiConfig: AiConfig) => ({
+            baseURL: aiConfig.aiBaseUrl,
+          }),
+          inject: [AiConfig],
+        }),
+      ],
       exports: [OcrService, AiService, EmbeddingService],
     };
   }

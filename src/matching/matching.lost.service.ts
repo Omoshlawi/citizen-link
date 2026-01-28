@@ -21,6 +21,7 @@ import {
   PaginationService,
 } from '../query-builder';
 import { QueryMatechesForFoundCaseDto } from './matching.dto';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class MatchLostDocumentService {
@@ -72,8 +73,9 @@ export class MatchLostDocumentService {
       }
 
       const searchText = this.embeddingService.createDocumentText(foundDoc);
-      const searchEmbedding =
-        await this.embeddingService.generateEmbedding(searchText);
+      const searchEmbedding = await lastValueFrom(
+        this.embeddingService.generateEmbedding(searchText),
+      );
       const vectorString = `[${searchEmbedding.join(',')}]`;
 
       // Get total count if requested

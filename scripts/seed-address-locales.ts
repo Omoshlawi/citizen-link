@@ -25,6 +25,7 @@ async function seedAddressLocales(): Promise<void> {
     throw new Error('Missing assets/address-locales.json seed file');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const payload: AddressLocale[] = JSON.parse(
     fs.readFileSync(filePath, 'utf-8'),
   );

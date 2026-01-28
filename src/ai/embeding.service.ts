@@ -1,35 +1,38 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { catchError, lastValueFrom, map, Observable } from 'rxjs';
 import {
   Document,
   DocumentCase,
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
-import { AiConfig } from './ai.config';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class EmbeddingService {
   private readonly logger = new Logger(EmbeddingService.name);
   constructor(
-    private readonly config: AiConfig,
+    private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
   ) {}
 
-  async generateEmbedding(text: string): Promise<Array<number>> {
-    try {
-      const url = `${this.config.aiBaseUrl}/api/embeddings`;
-      const response = await axios.post<{ embedding: Array<number> }>(url, {
-        model: 'nomic-embed-text',
-        prompt: text,
-      });
-
-      return response.data.embedding;
-    } catch (error) {
-      this.logger.error('Embedding generation failed:', error);
-      throw error;
-    }
+  generateEmbedding(text: string): Observable<Array<number>> {
+    const url = `/api/embeddings`;
+    const response = this.httpService.post<{
+      embedding: Array<number>;
+    }>(url, {
+      model: 'nomic-embed-text',
+      prompt: text,
+    });
+    const data = response.pipe(
+      map((res) => res.data.embedding),
+      catchError((error) => {
+        this.logger.error('Error generating embedding', error);
+        throw error;
+      }),
+    );
+    return data;
   }
 
   // Create a searchable text representation of a document
@@ -125,7 +128,7 @@ export class EmbeddingService {
       this.logger.debug(`Indexing document ${documentId}: ${searchText}`);
 
       // Generate embedding
-      const embedding = await this.generateEmbedding(searchText);
+      const embedding = await lastValueFrom(this.generateEmbedding(searchText));
 
       // Convert embedding array to PostgreSQL vector format
       const vectorString = `[${embedding.join(',  ')}]`;
