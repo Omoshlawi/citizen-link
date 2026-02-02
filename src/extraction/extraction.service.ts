@@ -516,6 +516,41 @@ export class ExtractionService {
       );
     }
 
+    // Validate document type id exists
+    const docType = await this.prismaService.documentType.findUnique({
+      where: { id: dataValidation.data.typeId },
+    });
+    if (!docType) {
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
+        data: {
+          aiextractionInteractions: {
+            create: {
+              aiInteractionId: dataResult.id,
+              extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+              errorMessage: `Document type with id ${dataValidation.data.typeId} not found`,
+              success: false,
+            },
+          },
+        },
+      });
+      this.logger.error(
+        'Data extraction validation failed: Document type not found',
+      );
+      input?.options?.onPublishProgressEvent?.({
+        key: 'DATA_EXTRACTION',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Data extraction validation failed: Document type with id ${dataValidation.data.typeId} not found`,
+          ),
+        },
+      });
+      throw new BadRequestException(
+        `Data extraction validation failed: Document type with id ${dataValidation.data.typeId} not found`,
+      );
+    }
+
     const extractedData = dataValidation.data;
     this.logger.log('Step 1 completed: Data extracted successfully');
     input?.options?.onPublishProgressEvent?.({

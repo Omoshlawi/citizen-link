@@ -113,10 +113,10 @@ export class AuthModule {
                 // Optional: Auto-create user on verification
                 signUpOnVerification: {
                   getTempEmail(phoneNumber) {
-                    return `${phoneNumber}@aicancerscreening.app`;
+                    return `${phoneNumber}@citizenlink.app`;
                   },
                   getTempName(phoneNumber) {
-                    return `${phoneNumber}@aicancerscreening.app`;
+                    return `${phoneNumber}@citizenlink.app`;
                   },
                 },
               }),
