@@ -71,10 +71,51 @@ export class ExtractionService {
     });
   }
 
-  // TODO: Refine extraction to start with video validation if the document falls into the supported PII categories,
-  // then analize images for data extraction, if analysis threshold is not met, else return error indicating document
-  // validation failed.If met continue to data extraction, then security questions generation then confidence scoring.
+  /**
+   * Parse AI response and validate against schema
+   */
+  private async parseAndValidate<T, E>(
+    response: string,
+    schema: z.ZodType<T>,
+    onError: (error: unknown) => Promise<E>,
+  ): Promise<T | E> {
+    try {
+      // Clean and parse JSON
+      const cleanedResponse = this.aiService.cleanResponseText(response);
+      const parsedResult = safeParseJson<Record<string, any>>(cleanedResponse, {
+        transformNullToUndefined: true,
+      });
+
+      if (!parsedResult.success) {
+        throw new Error(
+          JSON.stringify({
+            message: 'JSON parsing failed',
+            error: `${parsedResult.error.message}`,
+          }),
+        );
+      }
+
+      // Validate against schema
+      const validation = await schema.safeParseAsync(parsedResult.data);
+
+      if (!validation.success) {
+        throw new Error(
+          JSON.stringify({
+            message: 'Schema validation failed',
+            error: z.formatError(validation.error),
+          }),
+        );
+      }
+
+      return validation.data;
+    } catch (error: unknown) {
+      return await onError?.(error);
+    }
+  }
+
   async extractInformation(input: ExtractInformationInput) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const eventsToSkip = input.options?.skip || [];
     this.logger.log('Starting four-step extraction process...');
     // Get document types once
     const documentTypes = await this.prismaService.documentType.findMany({
@@ -99,24 +140,36 @@ export class ExtractionService {
       input.userId,
     );
 
-    // Parse and validate image analysis
-    const cleanedImageResponse = this.aiService.cleanResponseText(
+    const imageAnalysis = await this.parseAndValidate(
       imageResult.response,
+      ImageAnalysisSchema,
+      async (error: Error) => {
+        this.logger.error('Error parsing image analysis response:', error);
+        input?.options?.onPublishProgressEvent?.({
+          key: 'IMAGE_ANALYSIS',
+          state: {
+            isLoading: false,
+            error: error,
+          },
+        });
+        await this.prismaService.aIExtraction.update({
+          where: { id: input.extractionId },
+          data: {
+            aiextractionInteractions: {
+              create: {
+                aiInteractionId: imageResult.id,
+                extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                errorMessage: error.message,
+                success: false,
+              },
+            },
+          },
+        });
+        throw new BadRequestException(JSON.parse(error.message));
+      },
     );
-    const imageParsedResult = safeParseJson<Record<string, any>>(
-      cleanedImageResponse,
-      { transformNullToUndefined: true },
-    );
-    if (!imageParsedResult.success) {
-      input?.options?.onPublishProgressEvent?.({
-        key: 'IMAGE_ANALYSIS',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Image analysis parsing failed: ${imageParsedResult.error.message}`,
-          ),
-        },
-      });
+
+    if (!imageAnalysis.isSupportedDocument) {
       await this.prismaService.aIExtraction.update({
         where: { id: input.extractionId },
         data: {
@@ -126,7 +179,7 @@ export class ExtractionService {
                 {
                   aiInteractionId: imageResult.id,
                   extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  errorMessage: imageParsedResult.error.message,
+                  errorMessage: 'Invalid Document; Document is not supported',
                   success: false,
                 },
               ],
@@ -134,58 +187,17 @@ export class ExtractionService {
           },
         },
       });
-      this.logger.error(
-        'Image analysis parsing failed:',
-        imageParsedResult.error,
-      );
-      throw new BadRequestException(
-        `Image analysis parsing failed: ${imageParsedResult.error.message}`,
-      );
-    }
-    const imageValidation = await ImageAnalysisSchema.safeParseAsync(
-      imageParsedResult.data,
-    );
-
-    if (!imageValidation.success) {
+      this.logger.error('Document is not supported');
       input?.options?.onPublishProgressEvent?.({
         key: 'IMAGE_ANALYSIS',
         state: {
           isLoading: false,
-          error: new Error(
-            `Image analysis validation failed: ${JSON.stringify(imageValidation.error.issues)}`,
-          ),
+          error: new Error('Invalid Document; Document is not supported'),
         },
       });
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              // Because it parsed the data extraction and confidence successfully, we can add the data to the extraction
-              data: [
-                {
-                  aiInteractionId: imageResult.id,
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  errorMessage: JSON.stringify(
-                    z.formatError(imageValidation.error),
-                  ),
-                  success: false,
-                },
-              ],
-            },
-          },
-        },
-      });
-      this.logger.error(
-        'Image analysis validation failed:',
-        imageValidation.error,
-      );
-      throw new BadRequestException(
-        `Image analysis validation failed: ${JSON.stringify(imageValidation.error.issues)}`,
-      );
-    }
 
-    const imageAnalysis = imageValidation.data;
+      throw new BadRequestException('Document is not supported');
+    }
     this.logger.log('Step 1 completed: Image analysis finished');
     input?.options?.onPublishProgressEvent?.({
       key: 'IMAGE_ANALYSIS',
@@ -212,161 +224,66 @@ export class ExtractionService {
       input.userId,
     );
 
-    if (!dataResult.success) {
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              data: [
-                {
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  aiInteractionId: imageResult.id,
-                  extractionData: imageAnalysis,
-                },
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  errorMessage: dataResult.errorMessage,
-                  success: false,
-                },
-              ],
-            },
-          },
-        },
-      });
-      input?.options?.onPublishProgressEvent?.({
-        key: 'DATA_EXTRACTION',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Data extraction failed: ${dataResult.errorMessage}`,
-          ),
-        },
-      });
-
-      // await input?.options?.onAfterInteractionHook?.(
-      //   AIInteractionType.DATA_EXTRACTION,
-      //   ()=>
-      // );
-      throw new BadRequestException(
-        `Data extraction failed: ${dataResult.errorMessage}`,
-      );
-    }
-
-    // Parse and validate data extraction
-    const cleanedDataResponse = this.aiService.cleanResponseText(
+    const extractedData = await this.parseAndValidate(
       dataResult.response,
-    );
-    const dataParsedResult = safeParseJson<Record<string, any>>(
-      cleanedDataResponse,
-      { transformNullToUndefined: true },
-    );
-
-    if (!dataParsedResult.success) {
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              data: [
-                {
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  aiInteractionId: imageResult.id,
-                  extractionData: imageAnalysis,
-                },
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  errorMessage: dataParsedResult.error.message,
-                  success: false,
-                },
-              ],
+      DataExtractionSchema,
+      async (error: Error) => {
+        this.logger.error('Error parsing data extraction response:', error);
+        input?.options?.onPublishProgressEvent?.({
+          key: 'DATA_EXTRACTION',
+          state: {
+            isLoading: false,
+            error: error,
+          },
+        });
+        await this.prismaService.aIExtraction.update({
+          where: { id: input.extractionId },
+          data: {
+            aiextractionInteractions: {
+              createMany: {
+                data: [
+                  {
+                    extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                    aiInteractionId: imageResult.id,
+                    extractionData: imageAnalysis,
+                  },
+                  {
+                    aiInteractionId: dataResult.id,
+                    extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                    errorMessage: error.message,
+                    success: false,
+                  },
+                ],
+              },
             },
           },
-        },
-      });
-      this.logger.error(
-        'Data extraction validation failed:',
-        dataParsedResult.error,
-      );
-      input?.options?.onPublishProgressEvent?.({
-        key: 'DATA_EXTRACTION',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Data extraction failed: ${dataResult.errorMessage}`,
-          ),
-        },
-      });
-      throw new BadRequestException(
-        `Data extraction failed: ${dataParsedResult.error.message}`,
-      );
-    }
-
-    const dataValidation = await DataExtractionSchema.safeParseAsync(
-      dataParsedResult.data,
+        });
+        throw new BadRequestException(JSON.parse(error.message));
+      },
     );
-
-    if (!dataValidation.success) {
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              data: [
-                {
-                  aiInteractionId: imageResult.id,
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  extractionData: imageAnalysis,
-                },
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  errorMessage: JSON.stringify(
-                    z.formatError(dataValidation.error),
-                  ),
-                  success: false,
-                },
-              ],
-            },
-          },
-        },
-      });
-      this.logger.error(
-        'Data extraction validation failed:',
-        dataValidation.error,
-      );
-      input?.options?.onPublishProgressEvent?.({
-        key: 'DATA_EXTRACTION',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Data extraction validation failed: ${JSON.stringify(dataValidation.error.issues)}`,
-          ),
-        },
-      });
-      throw new BadRequestException(
-        `Data extraction validation failed: ${JSON.stringify(dataValidation.error.issues)}`,
-      );
-    }
-
-    // TODO: REMOVE WHEN YOU VALIDAT AT THE ANALYSIS STEP
-
     // Validate document type id exists
     const docType = await this.prismaService.documentType.findUnique({
-      where: { id: dataValidation.data.typeId },
+      where: { id: extractedData.typeId },
     });
     if (!docType) {
       await this.prismaService.aIExtraction.update({
         where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
-            create: {
-              aiInteractionId: dataResult.id,
-              extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-              errorMessage: `Document type with id ${dataValidation.data.typeId} not found`,
-              success: false,
+            createMany: {
+              data: [
+                {
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  aiInteractionId: imageResult.id,
+                  extractionData: imageAnalysis,
+                },
+                {
+                  aiInteractionId: dataResult.id,
+                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                  errorMessage: 'Unsupported Document',
+                  success: false,
+                },
+              ],
             },
           },
         },
@@ -379,16 +296,15 @@ export class ExtractionService {
         state: {
           isLoading: false,
           error: new Error(
-            `Data extraction validation failed: Document type with id ${dataValidation.data.typeId} not found`,
+            `Data extraction validation failed: Document type with id ${extractedData.typeId} not found`,
           ),
         },
       });
       throw new BadRequestException(
-        `Data extraction validation failed: Document type with id ${dataValidation.data.typeId} not found`,
+        `Data extraction validation failed: Document type with id ${extractedData.typeId} not found`,
       );
     }
 
-    const extractedData = dataValidation.data;
     this.logger.log('Step 2 completed: Data extracted successfully');
     input?.options?.onPublishProgressEvent?.({
       key: 'DATA_EXTRACTION',
@@ -414,113 +330,50 @@ export class ExtractionService {
       input.userId,
     );
 
-    // Parse and validate security questions
-    const cleanedSecurityQuestionsResponse = this.aiService.cleanResponseText(
+    const securityQuestions = await this.parseAndValidate(
       securityQuestionsResult.response,
-    );
-    const securityQuestionsParsedResult = safeParseJson<Record<string, any>>(
-      cleanedSecurityQuestionsResponse,
-      { transformNullToUndefined: true },
-    );
-    if (!securityQuestionsParsedResult.success) {
-      input?.options?.onPublishProgressEvent?.({
-        key: 'SECURITY_QUESTIONS',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Security questions parsing failed: ${securityQuestionsParsedResult.error.message}`,
-          ),
-        },
-      });
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              data: [
-                {
-                  aiInteractionId: imageResult.id,
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  extractionData: imageAnalysis,
-                },
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  extractionData: extractedData,
-                },
-                {
-                  aiInteractionId: securityQuestionsResult.id,
-                  extractionType:
-                    AIExtractionInteractionType.SECURITY_QUESTIONS,
-                  errorMessage: securityQuestionsParsedResult.error.message,
-                  success: false,
-                },
-              ],
+      SecurityQuestionsSchema,
+      async (error: Error) => {
+        this.logger.error('Error parsing security questions response:', error);
+        input?.options?.onPublishProgressEvent?.({
+          key: 'SECURITY_QUESTIONS',
+          state: {
+            isLoading: false,
+            error,
+          },
+        });
+        await this.prismaService.aIExtraction.update({
+          where: { id: input.extractionId },
+          data: {
+            aiextractionInteractions: {
+              createMany: {
+                data: [
+                  {
+                    aiInteractionId: imageResult.id,
+                    extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                    extractionData: imageAnalysis,
+                  },
+                  {
+                    aiInteractionId: dataResult.id,
+                    extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                    extractionData: extractedData,
+                  },
+                  {
+                    aiInteractionId: securityQuestionsResult.id,
+                    extractionType:
+                      AIExtractionInteractionType.SECURITY_QUESTIONS,
+                    errorMessage: error.message,
+                    success: false,
+                  },
+                ],
+              },
             },
           },
-        },
-      });
-      this.logger.error(
-        'Security questions parsing failed:',
-        securityQuestionsParsedResult.error,
-      );
-      throw new BadRequestException(
-        `Security questions parsing failed: ${securityQuestionsParsedResult.error.message}`,
-      );
-    }
-    const securityQuestionsValidation =
-      await SecurityQuestionsSchema.safeParseAsync(
-        securityQuestionsParsedResult.data,
-      );
-    if (!securityQuestionsValidation.success) {
-      input?.options?.onPublishProgressEvent?.({
-        key: 'SECURITY_QUESTIONS',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Security questions validation failed: ${JSON.stringify(securityQuestionsValidation.error.issues)}`,
-          ),
-        },
-      });
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              data: [
-                {
-                  aiInteractionId: imageResult.id,
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  extractionData: imageAnalysis,
-                },
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  extractionData: extractedData,
-                },
-                {
-                  aiInteractionId: securityQuestionsResult.id,
-                  extractionType:
-                    AIExtractionInteractionType.SECURITY_QUESTIONS,
-                  errorMessage: JSON.stringify(
-                    z.formatError(securityQuestionsValidation.error),
-                  ),
-                  success: false,
-                },
-              ],
-            },
-          },
-        },
-      });
-      this.logger.error(
-        'Security questions validation failed:',
-        securityQuestionsValidation.error,
-      );
-      throw new BadRequestException(
-        `Security questions validation failed: ${JSON.stringify(securityQuestionsValidation.error.issues)}`,
-      );
-    }
-    const securityQuestions = securityQuestionsValidation.data;
+        });
+
+        throw new BadRequestException(JSON.parse(error.message));
+      },
+    );
     this.logger.log('Step 3 completed: Security questions generated');
     input?.options?.onPublishProgressEvent?.({
       key: 'SECURITY_QUESTIONS',
@@ -547,125 +400,57 @@ export class ExtractionService {
       'Document',
       input.userId,
     );
-    // Parse and validate confidence
-    const cleanedConfidenceResponse = this.aiService.cleanResponseText(
+
+    const confidence = await this.parseAndValidate(
       confidenceResult.response,
-    );
-    const confidenceParsedResult = safeParseJson<Record<string, any>>(
-      cleanedConfidenceResponse,
-      { transformNullToUndefined: true },
-    );
-
-    if (!confidenceParsedResult.success) {
-      input?.options?.onPublishProgressEvent?.({
-        key: 'CONFIDENCE_SCORE',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Confidence parsing failed: ${confidenceParsedResult.error.message}`,
-          ),
-        },
-      });
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              data: [
-                {
-                  aiInteractionId: imageResult.id,
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  extractionData: imageAnalysis,
-                },
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  extractionData: extractedData,
-                },
-                {
-                  aiInteractionId: securityQuestionsResult.id,
-                  extractionType:
-                    AIExtractionInteractionType.SECURITY_QUESTIONS,
-                  extractionData: securityQuestions,
-                },
-                {
-                  aiInteractionId: confidenceResult.id,
-                  extractionType: AIExtractionInteractionType.CONFIDENCE_SCORE,
-                  errorMessage: confidenceParsedResult.error.message,
-                  success: false,
-                },
-              ],
+      ConfidenceSchema,
+      async (error: Error) => {
+        this.logger.error('Error parsing confidence response:', error);
+        input?.options?.onPublishProgressEvent?.({
+          key: 'CONFIDENCE_SCORE',
+          state: {
+            isLoading: false,
+            error,
+          },
+        });
+        await this.prismaService.aIExtraction.update({
+          where: { id: input.extractionId },
+          data: {
+            aiextractionInteractions: {
+              createMany: {
+                data: [
+                  {
+                    aiInteractionId: imageResult.id,
+                    extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                    extractionData: imageAnalysis,
+                  },
+                  {
+                    aiInteractionId: dataResult.id,
+                    extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                    extractionData: extractedData,
+                  },
+                  {
+                    aiInteractionId: securityQuestionsResult.id,
+                    extractionType:
+                      AIExtractionInteractionType.SECURITY_QUESTIONS,
+                    extractionData: securityQuestions,
+                  },
+                  {
+                    aiInteractionId: confidenceResult.id,
+                    extractionType:
+                      AIExtractionInteractionType.CONFIDENCE_SCORE,
+                    errorMessage: error.message,
+                    success: false,
+                  },
+                ],
+              },
             },
           },
-        },
-      });
-      this.logger.error(
-        'Confidence parsing failed:',
-        confidenceParsedResult.error,
-      );
-      throw new BadRequestException(
-        `Confidence parsing failed: ${confidenceParsedResult.error.message}`,
-      );
-    }
-    const confidenceValidation = await ConfidenceSchema.safeParseAsync(
-      confidenceParsedResult.data,
+        });
+
+        throw new BadRequestException(JSON.parse(error.message));
+      },
     );
-
-    if (!confidenceValidation.success) {
-      input?.options?.onPublishProgressEvent?.({
-        key: 'CONFIDENCE_SCORE',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Confidence validation failed: ${JSON.stringify(confidenceValidation.error.issues)}`,
-          ),
-        },
-      });
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              data: [
-                {
-                  aiInteractionId: imageResult.id,
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  extractionData: imageAnalysis,
-                },
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  extractionData: extractedData,
-                },
-                {
-                  aiInteractionId: securityQuestionsResult.id,
-                  extractionType:
-                    AIExtractionInteractionType.SECURITY_QUESTIONS,
-                  extractionData: securityQuestions,
-                },
-                {
-                  aiInteractionId: confidenceResult.id,
-                  extractionType: AIExtractionInteractionType.CONFIDENCE_SCORE,
-                  errorMessage: JSON.stringify(
-                    z.formatError(confidenceValidation.error),
-                  ),
-                  success: false,
-                },
-              ],
-            },
-          },
-        },
-      });
-      this.logger.error(
-        'Confidence validation failed:',
-        confidenceValidation.error,
-      );
-      throw new BadRequestException(
-        `Confidence validation failed: ${JSON.stringify(confidenceValidation.error.issues)}`,
-      );
-    }
-
-    const confidence = confidenceValidation.data;
     this.logger.log('Step 4 completed: Confidence scores calculated');
     input?.options?.onPublishProgressEvent?.({
       key: 'CONFIDENCE_SCORE',
