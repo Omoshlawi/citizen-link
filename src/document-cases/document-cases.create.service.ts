@@ -163,7 +163,7 @@ export class DocumentCasesCreateService {
                       url: image,
                       metadata: {
                         // ocrText: extractionTasks[i]
-                        imageAnalysis: imageAnalysis.find(
+                        imageAnalysis: imageAnalysis.images.find(
                           (imageAnalysis) => imageAnalysis.index === i,
                         ),
                       },
@@ -236,7 +236,7 @@ export class DocumentCasesCreateService {
                       url: image,
                       metadata: {
                         // ocrText: extractionTasks[i]
-                        imageAnalysis: imageAnalysis.find(
+                        imageAnalysis: imageAnalysis.images.find(
                           (imageAnalysis) => imageAnalysis.index === i,
                         ),
                       },

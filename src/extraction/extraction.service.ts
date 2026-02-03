@@ -81,8 +81,122 @@ export class ExtractionService {
       select: { id: true, name: true, category: true },
     });
 
-    // ============= STEP 1: EXTRACT DATA =============
-    this.logger.log('Step 1: Extracting document data...');
+    // ============= STEP 1: IMAGE ANALYSIS =============
+    this.logger.log('Step 1: Analyzing image quality...');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'IMAGE_ANALYSIS',
+      state: { isLoading: true },
+    });
+
+    const imagePrompt =
+      await this.promptsService.getImageAnalysisPrompt(documentTypes);
+
+    const imageResult = await this.aiService.callAIAndStore(
+      imagePrompt,
+      input.files,
+      AIInteractionType.IMAGE_ANALYSIS,
+      'Document',
+      input.userId,
+    );
+
+    // Parse and validate image analysis
+    const cleanedImageResponse = this.aiService.cleanResponseText(
+      imageResult.response,
+    );
+    const imageParsedResult = safeParseJson<Record<string, any>>(
+      cleanedImageResponse,
+      { transformNullToUndefined: true },
+    );
+    if (!imageParsedResult.success) {
+      input?.options?.onPublishProgressEvent?.({
+        key: 'IMAGE_ANALYSIS',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Image analysis parsing failed: ${imageParsedResult.error.message}`,
+          ),
+        },
+      });
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
+        data: {
+          aiextractionInteractions: {
+            createMany: {
+              data: [
+                {
+                  aiInteractionId: imageResult.id,
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  errorMessage: imageParsedResult.error.message,
+                  success: false,
+                },
+              ],
+            },
+          },
+        },
+      });
+      this.logger.error(
+        'Image analysis parsing failed:',
+        imageParsedResult.error,
+      );
+      throw new BadRequestException(
+        `Image analysis parsing failed: ${imageParsedResult.error.message}`,
+      );
+    }
+    const imageValidation = await ImageAnalysisSchema.safeParseAsync(
+      imageParsedResult.data,
+    );
+
+    if (!imageValidation.success) {
+      input?.options?.onPublishProgressEvent?.({
+        key: 'IMAGE_ANALYSIS',
+        state: {
+          isLoading: false,
+          error: new Error(
+            `Image analysis validation failed: ${JSON.stringify(imageValidation.error.issues)}`,
+          ),
+        },
+      });
+      await this.prismaService.aIExtraction.update({
+        where: { id: input.extractionId },
+        data: {
+          aiextractionInteractions: {
+            createMany: {
+              // Because it parsed the data extraction and confidence successfully, we can add the data to the extraction
+              data: [
+                {
+                  aiInteractionId: imageResult.id,
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  errorMessage: JSON.stringify(
+                    z.formatError(imageValidation.error),
+                  ),
+                  success: false,
+                },
+              ],
+            },
+          },
+        },
+      });
+      this.logger.error(
+        'Image analysis validation failed:',
+        imageValidation.error,
+      );
+      throw new BadRequestException(
+        `Image analysis validation failed: ${JSON.stringify(imageValidation.error.issues)}`,
+      );
+    }
+
+    const imageAnalysis = imageValidation.data;
+    this.logger.log('Step 1 completed: Image analysis finished');
+    input?.options?.onPublishProgressEvent?.({
+      key: 'IMAGE_ANALYSIS',
+      state: {
+        isLoading: false,
+        data: imageResult,
+      },
+    });
+
+    // ============= STEP 2: EXTRACT DATA =============
+    this.logger.log('Step 2: Extracting document data...');
     input?.options?.onPublishProgressEvent?.({
       key: 'DATA_EXTRACTION',
       state: { isLoading: true },
@@ -103,11 +217,20 @@ export class ExtractionService {
         where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
-            create: {
-              aiInteractionId: dataResult.id,
-              extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-              errorMessage: dataResult.errorMessage,
-              success: false,
+            createMany: {
+              data: [
+                {
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  aiInteractionId: imageResult.id,
+                  extractionData: imageAnalysis,
+                },
+                {
+                  aiInteractionId: dataResult.id,
+                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                  errorMessage: dataResult.errorMessage,
+                  success: false,
+                },
+              ],
             },
           },
         },
@@ -145,11 +268,20 @@ export class ExtractionService {
         where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
-            create: {
-              aiInteractionId: dataResult.id,
-              extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-              errorMessage: dataParsedResult.error.message,
-              success: false,
+            createMany: {
+              data: [
+                {
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  aiInteractionId: imageResult.id,
+                  extractionData: imageAnalysis,
+                },
+                {
+                  aiInteractionId: dataResult.id,
+                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                  errorMessage: dataParsedResult.error.message,
+                  success: false,
+                },
+              ],
             },
           },
         },
@@ -181,11 +313,22 @@ export class ExtractionService {
         where: { id: input.extractionId },
         data: {
           aiextractionInteractions: {
-            create: {
-              aiInteractionId: dataResult.id,
-              extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-              errorMessage: JSON.stringify(z.formatError(dataValidation.error)),
-              success: false,
+            createMany: {
+              data: [
+                {
+                  aiInteractionId: imageResult.id,
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  extractionData: imageAnalysis,
+                },
+                {
+                  aiInteractionId: dataResult.id,
+                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
+                  errorMessage: JSON.stringify(
+                    z.formatError(dataValidation.error),
+                  ),
+                  success: false,
+                },
+              ],
             },
           },
         },
@@ -207,6 +350,8 @@ export class ExtractionService {
         `Data extraction validation failed: ${JSON.stringify(dataValidation.error.issues)}`,
       );
     }
+
+    // TODO: REMOVE WHEN YOU VALIDAT AT THE ANALYSIS STEP
 
     // Validate document type id exists
     const docType = await this.prismaService.documentType.findUnique({
@@ -244,7 +389,7 @@ export class ExtractionService {
     }
 
     const extractedData = dataValidation.data;
-    this.logger.log('Step 1 completed: Data extracted successfully');
+    this.logger.log('Step 2 completed: Data extracted successfully');
     input?.options?.onPublishProgressEvent?.({
       key: 'DATA_EXTRACTION',
       state: {
@@ -253,8 +398,8 @@ export class ExtractionService {
       },
     });
 
-    // ============= STEP 2: GENERATE SECURITY QUESTIONS =============
-    this.logger.log('Step 2: Generating security questions...');
+    // ============= STEP 3: GENERATE SECURITY QUESTIONS =============
+    this.logger.log('Step 3: Generating security questions...');
     input?.options?.onPublishProgressEvent?.({
       key: 'SECURITY_QUESTIONS',
       state: { isLoading: true },
@@ -293,6 +438,11 @@ export class ExtractionService {
           aiextractionInteractions: {
             createMany: {
               data: [
+                {
+                  aiInteractionId: imageResult.id,
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  extractionData: imageAnalysis,
+                },
                 {
                   aiInteractionId: dataResult.id,
                   extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
@@ -339,6 +489,11 @@ export class ExtractionService {
             createMany: {
               data: [
                 {
+                  aiInteractionId: imageResult.id,
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  extractionData: imageAnalysis,
+                },
+                {
                   aiInteractionId: dataResult.id,
                   extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
                   extractionData: extractedData,
@@ -366,7 +521,7 @@ export class ExtractionService {
       );
     }
     const securityQuestions = securityQuestionsValidation.data;
-    this.logger.log('Step 2 completed: Security questions generated');
+    this.logger.log('Step 3 completed: Security questions generated');
     input?.options?.onPublishProgressEvent?.({
       key: 'SECURITY_QUESTIONS',
       state: {
@@ -375,8 +530,8 @@ export class ExtractionService {
       },
     });
 
-    // ============= STEP 3: CALCULATE CONFIDENCE =============
-    this.logger.log('Step 3: Calculating confidence scores...');
+    // ============= STEP 4: CALCULATE CONFIDENCE =============
+    this.logger.log('Step 4: Calculating confidence scores...');
     input?.options?.onPublishProgressEvent?.({
       key: 'CONFIDENCE_SCORE',
       state: { isLoading: true },
@@ -417,7 +572,11 @@ export class ExtractionService {
           aiextractionInteractions: {
             createMany: {
               data: [
-                // Because it parsed the data extraction successfully, we can add the data to the extraction
+                {
+                  aiInteractionId: imageResult.id,
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  extractionData: imageAnalysis,
+                },
                 {
                   aiInteractionId: dataResult.id,
                   extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
@@ -469,6 +628,11 @@ export class ExtractionService {
             createMany: {
               data: [
                 {
+                  aiInteractionId: imageResult.id,
+                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+                  extractionData: imageAnalysis,
+                },
+                {
                   aiInteractionId: dataResult.id,
                   extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
                   extractionData: extractedData,
@@ -502,159 +666,12 @@ export class ExtractionService {
     }
 
     const confidence = confidenceValidation.data;
-    this.logger.log('Step 3 completed: Confidence scores calculated');
+    this.logger.log('Step 4 completed: Confidence scores calculated');
     input?.options?.onPublishProgressEvent?.({
       key: 'CONFIDENCE_SCORE',
       state: {
         isLoading: false,
         data: confidenceResult,
-      },
-    });
-
-    // ============= STEP 4: ANALYZE IMAGES =============
-    this.logger.log('Step 4: Analyzing image quality...');
-    input?.options?.onPublishProgressEvent?.({
-      key: 'IMAGE_ANALYSIS',
-      state: { isLoading: true },
-    });
-
-    const imagePrompt =
-      await this.promptsService.getImageQualityAnalysisPrompt();
-
-    const imageResult = await this.aiService.callAIAndStore(
-      imagePrompt,
-      input.files,
-      AIInteractionType.IMAGE_ANALYSIS,
-      'Document',
-      input.userId,
-    );
-
-    // Parse and validate image analysis
-    const cleanedImageResponse = this.aiService.cleanResponseText(
-      imageResult.response,
-    );
-    const imageParsedResult = safeParseJson<Record<string, any>>(
-      cleanedImageResponse,
-      { transformNullToUndefined: true },
-    );
-    if (!imageParsedResult.success) {
-      input?.options?.onPublishProgressEvent?.({
-        key: 'IMAGE_ANALYSIS',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Image analysis parsing failed: ${imageParsedResult.error.message}`,
-          ),
-        },
-      });
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              data: [
-                // Because it parsed the data extraction and confidence successfully, we can add the data to the extraction
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  extractionData: extractedData,
-                },
-                {
-                  aiInteractionId: securityQuestionsResult.id,
-                  extractionType:
-                    AIExtractionInteractionType.SECURITY_QUESTIONS,
-                  extractionData: securityQuestions,
-                },
-                {
-                  aiInteractionId: confidenceResult.id,
-                  extractionType: AIExtractionInteractionType.CONFIDENCE_SCORE,
-                  extractionData: confidence,
-                },
-                {
-                  aiInteractionId: imageResult.id,
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  errorMessage: imageParsedResult.error.message,
-                  success: false,
-                },
-              ],
-            },
-          },
-        },
-      });
-      this.logger.error(
-        'Image analysis parsing failed:',
-        imageParsedResult.error,
-      );
-      throw new BadRequestException(
-        `Image analysis parsing failed: ${imageParsedResult.error.message}`,
-      );
-    }
-    const imageValidation = await ImageAnalysisSchema.safeParseAsync(
-      imageParsedResult.data,
-    );
-
-    if (!imageValidation.success) {
-      input?.options?.onPublishProgressEvent?.({
-        key: 'IMAGE_ANALYSIS',
-        state: {
-          isLoading: false,
-          error: new Error(
-            `Image analysis validation failed: ${JSON.stringify(imageValidation.error.issues)}`,
-          ),
-        },
-      });
-      await this.prismaService.aIExtraction.update({
-        where: { id: input.extractionId },
-        data: {
-          aiextractionInteractions: {
-            createMany: {
-              // Because it parsed the data extraction and confidence successfully, we can add the data to the extraction
-              data: [
-                {
-                  aiInteractionId: dataResult.id,
-                  extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                  extractionData: extractedData,
-                },
-                {
-                  aiInteractionId: securityQuestionsResult.id,
-                  extractionType:
-                    AIExtractionInteractionType.SECURITY_QUESTIONS,
-                  extractionData: securityQuestions,
-                },
-                {
-                  aiInteractionId: confidenceResult.id,
-                  extractionType: AIExtractionInteractionType.CONFIDENCE_SCORE,
-                  extractionData: confidence,
-                },
-                {
-                  aiInteractionId: imageResult.id,
-                  extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                  errorMessage: JSON.stringify(
-                    z.formatError(imageValidation.error),
-                  ),
-                  success: false,
-                },
-              ],
-            },
-          },
-        },
-      });
-      this.logger.error(
-        'Image analysis validation failed:',
-        imageValidation.error,
-      );
-      throw new BadRequestException(
-        `Image analysis validation failed: ${JSON.stringify(imageValidation.error.issues)}`,
-      );
-    }
-
-    const imageAnalysis = imageValidation.data;
-    this.logger.log('Step 4 completed: Image analysis finished');
-    input?.options?.onPublishProgressEvent?.({
-      key: 'IMAGE_ANALYSIS',
-      state: {
-        isLoading: false,
-        data: imageResult,
       },
     });
 
@@ -667,6 +684,11 @@ export class ExtractionService {
         aiextractionInteractions: {
           createMany: {
             data: [
+              {
+                aiInteractionId: imageResult.id,
+                extractionData: imageAnalysis,
+                extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
+              },
               {
                 aiInteractionId: dataResult.id,
                 extractionData: extractedData,
@@ -681,11 +703,6 @@ export class ExtractionService {
                 aiInteractionId: confidenceResult.id,
                 extractionData: confidence,
                 extractionType: AIExtractionInteractionType.CONFIDENCE_SCORE,
-              },
-              {
-                aiInteractionId: imageResult.id,
-                extractionData: imageAnalysis,
-                extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
               },
             ],
           },

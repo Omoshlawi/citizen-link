@@ -63,19 +63,25 @@ export const ConfidenceSchema = z.object({
     .optional(),
 });
 
-export const ImageAnalysisSchema = z
-  .object({
-    index: z.number(),
-    imageType: z.string().optional(),
-    quality: z.number().min(0).max(100),
-    readability: z.number().min(0).max(100),
-    focus: z.number().min(0).max(100).optional(),
-    lighting: z.number().min(0).max(100).optional(),
-    tamperingDetected: z.boolean(),
-    warnings: z.array(z.string()),
-    usableForExtraction: z.boolean().optional(),
-  })
-  .array();
+export const ImageAnalysisSchema = z.object({
+  isSupportedDocument: z.boolean(),
+  detectedDocumentType: z.string(),
+  documentTypeConfidence: z.number().min(0).max(100),
+  images: z
+    .object({
+      index: z.number(),
+      imageType: z.string().optional(),
+      quality: z.number().min(0).max(100),
+      readability: z.number().min(0).max(100),
+      focus: z.number().min(0).max(100).optional(),
+      lighting: z.number().min(0).max(100).optional(),
+      tamperingDetected: z.boolean(),
+      warnings: z.array(z.string()),
+      usableForExtraction: z.boolean().optional(),
+    })
+    .array()
+    .nonempty('At least one image is required'),
+});
 
 export class DataExtractionDto extends createZodDto(DataExtractionSchema) {}
 

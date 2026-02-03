@@ -30,12 +30,14 @@ export class PromptsService {
     });
   }
 
-  async getImageQualityAnalysisPrompt() {
-    return this.templatesService.render(
-      'prompts',
-      'image-quality-analysis',
-      {},
-    );
+  async getImageAnalysisPrompt(
+    supportedDocumentTypes: Array<
+      Pick<DocumentType, 'id' | 'name' | 'category'>
+    >,
+  ) {
+    return this.templatesService.render('prompts', 'image-quality-analysis', {
+      supportedDocumentTypes,
+    });
   }
 
   async getConfidenceScorePrompt(
