@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
-import { QueryBuilderSchema } from '../query-builder';
+import { QueryBuilderSchema } from '../common/query-builder';
 import { AddressHierarchy } from '../../generated/prisma/browser';
 
 export const QueryAddressHierarchySchema = z.object({

@@ -28,7 +28,7 @@ import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
   OriginalUrl,
-} from '../query-builder';
+} from '../common/query-builder';
 import { UserSession } from '../auth/auth.types';
 
 @Controller('addresses')

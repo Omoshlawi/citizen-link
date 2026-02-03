@@ -5,14 +5,14 @@ import {
   UpdateDocumentTypeDto,
 } from './document-type.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaginationService } from '../query-builder/pagination.service';
-import { CustomRepresentationService } from '../query-builder/representation.service';
-import { SortService } from '../query-builder/sort.service';
+import { PaginationService } from '../common/query-builder/pagination.service';
+import { CustomRepresentationService } from '../common/query-builder/representation.service';
+import { SortService } from '../common/query-builder/sort.service';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
-} from '../query-builder/query-builder.utils';
-import { FunctionFirstArgument } from '../query-builder/query-builder.types';
+} from '../common/query-builder/query-builder.utils';
+import { FunctionFirstArgument } from '../common/query-builder/query-builder.types';
 import { pick } from 'lodash';
 import { DocumentType } from '../../generated/prisma/browser';
 

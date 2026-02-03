@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
-import { QueryBuilderSchema } from '../query-builder';
+import { QueryBuilderSchema } from '../common/query-builder';
 
 const LocaleLevelSpecSchema = z.object({
   level: z.enum(['level1', 'level2', 'level3', 'level4', 'level5']).optional(),

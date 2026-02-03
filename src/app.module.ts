@@ -2,6 +2,7 @@ import { ConfigifyModule } from '@itgorillaz/configify';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AddressHierarchyModule } from './address-hierarchy/address-hierarchy.module';
 import { AddressLocalesModule } from './address-locales/address-locales.module';
@@ -14,19 +15,20 @@ import { AppService } from './app.service';
 import { RequireSystemPermissionsGuard } from './auth/auth.guards';
 import { AuthModule } from './auth/auth.module';
 import { CaseDocumentsModule } from './case-documents/case-documents.module';
+import { QueryBuilderModule } from './common/query-builder';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
 import { DocumentImagesModule } from './document-images/document-images.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
-import { PrismaModule } from './prisma/prisma.module';
-import { QueryBuilderModule } from './query-builder';
-import { S3Module } from './s3/s3.module';
-import { PrismaConfig } from './prisma/prisma.config';
-import { PrismaPg } from '@prisma/adapter-pg';
 import { ExtractionModule } from './extraction/extraction.module';
 import { MatchingModule } from './matching/matching.module';
+import { PrismaConfig } from './prisma/prisma.config';
+import { PrismaModule } from './prisma/prisma.module';
+import { PromptsModule } from './prompts/prompts.module';
+import { S3Module } from './s3/s3.module';
 
 @Module({
   imports: [
+    PromptsModule,
     ConfigifyModule.forRootAsync(),
     PrismaModule.forRootAsync({
       global: true,

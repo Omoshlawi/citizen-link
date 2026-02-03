@@ -1,5 +1,5 @@
 import { createZodDto } from 'nestjs-zod';
-import { QueryBuilderSchema } from '../query-builder';
+import { QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
 import { Match, MatchStatus } from 'generated/prisma/client';
 import { JsonValue } from '@prisma/client/runtime/client';

@@ -21,6 +21,7 @@ import {
 } from '../../generated/prisma/client';
 import { ExtractInformationInput } from './extraction.interface';
 import { safeParseJson } from '../app.utils';
+import { PromptsService } from 'src/prompts/prompts.service';
 
 @Injectable()
 export class ExtractionService {
@@ -29,6 +30,7 @@ export class ExtractionService {
     private readonly aiService: AiService,
     @Inject(PrismaService)
     private readonly prismaService: PrismaService,
+    private readonly promptsService: PromptsService,
   ) {}
   /**
    * Returns a prompt to generate probing security questions about a document,
@@ -48,325 +50,10 @@ export class ExtractionService {
     if (!documentType) {
       throw new BadRequestException('Document type not found');
     }
-    return `
-        You are an advanced AI tasked with generating probing, context-aware security questions about a person, based strictly on the following extracted document data:
-
-        DOCUMENT TYPE: ${documentType.name}
-        DOCUMENT CATEGORY: ${documentType.category}
-        DOCUMENT DATA: ${JSON.stringify(extractedData, null, 2)}
-
-        Your goals:
-        - Generate challenging, non-obvious security questions, FOCUSED on this individual and document, such as "What is the owner's date of birth?", "Who is the document issuer?", or, if available, "What is the document place of issue?".
-        - Use ONLY the information found above. Do NOT hallucinate questions about information that is missing or set to null.
-        - Make 3 to 5 questions (if information allows), and prioritize details that are not always obvious or could distinguish this person.
-        - Format output as a JSON object with the following structure: { "questions": [{ "question": string, "answer": string }] }
-        - Do NOT include any extra text, notes, or explanation.
-        - Prioritize less obvious questions e.g what is the owners phone number;which is very obvious
-        - Correct formated date values e.g 20.11.2025 to 2025-11-20, 20/11/2025 to 2025-11-20, etc.
-        - Return date VALUES in ISO format (YYYY-MM-DD).
-        - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
-
-        SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
-        {
-            "questions": [
-                { "question": string, "answer": string }
-            ]
-        }
-
-        EXAMPLES OF GOOD OUTPUT:
-        1. For a clear passport photo with data: 
-        {
-            "documentNumber": "A12345678",
-            "ownerName": "JOHN DOE",
-            "dateOfBirth": "1990-01-01",
-            "nationality": "Countryland",
-            "typeId": "<type id for passport>", 
-            "issuer": "Countryland Government",
-            "expiryDate": "2032-12-31",
-            "additionalFields": [
-              { "fieldName": "Passport No", "fieldValue": "A12345678" },
-            ]
-        }
-        SECURITY QUESTIONS:
-        {
-            "questions": [
-              { "question": "What is the document passport number?", "answer": "A12345678" },
-              { "question": "What is the document expiry date?", "answer": "2032-12-31" },
-              { "question": "What is the owner's date of birth?", "answer": "1990-01-01" }
-            ]
-        }
-
-        2. For a clear license photo with data:
-        {
-            "documentNumber": "D1234567",
-            "ownerName": "JANE DOE",
-            "dateOfBirth": "1985-02-15",
-            "typeId": "<type id for driver's license>",
-            "issuer": "STATE OF EXAMPLE",
-            "expiryDate": "2026-06-30",
-        }
-        SECURITY QUESTIONS:
-        {
-            "questions": [
-              { "question": "What is the document number?", "answer": "D1234567" },
-              { "question": "What is the owner's date of birth?", "answer": "1985-02-15" },
-              { "question": "What is the document expiry date?", "answer": "2026-06-30" }
-            ]
-        }
-
-        
-        Generate the questions now, drawing only from the document fields that are actually present.
-      `;
-  }
-
-  private getDataExtractionPrompt(
-    documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
-  ): string {
-    /**
-     * - National ID cards
-          - Passports
-          - Driver's licenses
-          - Student IDs
-          - Birth certificates
-          - Marriage certificates
-          - Professional licenses/certificates
-          - Insurance cards
-          - Social security/pension documents
-          - Work permits/visas
-          - Vaccination/medical records
-     */
-    const baseInstructions = `
-        You are an advanced document information extraction AI with expert-level OCR (Optical Character Recognition) and document understanding capabilities.
-
-        TASK:
-        Analyze the provided image(s) of original personal/official documents. Extract and return all relevant information by visually interpreting the content. Your goal is to accurately recognize text, fields, and layout, and convert this information into a structured data object according to the described schema.
-
-        HANDLED DOCUMENT TYPES (examples, not limited to):
-            ${documentTypes.map((t) => ' - ' + t.name + ' (Category:' + t.category + ', ID: ' + t.id + ')').join('\n\t')}
-            - Any other personally identifiable documents
-
-        IMPORTANT INSTRUCTIONS:
-        - Use your vision capabilities to read and interpret images, NOT just metadata or file names.
-        - Handle blurred, skewed, or partially obscured documents; do your best to interpret visually.
-        - Recognize typical fields and their variants, even if formatting or placement varies.
-        - Account for official seals, logos, stamps, and barcodes/QRs to help deduce issuer/type.
-        - Use visual context to deduce field semantics, even if not explicitly labeled.
-        - Parse handwritten and printed text.
-        - Correct formated date values for fields 'expiryDate', 'issuanceDate', 'dateOfBirth' and other date fields in 'aditionalFields' array e.g 20.11.2025 to 2025-11-20, 20/11/2025 to 2025-11-20, etc.
-        - Return date fields in ISO format (YYYY-MM-DD).
-        - If a field is uncertain or illegible, omit it or set its value to null. Do NOT hallucinate.
-        - Include if exist extracted document number value as "fieldValue", extracted field name from the document as "fieldName"  in "aditionalFields" array for semantics e.g for school ids we are likely to have "Reg no", "Registration No", e.t.c as "fieldName" of document number
-        - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
-        - Gender field MUST be one of the following values only: "Male", "Female", "Unknown". Handle "M", "F", "U" and other variants accordingly.
-
-        SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
-        {
-            "serialNumber": string,              // Serial number on the document (if present)
-            "documentNumber": string,            // Primary document number (passport/ID/license etc.)
-            "batchNumber": string,               // Batch/lot/barcode/QR batch info
-            "issuer": string,                    // Issuing country, authority, institution, or agency 
-            "ownerName": string,                 // Person's full name as shown on document
-            "dateOfBirth": string,               // Owner's birth date (YYYY-MM-DD)
-            "placeOfBirth": string,              // Owner's place of birth (city/country, as shown)
-            "placeOfIssue": string,              // Place where document is issued
-            "gender": "Male" | "Female" | "Unknown", // Owner's gender (Unknown if not found)
-            "note": string,                      // Any noted remarks or visible comments (optional)
-            "typeId": string,                    // MUST be valid uuid. Use the "id" from this list of handled document types. MUST be in handled document
-            "issuanceDate": string,              // Document's date of issue (YYYY-MM-DD)
-            "expiryDate": string,                // Expiry/valid until (YYYY-MM-DD)
-            "additionalFields": [                // Other fields as visually extracted, format:
-              {
-                  "fieldName": string,
-                  "fieldValue": string
-              }
-            ],
-        }
-
-        EXAMPLES OF GOOD OUTPUT:
-
-        1. For a clear passport photo: 
-        {
-            "documentNumber": "A12345678",
-            "ownerName": "JOHN DOE",
-            "dateOfBirth": "1990-01-01",
-            "nationality": "Countryland",
-            "typeId": "<type id for passport (uuid)>", 
-            "issuer": "Countryland Government",
-            "expiryDate": "2032-12-31"
-            "additionalFields": [
-              { "fieldName": "Passport No", "fieldValue": "A12345678" },
-            ]
-        }
-
-        2. For a license image with both front and back:
-        {
-            "documentNumber": "D1234567",
-            "ownerName": "JANE DOE",
-            "dateOfBirth": "1985-02-15",
-            "typeId": "<type id for driver's license>(uuid)",
-            "issuer": "STATE OF EXAMPLE",
-            "expiryDate": "2026-06-30",
-            "additionalFields": [
-              { "fieldName": "Licence Number", "fieldValue": "D1234567" },
-              { "fieldName": "Address", "fieldValue": "123 MAIN ST, ANYTOWN" },
-              { "fieldName": "License Class", "fieldValue": "C" }
-            ]
-        }
-
-        PROCESS:
-        - Visually analyze all uploaded images.
-        - Use your expert OCR, context awareness, and reasoning to organize the fields.
-        - Output a single, valid JSON object conforming to the schema above.
-        - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
-        - CORRECT formated date VALUES for fields 'expiryDate', 'issuanceDate', 'dateOfBirth' and other date fields in 'aditionalFields' array e.g 20.11.2025 to 2025-11-20, 20/11/2025 to 2025-11-20, etc.
-        - Return date VALUES in ISO format (YYYY-MM-DD).
-        - "typeId" MUST bellong to one of the handled document types provided
-        - Include if exist extracted document number value as "fieldValue", extracted field name from the document as "fieldName"  in "aditionalFields" array for semantics e.g for school ids we are likely to have "Reg no", "Registration No", e.t.c as "fieldName" of document number
-    `;
-
-    return baseInstructions;
-  }
-
-  private getConfidencePrompt(
-    extractedData: z.infer<typeof DataExtractionSchema>,
-  ): string {
-    return `
-        You are an advanced document information extraction AI with expert-level OCR (Optical Character Recognition) and document understanding capabilities.
-        Your task is to evaluate confidence scores as integer percentages (from 1 to 100, no decimals, no points) for EVERY field in the extracted data by VISUALLY VERIFYING each extracted value against the document images.
-
-        TASK:
-        Evaluate the confidence scores for EVERY field in the extracted data by VISUALLY VERIFYING each extracted value against the document images. Each confidence score must be a whole number integer from 1 to 100 (no decimals, no points).
-
-        CRITICAL VERIFICATION PROCESS:
-        - For EACH field in the extracted data, visually locate it in the provided document images
-        - Compare the extracted value against what you can actually see in the images
-        - Verify the accuracy of the extraction by checking:
-          - Does the extracted text match what's visible in the image?
-          - Is the field clearly readable in the image?
-          - Are there any discrepancies between extracted value and image content?
-          - How confident are you that the extraction is correct based on visual inspection?
-        - Use the images as the PRIMARY source for determining confidence scores
-        - If you cannot find a field in the images, significantly reduce its confidence score
-        - If the extracted value doesn't match what you see, reduce the confidence score accordingly
-
-        RETURN ONLY THE JSON OBJECT WITH THE CONFIDENCE SCORES:
-        {
-          "serialNumber": 95,
-          "documentNumber": 99,
-          "batchNumber": 88,
-          "issuer": 96,
-          "ownerName": 92,
-          "dateOfBirth": 98,
-          "placeOfBirth": 88,
-          "placeOfIssue": 85,
-          "gender": 99,
-          "note": 90,
-          "typeId": 100,
-          "issuanceDate": 94,
-          "expiryDate": 90,
-          "additionalFields": [
-            {
-              "fieldName": "District",
-              "nameScore": 95,
-              "fieldValue": "NAIROBI",
-              "valueScore": 92
-            }
-          ]
-        }
-
-        IMPORTANT REQUIREMENTS:
-        - All confidence scores MUST be whole number integers from 1 to 100 (no decimals or points)
-        - Return ONLY the JSON object, no markdown formatting, no code blocks
-        - Include confidence scores for EVERY field that exists in the extracted data
-        - If a field was not in the extracted data, DO NOT include it in the confidence response
-        - The "additionalFields" array MUST include ALL items from extracted data with nameScore and valueScore for each
-        - Return ONLY the JSON object, no explanations, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
-
-        EXTRACTED DATA TO VERIFY AND SCORE:
-        ${JSON.stringify(extractedData, null, 2)}
-
-        REQUIRED OUTPUT STRUCTURE (return ONLY valid JSON, no markdown, no code blocks, scores as integers):
-        {
-          "serialNumber": 95,
-          "documentNumber": 99,
-          "batchNumber": 88,
-          "issuer": 96,
-          "ownerName": 92,
-          "dateOfBirth": 98,
-          "placeOfBirth": 88,
-          "placeOfIssue": 85,
-          "gender": 99,
-          "note": 90,
-          "typeId": 100,
-          "issuanceDate": 94,
-          "expiryDate": 90,
-          "additionalFields": [
-            {
-              "fieldName": "District",
-              "nameScore": 95,
-              "fieldValue": "NAIROBI",
-              "valueScore": 92
-            }
-          ]
-        }
-        
-    `;
-  }
-
-  private getImageAnalysisPrompt(): string {
-    return `
-        You are an advanced image analysis AI with expert-level image understanding capabilities.
-
-        TASK:
-        Analyze ALL images and return a complete analysis for each one.
-
-        For EACH image, you MUST evaluate and provide:
-        1. "index" (REQUIRED): Sequential number starting from 0 (0, 1, 2, ...)
-        2. "quality" (REQUIRED): Overall image quality score as an integer confidence percentage between 0 and 100 (resolution, clarity, sharpness)
-        3. "readability" (REQUIRED): Text readability score as an integer confidence percentage between 0 and 100 (how easy it is to read text)
-        4. "focus" (optional): Integer confidence percentage between 0 and 100 - image sharpness and focus quality
-        5. "lighting" (optional): Integer confidence percentage between 0 and 100 - exposure quality, glare, shadows
-        6. "tamperingDetected" (REQUIRED): Boolean - true if any signs of manipulation detected
-        7. "warnings" (REQUIRED): Array of strings 
-            - specific issues found (empty array [] if none)
-            - should be as few as a maximum of 5 major issues, focusing on those that greatly affect extraction
-            - each issue should be very brief and to the point (not more than 5 words)
-        8. "imageType" (optional): String - e.g., "front", "back", "side", etc.
-        9. "usableForExtraction" (optional): Boolean - whether image is usable for data extraction
-
-        REQUIRED OUTPUT STRUCTURE (return ONLY valid JSON array, no markdown, no code blocks, confidence as integer percentages 0-100):
-        [
-          {
-            "index": 0,
-            "imageType": "front",
-            "quality": 88,
-            "readability": 92,
-            "focus": 85,
-            "lighting": 90,
-            "tamperingDetected": false,
-            "warnings": ["slight blur on bottom corner"],
-            "usableForExtraction": true
-          },
-          {
-            "index": 1,
-            "imageType": "back",
-            "quality": 92,
-            "readability": 95,
-            "focus": 90,
-            "lighting": 88,
-            "tamperingDetected": false,
-            "warnings": [],
-            "usableForExtraction": true
-          }
-        ]
-
-        CRITICAL REQUIREMENTS:
-        - You MUST analyze ALL images and return a complete analysis for each one.
-        - You MUST return an array with EXACTLY objects
-        - Each object MUST have: index, imageType, quality, readability, focus, lighting, tamperingDetected, warnings, usableForExtraction
-        - The confidence scores ("quality", "readability", "focus", "lighting") MUST be whole number integers between 0 and 100 (no decimals).
-        - Return ONLY the JSON array, no explanations, no markdown formatting
-    `;
+    return this.promptsService.getSecurityQuestionsPrompt(
+      documentType,
+      extractedData,
+    );
   }
 
   async getOrCreateAiExtraction(extractionId?: string) {
@@ -400,7 +87,8 @@ export class ExtractionService {
       key: 'DATA_EXTRACTION',
       state: { isLoading: true },
     });
-    const dataPrompt = this.getDataExtractionPrompt(documentTypes);
+    const dataPrompt =
+      await this.promptsService.getDocumentDataExtractionPrompt(documentTypes);
 
     const dataResult = await this.aiService.callAIAndStore(
       dataPrompt,
@@ -694,7 +382,8 @@ export class ExtractionService {
       state: { isLoading: true },
     });
 
-    const confidencePrompt = this.getConfidencePrompt(extractedData);
+    const confidencePrompt =
+      await this.promptsService.getConfidenceScorePrompt(extractedData);
 
     const confidenceResult = await this.aiService.callAIAndStore(
       confidencePrompt,
@@ -829,7 +518,8 @@ export class ExtractionService {
       state: { isLoading: true },
     });
 
-    const imagePrompt = this.getImageAnalysisPrompt();
+    const imagePrompt =
+      await this.promptsService.getImageQualityAnalysisPrompt();
 
     const imageResult = await this.aiService.callAIAndStore(
       imagePrompt,

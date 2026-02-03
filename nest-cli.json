@@ -8,6 +8,10 @@
       {
         "include": "../generated/**/*",
         "outDir": "dist/generated"
+      },
+      {
+        "include": "templates/**/*.hbs",
+        "outDir": "dist/src"
       }
     ],
     "watchAssets": true

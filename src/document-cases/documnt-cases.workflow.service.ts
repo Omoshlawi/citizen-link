@@ -12,7 +12,7 @@ import { EmbeddingService } from '../ai/embeding.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 import { MatchingService } from '../matching/matching.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CustomRepresentationQueryDto } from '../query-builder';
+import { CustomRepresentationQueryDto } from '../common/query-builder';
 @Injectable()
 export class DocumentCasesWorkflowService {
   private readonly logger = new Logger(DocumentCasesWorkflowService.name);

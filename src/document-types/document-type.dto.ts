@@ -1,5 +1,5 @@
 import { createZodDto } from 'nestjs-zod';
-import { QueryBuilderSchema } from '../query-builder/query-builder.utils';
+import { QueryBuilderSchema } from '../common/query-builder/query-builder.utils';
 import z from 'zod';
 import { DocumentCategory, DocumentType } from '../../generated/prisma/browser';
 import { ApiProperty } from '@nestjs/swagger';

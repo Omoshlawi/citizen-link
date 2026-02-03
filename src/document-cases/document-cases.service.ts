@@ -18,7 +18,7 @@ import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
-} from '../query-builder';
+} from '../common/query-builder';
 import {
   CreateFoundDocumentCaseDto,
   CreateLostDocumentCaseDto,

@@ -18,7 +18,7 @@ import {
   FunctionFirstArgument,
   PaginationService,
   SortService,
-} from '../query-builder';
+} from '../common/query-builder';
 import { QueryStatusTransitionDto } from './case-status-transitions.dto';
 
 @Injectable()

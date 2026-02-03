@@ -6,7 +6,7 @@ import {
   CaseStatusTransition,
   CaseType,
 } from '../../generated/prisma/client';
-import { QueryBuilderSchema } from '../query-builder';
+import { QueryBuilderSchema } from '../common/query-builder';
 
 export const QueryStatusTransitionDtoSchema = z.object({
   ...QueryBuilderSchema.shape,

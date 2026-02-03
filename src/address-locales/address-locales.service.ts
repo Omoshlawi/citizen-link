@@ -12,7 +12,7 @@ import {
   PaginationService,
   SortService,
   CustomRepresentationService,
-} from '../query-builder';
+} from '../common/query-builder';
 import {
   CreateAddressLocaleDto,
   QueryAddressLocaleDto,

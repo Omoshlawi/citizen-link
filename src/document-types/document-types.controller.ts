@@ -14,7 +14,7 @@ import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
   OriginalUrl,
-} from '../query-builder';
+} from '../common/query-builder';
 import { ApiErrorsResponse } from '../app.decorators';
 import {
   CreateDocumentTypeDto,

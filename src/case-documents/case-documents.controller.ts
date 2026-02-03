@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
-import { CustomRepresentationQueryDto } from '../query-builder';
+import { CustomRepresentationQueryDto } from '../common/query-builder';
 import {
   GetCaseDocumentResponseDto,
   UpdateCaseDocumentDto,

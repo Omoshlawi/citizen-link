@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
-import { OriginalUrl } from '../query-builder';
+import { OriginalUrl } from '../common/query-builder';
 import {
   GetCaseCurrentStatusResponseDto,
   GetCaseStatusTransitionHistoryResponseDto,

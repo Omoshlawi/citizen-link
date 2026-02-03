@@ -8,7 +8,7 @@ import {
   FunctionFirstArgument,
   PaginationService,
   SortService,
-} from '../query-builder';
+} from '../common/query-builder';
 import { QueryAddressHierarchyDto } from './address-hierarchy.dto';
 import { AddressHierarchy } from '../../generated/prisma/browser';
 

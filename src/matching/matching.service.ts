@@ -9,7 +9,7 @@ import {
   FunctionFirstArgument,
   PaginationService,
   SortService,
-} from '../query-builder';
+} from '../common/query-builder';
 import {
   QueryMatchesDto,
   QueryMatechesForFoundCaseDto,

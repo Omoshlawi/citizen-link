@@ -19,7 +19,7 @@ import { Match } from '../../generated/prisma/client';
 import {
   CustomRepresentationService,
   PaginationService,
-} from '../query-builder';
+} from '../common/query-builder';
 import { QueryMatechesForLostCaseDto } from './matching.dto';
 import { lastValueFrom } from 'rxjs';
 

@@ -4,9 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { CustomRepresentationService } from '../query-builder/representation.service';
+import { CustomRepresentationService } from '../common/query-builder/representation.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CustomRepresentationQueryDto } from '../query-builder';
+import { CustomRepresentationQueryDto } from '../common/query-builder';
 import { UpdateCaseDocumentDto } from './case-documents.dto';
 import {
   FoundDocumentCaseStatus,

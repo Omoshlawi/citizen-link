@@ -5,8 +5,10 @@ import { MatchLostDocumentService } from './matching.lost.service';
 import { MatchingVerifierService } from './matching.verifier.service';
 import { MatchingController } from './matching.controller';
 import { MatchingStatisticsService } from './matching.statistics.service';
+import { PromptsModule } from '../prompts/prompts.module';
 
 @Module({
+  imports: [PromptsModule],
   providers: [
     MatchingService,
     MatchFoundDocumentService,

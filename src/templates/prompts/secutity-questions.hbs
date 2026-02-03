@@ -1,0 +1,70 @@
+You are an advanced AI tasked with generating probing, context-aware security questions about a person, based strictly on the following extracted document data:
+
+DOCUMENT TYPE: {{documentType.name}}
+DOCUMENT CATEGORY: {{documentType.category}}
+DOCUMENT DATA:
+{{json extractedData}}
+
+Your goals:
+- Generate challenging, non-obvious security questions, FOCUSED on this individual and document, such as "What is the owner's date of birth?", "Who is the document issuer?", or, if available, "What is the document place of issue?".
+- Use ONLY the information found above. Do NOT hallucinate questions about information that is missing or set to null.
+- Make 3 to 5 questions (if information allows), and prioritize details that are not always obvious or could distinguish this person.
+- Format output as a JSON object with the following structure: { "questions": [{ "question": string, "answer": string }] }
+- Do NOT include any extra text, notes, or explanation.
+- Prioritize less obvious questions rather than very obvious ones.
+- Correct formatted date values (e.g. 20.11.2025 → 2025-11-20, 20/11/2025 → 2025-11-20).
+- Return date VALUES in ISO format (YYYY-MM-DD).
+- Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters.
+
+SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
+{
+  "questions": [
+    { "question": string, "answer": string }
+  ]
+}
+
+EXAMPLES OF GOOD OUTPUT:
+
+1. For a clear passport photo with data:
+{
+  "documentNumber": "A12345678",
+  "ownerName": "JOHN DOE",
+  "dateOfBirth": "1990-01-01",
+  "nationality": "Countryland",
+  "typeId": "<type id for passport>",
+  "issuer": "Countryland Government",
+  "expiryDate": "2032-12-31",
+  "additionalFields": [
+    { "fieldName": "Passport No", "fieldValue": "A12345678" }
+  ]
+}
+
+SECURITY QUESTIONS:
+{
+  "questions": [
+    { "question": "What is the document passport number?", "answer": "A12345678" },
+    { "question": "What is the document expiry date?", "answer": "2032-12-31" },
+    { "question": "What is the owner's date of birth?", "answer": "1990-01-01" }
+  ]
+}
+
+2. For a clear license photo with data:
+{
+  "documentNumber": "D1234567",
+  "ownerName": "JANE DOE",
+  "dateOfBirth": "1985-02-15",
+  "typeId": "<type id for driver's license>",
+  "issuer": "STATE OF EXAMPLE",
+  "expiryDate": "2026-06-30"
+}
+
+SECURITY QUESTIONS:
+{
+  "questions": [
+    { "question": "What is the document number?", "answer": "D1234567" },
+    { "question": "What is the owner's date of birth?", "answer": "1985-02-15" },
+    { "question": "What is the document expiry date?", "answer": "2026-06-30" }
+  ]
+}
+
+Generate the questions now, drawing only from the document fields that are actually present.

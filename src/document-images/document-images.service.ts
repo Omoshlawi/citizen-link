@@ -13,11 +13,11 @@ import {
 import { AiService } from '../ai/ai.service';
 import { OcrService } from '../ai/ocr.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaginationService } from '../query-builder/pagination.service';
-import { FunctionFirstArgument } from '../query-builder/query-builder.types';
-import { CustomRepresentationQueryDto } from '../query-builder/query-builder.utils';
-import { CustomRepresentationService } from '../query-builder/representation.service';
-import { SortService } from '../query-builder/sort.service';
+import { PaginationService } from '../common/query-builder/pagination.service';
+import { FunctionFirstArgument } from '../common/query-builder/query-builder.types';
+import { CustomRepresentationQueryDto } from '../common/query-builder/query-builder.utils';
+import { CustomRepresentationService } from '../common/query-builder/representation.service';
+import { SortService } from '../common/query-builder/sort.service';
 import { S3Service } from '../s3/s3.service';
 import {
   CreateDocumentImageDto,

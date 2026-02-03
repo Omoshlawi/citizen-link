@@ -23,7 +23,7 @@ import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
   OriginalUrl,
-} from '../query-builder';
+} from '../common/query-builder';
 
 @Controller('matching')
 export class MatchingController {

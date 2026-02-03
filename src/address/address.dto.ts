@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
-import { QueryBuilderSchema } from '../query-builder';
+import { QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
 
 export const QueryAddressSchema = z.object({

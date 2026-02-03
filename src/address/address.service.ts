@@ -8,7 +8,7 @@ import {
   FunctionFirstArgument,
   PaginationService,
   SortService,
-} from '../query-builder';
+} from '../common/query-builder';
 import {
   CreateAddressDto,
   QueryAddressDto,

@@ -1,0 +1,104 @@
+You are a document matching expert. Your task is to analyze two documents and determine if they belong to the same person.
+
+## Documents to Compare
+
+### FOUND DOCUMENT:
+- Keywords/Tags: {{foundTags}}
+- Document Number: {{found.document.documentNumber}}
+- Serial Number: {{found.document.serialNumber}}
+- Batch Number: {{found.document.batchNumber}}
+- Date of birth: {{found.document.dateOfBirth}}
+- Place of birth: {{found.document.placeOfBirth}}
+- Gender: {{found.document.gender}}
+- Owner name: {{found.document.ownerName}}
+- Issuer: {{found.document.issuer}}
+- Document Type: {{found.document.type.name}}
+- Date of Issue: {{found.document.issuanceDate}}
+- Place of Issue: {{found.document.placeOfIssue}}
+- Date of expiry: {{found.document.expiryDate}}
+{{#if found.document.additionalFields.length}}
+
+**Additional Fields:**
+{{#each found.document.additionalFields}}
+- {{fieldName}}: {{fieldValue}}
+{{/each}}
+{{/if}}
+
+### LOST DOCUMENT:
+- Keywords/Tags: {{lostTags}}
+- Document Number: {{lost.document.documentNumber}}
+- Serial Number: {{lost.document.serialNumber}}
+- Batch Number: {{lost.document.batchNumber}}
+- Date of birth: {{lost.document.dateOfBirth}}
+- Place of birth: {{lost.document.placeOfBirth}}
+- Gender: {{lost.document.gender}}
+- Owner name: {{lost.document.ownerName}}
+- Issuer: {{lost.document.issuer}}
+- Document Type: {{lost.document.type.name}}
+- Date of Issue: {{lost.document.issuanceDate}}
+- Place of Issue: {{lost.document.placeOfIssue}}
+- Date of expiry: {{lost.document.expiryDate}}
+{{#if lost.document.additionalFields.length}}
+
+**Additional Fields:**
+{{#each lost.document.additionalFields}}
+- {{fieldName}}: {{fieldValue}}
+{{/each}}
+{{/if}}
+
+## Field Importance Guide
+
+CRITICAL IDENTIFIERS (Highest Weight):
+- documentNumber
+- serialNumber
+- dateOfBirth
+
+STRONG IDENTIFIERS (High Weight):
+- ownerName
+- gender
+
+MODERATE IDENTIFIERS (Medium Weight):
+- placeOfBirth
+- issuer
+- placeOfIssue
+
+WEAK IDENTIFIERS (Low Weight):
+- batchNumber
+- issuanceDate
+- expiryDate
+
+CONTEXTUAL INDICATORS:
+- keywords/tags (supporting evidence only, never primary)
+
+## Required Output Format
+
+Return ONLY valid JSON:
+
+{
+  "overallScore": 0,
+  "confidence": "HIGH|MEDIUM|LOW|NO_MATCH",
+  "recommendation": "SAME_PERSON|LIKELY_SAME|POSSIBLY_SAME|DIFFERENT_PERSON",
+  "reasoning": "",
+  "fieldAnalysis": [
+    {
+      "fieldName": "",
+      "match": true,
+      "confidence": 0,
+      "note": ""
+    }
+  ],
+  "tagAnalysis": {
+    "overlap": 0,
+    "overlappingTags": [],
+    "interpretation": ""
+  },
+  "matchingFields": [],
+  "conflictingFields": [],
+  "redFlags": [],
+  "confidenceFactors": {
+    "strengths": [],
+    "weaknesses": []
+  }
+}
+
+Now analyze the two documents above and respond strictly in the required JSON format.
