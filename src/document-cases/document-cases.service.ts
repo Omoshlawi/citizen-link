@@ -5,388 +5,49 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { pick } from 'lodash';
 import {
-  ActorType,
-  AIInteractionType,
   DocumentCase,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
-import { OcrService } from '../ai/ocr.service';
-import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
+import { EmbeddingService } from '../ai/embeding.service';
+import { ProgressEvent } from '../extraction/extraction.interface';
+import { MatchingService } from '../matching/matching.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
-  FunctionFirstArgument,
-  PaginationService,
-  SortService,
 } from '../query-builder';
-import { S3Service } from '../s3/s3.service';
 import {
   CreateFoundDocumentCaseDto,
   CreateLostDocumentCaseDto,
   QueryDocumentCaseDto,
   UpdateDocumentCaseDto,
 } from './document-cases.dto';
-import { ExtractionService } from '../extraction/extraction.service';
-import {
-  DataExtractionDto,
-  ImageAnalysisDto,
-  SecurityQuestionsDto,
-} from '../extraction/extraction.dto';
-import { ProgressEvent } from '../extraction/extraction.interface';
-import { EmbeddingService } from '../ai/embeding.service';
-import { MatchingService } from '../matching/matching.service';
+import { DocumentCasesQueryService } from './document-cases.query.service';
+import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
+import { DocumentCasesCreateService } from './document-cases.create.service';
 
 @Injectable()
 export class DocumentCasesService {
   private readonly logger = new Logger(DocumentCasesService.name);
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
-    private readonly sortService: SortService,
-    private readonly ocrService: OcrService,
-    private readonly extractionService: ExtractionService,
-    private readonly s3Service: S3Service,
-    private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
     private readonly embeddingService: EmbeddingService,
     private readonly matchingService: MatchingService,
+    private readonly documentCasesQueryService: DocumentCasesQueryService,
+    private readonly documentCasesWorkflowService: DocumentCasesWorkflowService,
+    private readonly documentCasesCreateService: DocumentCasesCreateService,
   ) {}
 
-  private async filesExists(
-    images: string[],
-    onFailed?: () => void,
-  ): Promise<void> {
-    this.logger.debug('Checking if images exist', images);
-    const exists = await Promise.all(
-      images.map((image) => this.s3Service.fileExists(image)),
-    );
-    const allExists = exists.every(Boolean);
-    if (!allExists) {
-      if (!onFailed)
-        throw new BadRequestException('One or more images do not exist');
-      else onFailed();
-    }
-    this.logger.debug('All images exist');
+  findAll(query: QueryDocumentCaseDto, userId: string, originalUrl: string) {
+    return this.documentCasesQueryService.findAll(query, userId, originalUrl);
   }
 
-  async reportFoundDocumentCase(
-    extractionId: string,
-    createDocumentCaseDto: CreateFoundDocumentCaseDto,
-    query: CustomRepresentationQueryDto,
-    userId: string,
-    onPublishProgressEvent?: (data: ProgressEvent) => void,
-  ) {
-    const { eventDate, images, ...caseData } = createDocumentCaseDto;
-    onPublishProgressEvent?.({
-      key: 'IMAGE_VALIDATION',
-      state: { isLoading: true },
-    });
-    await this.filesExists(images, () => {
-      onPublishProgressEvent?.({
-        key: 'IMAGE_VALIDATION',
-        state: {
-          isLoading: false,
-          error: new Error('One or more images do not exist'),
-        },
-      });
-      throw new BadRequestException('One or more images do not exist');
-    });
-    onPublishProgressEvent?.({
-      key: 'IMAGE_VALIDATION',
-      state: {
-        isLoading: false,
-        data: 'Image validation succesfull',
-      },
-    });
-    const _extractionTasks = await Promise.all(
-      images.map(async (image) => {
-        const url = await this.s3Service.generateDownloadSignedUrl(image);
-        const buffer = await this.ocrService.downloadFileAsBuffer(url);
-        const metadata = await this.s3Service.getFileMetadata(image);
-        const mimeType =
-          metadata?.ContentType ?? `image/${image.split('.').pop()}`;
-        return { buffer, mimeType };
-      }),
-    );
-    const extraction = await this.extractionService.extractInformation({
-      extractionId,
-      files: _extractionTasks,
-      userId,
-      options: { onPublishProgressEvent },
-    });
-    const { additionalFields, ...documentpayload } =
-      extraction.aiextractionInteractions.find(
-        (interaction) =>
-          interaction.aiInteraction.interactionType ===
-          AIInteractionType.DATA_EXTRACTION,
-      )?.extractionData as unknown as DataExtractionDto;
-    const imageAnalysis = extraction.aiextractionInteractions.find(
-      (interaction) =>
-        interaction.aiInteraction.interactionType ===
-        AIInteractionType.IMAGE_ANALYSIS,
-    )?.extractionData as unknown as ImageAnalysisDto;
-    const securityQuestions = extraction.aiextractionInteractions.find(
-      (interaction) =>
-        interaction.aiInteraction.interactionType ===
-        AIInteractionType.SECURITY_QUESTIONS_GEN,
-    )?.extractionData as unknown as SecurityQuestionsDto;
-    const documentCase = await this.prismaService.documentCase.create({
-      data: {
-        ...caseData,
-        eventDate: dayjs(eventDate).toDate(),
-        foundDocumentCase: {
-          create: {
-            securityQuestion: securityQuestions.questions,
-            extractionId: extraction.id,
-          },
-        },
-        userId,
-        document: {
-          create: {
-            ...documentpayload,
-            expiryDate: documentpayload.expiryDate
-              ? dayjs(documentpayload.expiryDate).toDate()
-              : undefined,
-            issuanceDate: documentpayload.issuanceDate
-              ? dayjs(documentpayload.issuanceDate).toDate()
-              : undefined,
-            dateOfBirth: documentpayload.dateOfBirth
-              ? dayjs(documentpayload.dateOfBirth).toDate()
-              : undefined,
-            images: images?.length
-              ? {
-                  createMany: {
-                    data: images.map((image, i) => ({
-                      url: image,
-                      metadata: {
-                        // ocrText: extractionTasks[i]
-                        imageAnalysis: imageAnalysis.find(
-                          (imageAnalysis) => imageAnalysis.index === i,
-                        ),
-                      },
-                    })),
-                  },
-                }
-              : undefined,
-            additionalFields: additionalFields?.length
-              ? {
-                  createMany: {
-                    data: additionalFields.map((field) => ({
-                      fieldName: field.fieldName,
-                      fieldValue: field.fieldValue,
-                    })),
-                  },
-                }
-              : undefined,
-          },
-        },
-      },
-      include: {
-        document: true,
-      },
-    });
-
-    return await this.findOne(documentCase.id, query, userId);
-  }
-
-  async findAll(
-    query: QueryDocumentCaseDto,
-    userId: string,
-    originalUrl: string,
-  ) {
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.documentCase.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            voided: query?.includeVoided ? undefined : false,
-            userId: query?.includeForOtherUsers ? undefined : userId, // only admin users can view all cases
-            document: {
-              typeId: query.documentType,
-              serialNumber: query.documentNumber,
-              issuer: { contains: query.documentIssuer },
-              ownerName: { contains: query.ownerName },
-              expiryDate: {
-                gte: query.docuemtExpiryDateFrom
-                  ? dayjs(query.docuemtExpiryDateFrom).toDate()
-                  : undefined,
-                lte: query.docuemtExpiryDateTo
-                  ? dayjs(query.docuemtExpiryDateTo).toDate()
-                  : undefined,
-              },
-              issuanceDate: {
-                gte: query.docuemtIssueDateFrom
-                  ? dayjs(query.docuemtIssueDateFrom).toDate()
-                  : undefined,
-                lte: query.docuemtIssueDateTo
-                  ? dayjs(query.docuemtIssueDateTo).toDate()
-                  : undefined,
-              },
-            },
-            address: {
-              level1: query.level1,
-              level2: query.level2,
-              level3: query.level3,
-              level4: query.level4,
-              level5: query.level5,
-              country: query.country,
-              postalCode: query.postalCode,
-            },
-            foundDocumentCase:
-              query.caseType === 'FOUND' ? { isNot: null } : undefined,
-            lostDocumentCase:
-              query.caseType === 'LOST' ? { isNot: null } : undefined,
-            eventDate: query.eventDateFrom
-              ? {
-                  gte: dayjs(query.eventDateFrom).toDate(),
-                  lte: dayjs(query.eventDateTo).toDate(),
-                }
-              : undefined,
-            createdAt: query.dateReportedFrom
-              ? {
-                  gte: dayjs(query.dateReportedFrom).toDate(),
-                  lte: dayjs(query.dateReportedTo).toDate(),
-                }
-              : undefined,
-          },
-          {
-            OR: query.search
-              ? [
-                  { document: { serialNumber: { contains: query?.search } } },
-                  { description: { contains: query?.search } },
-                  { document: { ownerName: { contains: query?.search } } },
-                ]
-              : undefined,
-          },
-
-          {
-            address: {
-              OR: query.location
-                ? [
-                    {
-                      label: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      id: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      address1: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      address2: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      cityVillage: {
-                        contains: query.location,
-                        // mode: 'insensitive',
-                      },
-                    },
-                    {
-                      country: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      formatted: {
-                        contains: query.location,
-                        // mode: 'insensitive',
-                      },
-                    },
-                    {
-                      label: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      landmark: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      level1: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      level2: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      level3: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      level4: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      level5: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      plusCode: {
-                        contains: query.location, //mode: 'insensitive'
-                      },
-                    },
-                    {
-                      postalCode: {
-                        contains: query.location,
-                        // mode: 'insensitive',
-                      },
-                    },
-                  ]
-                : undefined,
-            },
-          },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
-      ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.documentCase.findMany(dbQuery),
-      this.prismaService.documentCase.count(pick(dbQuery, 'where')),
-    ]);
-    return {
-      results: data,
-      ...this.paginationService.buildPaginationControls(
-        totalCount,
-        originalUrl,
-        query,
-      ),
-    };
-  }
-
-  async findOne(
-    id: string,
-    query: CustomRepresentationQueryDto,
-    userId: string,
-  ) {
-    const data = await this.prismaService.documentCase.findUnique({
-      where: { id, userId },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
-    });
-    if (!data) throw new NotFoundException('Document case not found');
-    return data;
+  findOne(id: string, query: CustomRepresentationQueryDto, userId: string) {
+    return this.documentCasesQueryService.findOne(id, query, userId);
   }
 
   private async canUpdateCase(caseId: string) {
@@ -441,6 +102,23 @@ export class DocumentCasesService {
       await this.embeddingService.indexDocument(docCase.document.id);
     return await this.findOne(docCase.id, query, userId);
   }
+
+  reportFoundDocumentCase(
+    extractionId: string,
+    createDocumentCaseDto: CreateFoundDocumentCaseDto,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+    onPublishProgressEvent?: (data: ProgressEvent) => void,
+  ) {
+    return this.documentCasesCreateService.reportFoundDocumentCase(
+      extractionId,
+      createDocumentCaseDto,
+      query,
+      userId,
+      onPublishProgressEvent,
+    );
+  }
+
   async reportLostDocumentCase(
     createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     query: CustomRepresentationQueryDto,
@@ -515,105 +193,39 @@ export class DocumentCasesService {
     return await this.findOne(documentCase.id, query, userId);
   }
 
-  async submitFoundDocumentCase(
+  submitFoundDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    // First, verify it's a found case owned by the user
-    const documentCase = await this.prismaService.documentCase.findUnique({
-      where: { id, userId },
-      include: {
-        foundDocumentCase: true,
-      },
-    });
-
-    if (!documentCase) {
-      throw new NotFoundException('Document case not found');
-    }
-
-    if (!documentCase.foundDocumentCase) {
-      throw new BadRequestException('This is not a found document case');
-    }
-
-    if (
-      documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
-    ) {
-      throw new BadRequestException(
-        `Cannot submit case. Current status: ${documentCase.foundDocumentCase.status}. Only DRAFT cases can be submitted.`,
-      );
-    }
-
-    return await this.caseStatusTransitionsService.transitionStatus(
+    return this.documentCasesWorkflowService.submitFoundDocumentCase(
       id,
-      FoundDocumentCaseStatus.SUBMITTED,
-      ActorType.USER,
+      query,
       userId,
-      query?.v,
     );
   }
 
-  async verifyFoundDocumentCase(
+  verifyFoundDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    this.logger.log(`Verifying found document case ${id} for user ${userId}`);
-    const documentCase = await this.prismaService.documentCase.findUnique({
-      where: { id, userId },
-      include: {
-        foundDocumentCase: true,
-        document: true,
-      },
-    });
-
-    if (!documentCase) {
-      throw new NotFoundException('Document case not found');
-    }
-
-    if (!documentCase.foundDocumentCase) {
-      throw new BadRequestException('This is not a found document case');
-    }
-    const statusTransition =
-      await this.caseStatusTransitionsService.transitionStatus(
-        id,
-        FoundDocumentCaseStatus.VERIFIED,
-        ActorType.USER,
-        userId,
-        query?.v,
-      );
-    if (documentCase.document?.id) {
-      await this.embeddingService.indexDocument(documentCase.document.id);
-      const matches =
-        await this.matchingService.findMatchesForFoundDocumentAndVerify(
-          documentCase.document.id,
-          userId,
-          {
-            limit: 20,
-            similarityThreshold: 0.5,
-            minVerificationScore: 0.6,
-          },
-        );
-      this.logger.debug(
-        `Found ${matches.length} matches for document ${documentCase.document.id}`,
-        matches,
-      );
-    }
-    return statusTransition;
+    return this.documentCasesWorkflowService.verifyFoundDocumentCase(
+      id,
+      query,
+      userId,
+    );
   }
 
-  async rejectFoundDocumentCase(
+  rejectFoundDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    this.logger.log(`Rejecting found document case ${id} for user ${userId}`);
-    return await this.caseStatusTransitionsService.transitionStatus(
+    return this.documentCasesWorkflowService.rejectFoundDocumentCase(
       id,
-      FoundDocumentCaseStatus.REJECTED,
-      ActorType.USER,
+      query,
       userId,
-      query?.v,
     );
   }
 

@@ -5,6 +5,9 @@ import { DocumentCasesService } from './document-cases.service';
 import { ExtractionModule } from '../extraction/extraction.module';
 import { DocumentCaseGateway } from './document-case.gateway';
 import { MatchingModule } from '../matching/matching.module';
+import { DocumentCasesCreateService } from './document-cases.create.service';
+import { DocumentCasesQueryService } from './document-cases.query.service';
+import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
 
 @Module({
   imports: [
@@ -14,6 +17,12 @@ import { MatchingModule } from '../matching/matching.module';
     MatchingModule,
   ],
   controllers: [DocumentCasesController],
-  providers: [DocumentCasesService, DocumentCaseGateway],
+  providers: [
+    DocumentCasesService,
+    DocumentCasesCreateService,
+    DocumentCasesQueryService,
+    DocumentCasesWorkflowService,
+    DocumentCaseGateway,
+  ],
 })
 export class DocumentCasesModule {}

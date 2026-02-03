@@ -157,6 +157,7 @@ export class ExtractionService {
         - If a field is uncertain or illegible, omit it or set its value to null. Do NOT hallucinate.
         - Include if exist extracted document number value as "fieldValue", extracted field name from the document as "fieldName"  in "aditionalFields" array for semantics e.g for school ids we are likely to have "Reg no", "Registration No", e.t.c as "fieldName" of document number
         - Return ONLY valid JSON, no markdown formatting, no extra text, no extra lines, no extra spaces, no extra characters, no extra anything.
+        - Gender field MUST be one of the following values only: "Male", "Female", "Unknown". Handle "M", "F", "U" and other variants accordingly.
 
         SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
         {
@@ -383,6 +384,9 @@ export class ExtractionService {
     });
   }
 
+  // TODO: Refine extraction to start with video validation if the document falls into the supported PII categories,
+  // then analize images for data extraction, if analysis threshold is not met, else return error indicating document
+  // validation failed.If met continue to data extraction, then security questions generation then confidence scoring.
   async extractInformation(input: ExtractInformationInput) {
     this.logger.log('Starting four-step extraction process...');
     // Get document types once

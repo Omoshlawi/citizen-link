@@ -49,8 +49,8 @@ model User {
 
   @@unique([email])
   @@unique([username])
-  @@map("user")
   @@unique([phoneNumber])
+  @@map("user")
 }
 
 model Session {
@@ -350,8 +350,8 @@ model AIExtraction {
 
   createdAt DateTime @default(now())
 
-  foundDocumentCases       FoundDocumentCase[]
   aiextractionInteractions AIExtractionInteraction[]
+  documentCases            DocumentCase[]
 }
 
 model AIExtractionInteraction {
@@ -390,6 +390,10 @@ model DocumentCase {
   // Location information
   addressId String
   address   Address  @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  // Related Extraction
+  extractionId String?
+  extraction   AIExtraction? @relation(fields: [extractionId], references: [id])
 
   tags        Json    @default("[]") // array of key words
   description String?
@@ -430,10 +434,6 @@ model FoundDocumentCase {
   // Related Case
   caseId String       @unique
   case   DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
-
-  // Related Extraction
-  extractionId String
-  extraction   AIExtraction @relation(fields: [extractionId], references: [id])
 
   status           FoundDocumentCaseStatus @default(DRAFT)
   createdAt        DateTime                @default(now())
