@@ -119,6 +119,22 @@ export class DocumentCasesService {
     );
   }
 
+  reportLostDocumentCaseScanned(
+    extractionId: string,
+    createDocumentCaseDto: CreateFoundDocumentCaseDto,
+    query: CustomRepresentationQueryDto,
+    userId: string,
+    onPublishProgressEvent?: (data: ProgressEvent) => void,
+  ) {
+    return this.documentCasesCreateService.reportLostDocumentCaseScanned(
+      extractionId,
+      createDocumentCaseDto,
+      query,
+      userId,
+      onPublishProgressEvent,
+    );
+  }
+
   async reportLostDocumentCase(
     createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     query: CustomRepresentationQueryDto,

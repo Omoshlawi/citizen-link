@@ -18,7 +18,7 @@ export type ProgressEvent = ImageValidationEvent | _ProgressEvent;
 export type ExtractionStep = ProgressEvent['key'];
 export type ExtractionOptions = {
   onPublishProgressEvent?: (data: ProgressEvent) => void;
-  skip?: Array<ProgressEvent['key']>;
+  skipSecurityQuestion?: boolean;
 };
 export type ImageExtractionInput = {
   extractionId: string;

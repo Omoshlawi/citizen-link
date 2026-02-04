@@ -16,6 +16,7 @@ import {
 } from './extraction.dto';
 import {
   AIExtractionInteractionType,
+  AIInteraction,
   AIInteractionType,
   DocumentType,
 } from '../../generated/prisma/client';
@@ -114,8 +115,6 @@ export class ExtractionService {
   }
 
   async extractInformation(input: ExtractInformationInput) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const eventsToSkip = input.options?.skip || [];
     this.logger.log('Starting four-step extraction process...');
     // Get document types once
     const documentTypes = await this.prismaService.documentType.findMany({
@@ -315,73 +314,83 @@ export class ExtractionService {
     });
 
     // ============= STEP 3: GENERATE SECURITY QUESTIONS =============
-    this.logger.log('Step 3: Generating security questions...');
-    input?.options?.onPublishProgressEvent?.({
-      key: 'SECURITY_QUESTIONS',
-      state: { isLoading: true },
-    });
-    const securityQuestionsPrompt =
-      await this.getSecurityQuestionsPromt(extractedData);
-    const securityQuestionsResult = await this.aiService.callAIAndStore(
-      securityQuestionsPrompt,
-      [],
-      AIInteractionType.SECURITY_QUESTIONS_GEN,
-      'Document',
-      input.userId,
-    );
+    let securityQuestions: z.infer<typeof SecurityQuestionsSchema> | null =
+      null;
+    let securityQuestionsResult: AIInteraction | null = null;
+    if (!input.options?.skipSecurityQuestion) {
+      this.logger.log('Step 3: Generating security questions...');
+      input?.options?.onPublishProgressEvent?.({
+        key: 'SECURITY_QUESTIONS',
+        state: { isLoading: true },
+      });
+      const securityQuestionsPrompt =
+        await this.getSecurityQuestionsPromt(extractedData);
+      securityQuestionsResult = await this.aiService.callAIAndStore(
+        securityQuestionsPrompt,
+        [],
+        AIInteractionType.SECURITY_QUESTIONS_GEN,
+        'Document',
+        input.userId,
+      );
 
-    const securityQuestions = await this.parseAndValidate(
-      securityQuestionsResult.response,
-      SecurityQuestionsSchema,
-      async (error: Error) => {
-        this.logger.error('Error parsing security questions response:', error);
-        input?.options?.onPublishProgressEvent?.({
-          key: 'SECURITY_QUESTIONS',
-          state: {
-            isLoading: false,
+      securityQuestions = await this.parseAndValidate(
+        securityQuestionsResult.response,
+        SecurityQuestionsSchema,
+        async (error: Error) => {
+          this.logger.error(
+            'Error parsing security questions response:',
             error,
-          },
-        });
-        await this.prismaService.aIExtraction.update({
-          where: { id: input.extractionId },
-          data: {
-            aiextractionInteractions: {
-              createMany: {
-                data: [
-                  {
-                    aiInteractionId: imageResult.id,
-                    extractionType: AIExtractionInteractionType.IMAGE_ANALYSIS,
-                    extractionData: imageAnalysis,
-                  },
-                  {
-                    aiInteractionId: dataResult.id,
-                    extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
-                    extractionData: extractedData,
-                  },
-                  {
-                    aiInteractionId: securityQuestionsResult.id,
-                    extractionType:
-                      AIExtractionInteractionType.SECURITY_QUESTIONS,
-                    errorMessage: error.message,
-                    success: false,
-                  },
-                ],
+          );
+          input?.options?.onPublishProgressEvent?.({
+            key: 'SECURITY_QUESTIONS',
+            state: {
+              isLoading: false,
+              error,
+            },
+          });
+          await this.prismaService.aIExtraction.update({
+            where: { id: input.extractionId },
+            data: {
+              aiextractionInteractions: {
+                createMany: {
+                  data: [
+                    {
+                      aiInteractionId: imageResult.id,
+                      extractionType:
+                        AIExtractionInteractionType.IMAGE_ANALYSIS,
+                      extractionData: imageAnalysis,
+                    },
+                    {
+                      aiInteractionId: dataResult.id,
+                      extractionType:
+                        AIExtractionInteractionType.DATA_EXTRACTION,
+                      extractionData: extractedData,
+                    },
+                    {
+                      aiInteractionId: securityQuestionsResult!.id,
+                      extractionType:
+                        AIExtractionInteractionType.SECURITY_QUESTIONS,
+                      errorMessage: error.message,
+                      success: false,
+                    },
+                  ],
+                },
               },
             },
-          },
-        });
+          });
 
-        throw new BadRequestException(JSON.parse(error.message));
-      },
-    );
-    this.logger.log('Step 3 completed: Security questions generated');
-    input?.options?.onPublishProgressEvent?.({
-      key: 'SECURITY_QUESTIONS',
-      state: {
-        isLoading: false,
-        data: securityQuestionsResult,
-      },
-    });
+          throw new BadRequestException(JSON.parse(error.message));
+        },
+      );
+      this.logger.log('Step 3 completed: Security questions generated');
+      input?.options?.onPublishProgressEvent?.({
+        key: 'SECURITY_QUESTIONS',
+        state: {
+          isLoading: false,
+          data: securityQuestionsResult,
+        },
+      });
+    }
 
     // ============= STEP 4: CALCULATE CONFIDENCE =============
     this.logger.log('Step 4: Calculating confidence scores...');
@@ -429,12 +438,10 @@ export class ExtractionService {
                     extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
                     extractionData: extractedData,
                   },
-                  {
-                    aiInteractionId: securityQuestionsResult.id,
-                    extractionType:
-                      AIExtractionInteractionType.SECURITY_QUESTIONS,
-                    extractionData: securityQuestions,
-                  },
+                  ...this.getSecurityQuizAiExtractionInteraction(
+                    securityQuestionsResult,
+                    securityQuestions,
+                  ),
                   {
                     aiInteractionId: confidenceResult.id,
                     extractionType:
@@ -479,11 +486,10 @@ export class ExtractionService {
                 extractionData: extractedData,
                 extractionType: AIExtractionInteractionType.DATA_EXTRACTION,
               },
-              {
-                aiInteractionId: securityQuestionsResult.id,
-                extractionData: securityQuestions,
-                extractionType: AIExtractionInteractionType.SECURITY_QUESTIONS,
-              },
+              ...this.getSecurityQuizAiExtractionInteraction(
+                securityQuestionsResult,
+                securityQuestions,
+              ),
               {
                 aiInteractionId: confidenceResult.id,
                 extractionData: confidence,
@@ -507,5 +513,19 @@ export class ExtractionService {
 
     this.logger.log('Extraction completed successfully!');
     return extraction;
+  }
+
+  private getSecurityQuizAiExtractionInteraction(
+    securityQuestionsResult: AIInteraction | null,
+    securityQuestions: z.infer<typeof SecurityQuestionsSchema> | null,
+  ) {
+    if (!securityQuestionsResult || !securityQuestions) return [];
+    return [
+      {
+        aiInteractionId: securityQuestionsResult.id,
+        extractionData: securityQuestions,
+        extractionType: AIExtractionInteractionType.SECURITY_QUESTIONS,
+      },
+    ];
   }
 }

@@ -48,6 +48,7 @@ export class DocumentCasesCreateService {
     extractionId: string,
     images: string[],
     userId: string,
+    skipSecurityQuestions = false,
     onPublishProgressEvent?: (data: ProgressEvent) => void,
   ) {
     onPublishProgressEvent?.({
@@ -85,7 +86,10 @@ export class DocumentCasesCreateService {
       extractionId,
       files: _extractionTasks,
       userId,
-      options: { onPublishProgressEvent },
+      options: {
+        onPublishProgressEvent,
+        skipSecurityQuestion: skipSecurityQuestions,
+      },
     });
     const { additionalFields, ...documentpayload } =
       extraction.aiextractionInteractions.find(
@@ -131,6 +135,7 @@ export class DocumentCasesCreateService {
       extractionId,
       images,
       userId,
+      false,
       onPublishProgressEvent,
     );
     const documentCase = await this.prismaService.documentCase.create({
@@ -209,6 +214,7 @@ export class DocumentCasesCreateService {
         extractionId,
         images,
         userId,
+        true,
         onPublishProgressEvent,
       );
     const documentCase = await this.prismaService.documentCase.create({
@@ -216,6 +222,9 @@ export class DocumentCasesCreateService {
         ...caseData,
         extractionId: extraction.id,
         eventDate: dayjs(eventDate).toDate(),
+        lostDocumentCase: {
+          create: {},
+        },
         userId,
         document: {
           create: {

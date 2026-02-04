@@ -82,15 +82,25 @@ export class DocumentCaseGateway {
     @MessageBody() payload: WsCreateFoundDocumentCaseDto,
   ) {
     try {
-      const { extractionId, ...caseData } = payload;
-
-      const docCase = await this.documentCaseService.reportFoundDocumentCase(
-        extractionId,
-        caseData,
-        {},
-        session.user.id,
-        (data) => this.publishProgressEvent(extractionId, data),
-      );
+      const { extractionId, caseType, ...caseData } = payload;
+      let docCase: DocumentCase;
+      if (caseType === 'FOUND') {
+        docCase = await this.documentCaseService.reportFoundDocumentCase(
+          extractionId,
+          caseData,
+          {},
+          session.user.id,
+          (data) => this.publishProgressEvent(extractionId, data),
+        );
+      } else {
+        docCase = await this.documentCaseService.reportLostDocumentCaseScanned(
+          extractionId,
+          caseData,
+          {},
+          session.user.id,
+          (data) => this.publishProgressEvent(extractionId, data),
+        );
+      }
       ack(docCase);
     } catch (error) {
       this.logger.error(

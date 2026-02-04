@@ -98,7 +98,10 @@ export class CreateFoundDocumentCaseDto extends createZodDto(
   FoundDocumentCaseSchema,
 ) {}
 export class WsCreateFoundDocumentCaseDto extends createZodDto(
-  FoundDocumentCaseSchema.extend({ extractionId: z.uuid() }),
+  FoundDocumentCaseSchema.extend({
+    extractionId: z.uuid(),
+    caseType: z.enum(['FOUND', 'LOST']),
+  }),
 ) {}
 
 export class CreateLostDocumentCaseDto extends createZodDto(
