@@ -7,14 +7,14 @@ export const DataExtractionSchema = z.object({
   batchNumber: z.string().optional(),
   issuer: z.string().optional(),
   ownerName: z.string().optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.coerce.date().optional(),
   placeOfBirth: z.string().optional(),
   placeOfIssue: z.string().optional(),
   gender: z.enum(['Male', 'Female', 'Unknown']).optional(),
   note: z.string().optional(),
   typeId: z.string(),
-  issuanceDate: z.string().optional(),
-  expiryDate: z.string().optional(),
+  issuanceDate: z.coerce.date().optional(),
+  expiryDate: z.coerce.date().optional(),
   additionalFields: z
     .object({
       fieldName: z.string(),
