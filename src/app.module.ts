@@ -25,6 +25,7 @@ import { PrismaConfig } from './prisma/prisma.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { S3Module } from './s3/s3.module';
+import { ChatBotModule } from './chat-bot/chat-bot.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { S3Module } from './s3/s3.module';
     DocumentImagesModule,
     ExtractionModule,
     MatchingModule,
+    ChatBotModule,
   ],
   controllers: [AppController],
   providers: [

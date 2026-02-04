@@ -75,4 +75,14 @@ export class PromptsService {
       lostTags,
     });
   }
+
+  async getChatPromptMessage(
+    userQuery: string,
+    supportedDocumentTypes: Array<string>,
+  ) {
+    return this.templatesService.render('prompts', 'chatbot-guide', {
+      userQuery,
+      supportedDocumentTypes,
+    });
+  }
 }
