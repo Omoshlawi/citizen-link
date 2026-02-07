@@ -95,7 +95,6 @@ export class DocumentCasesQueryService {
                 ]
               : undefined,
           },
-
           {
             address: {
               OR: query.location

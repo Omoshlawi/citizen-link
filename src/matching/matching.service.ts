@@ -19,6 +19,8 @@ import { MatchFoundDocumentService } from './matching.found.service';
 import { FindMatchesOptions, VerifyMatchesOptions } from './matching.interface';
 import { MatchLostDocumentService } from './matching.lost.service';
 import { MatchingStatisticsService } from './matching.statistics.service';
+import { UserSession } from 'src/auth/auth.types';
+import { isSuperUser } from 'src/app.utils';
 
 @Injectable()
 export class MatchingService {
@@ -93,7 +95,12 @@ export class MatchingService {
     );
   }
 
-  async findAll(query: QueryMatchesDto, originalUrl: string) {
+  async findAll(
+    query: QueryMatchesDto,
+    originalUrl: string,
+    user: UserSession['user'],
+  ) {
+    const isAdmin = isSuperUser(user);
     const dbQuery: FunctionFirstArgument<
       typeof this.prismaService.match.findMany
     > = {
@@ -105,83 +112,107 @@ export class MatchingService {
             foundDocumentCaseId: query?.foundDocumentCaseId,
             matchScore: { gte: query.minMatchScore, lte: query.maxMatchScore },
           },
+          {
+            OR: query.search
+              ? [
+                  {
+                    foundDocumentCase: {
+                      case: {
+                        document: {
+                          ownerName: {
+                            contains: query.search,
+                            mode: Prisma.QueryMode.insensitive,
+                          },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    foundDocumentCase: {
+                      case: {
+                        document: {
+                          documentNumber: {
+                            contains: query.search,
+                            mode: Prisma.QueryMode.insensitive,
+                          },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    lostDocumentCase: {
+                      case: {
+                        document: {
+                          ownerName: {
+                            contains: query.search,
+                            mode: Prisma.QueryMode.insensitive,
+                          },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    lostDocumentCase: {
+                      case: {
+                        document: {
+                          documentNumber: {
+                            contains: query.search,
+                            mode: Prisma.QueryMode.insensitive,
+                          },
+                        },
+                      },
+                    },
+                  },
+                ]
+              : undefined,
+          },
+          {
+            OR: query.documentCaseId
+              ? [
+                  {
+                    foundDocumentCase: {
+                      caseId: query.documentCaseId,
+                    },
+                  },
+                  {
+                    lostDocumentCase: {
+                      caseId: query.documentCaseId,
+                    },
+                  },
+                ]
+              : undefined,
+          },
+          {
+            OR:
+              isAdmin && query.userId
+                ? [
+                    {
+                      foundDocumentCase: {
+                        case: {
+                          userId: query.userId,
+                        },
+                      },
+                    },
+                    {
+                      lostDocumentCase: {
+                        case: {
+                          userId: query.userId,
+                        },
+                      },
+                    },
+                  ]
+                : undefined,
+          },
         ],
-        OR:
-          query.search || query.documentCaseId
-            ? [
-                ...(query.search
-                  ? [
-                      {
-                        foundDocumentCase: {
-                          case: {
-                            document: {
-                              ownerName: {
-                                contains: query.search,
-                                mode: Prisma.QueryMode.insensitive,
-                              },
-                            },
-                          },
-                        },
-                      },
-                      {
-                        foundDocumentCase: {
-                          case: {
-                            document: {
-                              documentNumber: {
-                                contains: query.search,
-                                mode: Prisma.QueryMode.insensitive,
-                              },
-                            },
-                          },
-                        },
-                      },
-                      {
-                        lostDocumentCase: {
-                          case: {
-                            document: {
-                              ownerName: {
-                                contains: query.search,
-                                mode: Prisma.QueryMode.insensitive,
-                              },
-                            },
-                          },
-                        },
-                      },
-                      {
-                        lostDocumentCase: {
-                          case: {
-                            document: {
-                              documentNumber: {
-                                contains: query.search,
-                                mode: Prisma.QueryMode.insensitive,
-                              },
-                            },
-                          },
-                        },
-                      },
-                    ]
-                  : []),
-                ...(query.documentCaseId
-                  ? [
-                      {
-                        foundDocumentCase: {
-                          caseId: query.documentCaseId,
-                        },
-                      },
-                      {
-                        lostDocumentCase: {
-                          caseId: query.documentCaseId,
-                        },
-                      },
-                    ]
-                  : []),
-              ]
-            : undefined,
       },
       ...this.paginationService.buildPaginationQuery(query),
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      ...this.representationService.buildCustomRepresentationQuery(
+        isAdmin ? query?.v : undefined,
+      ),
       ...this.sortService.buildSortQuery(query?.orderBy),
     };
+    console.log(JSON.stringify(dbQuery, null, 2));
+
     const [data, totalCount] = await Promise.all([
       this.prismaService.match.findMany(dbQuery),
       this.prismaService.match.count(pick(dbQuery, 'where')),

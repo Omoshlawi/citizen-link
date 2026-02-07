@@ -22,6 +22,10 @@ export const QueryMatchesSchema = z.object({
   maxMatchScore: z.coerce.number().min(0).max(100).optional(),
   documentCaseId: z.uuid().optional(),
   search: z.string().optional(),
+  userId: z
+    .string()
+    .optional()
+    .describe('Admin Only - query matchs for user with provided id'),
   adminVerified: z
     .stringbool({
       truthy: ['true', '1'],
@@ -42,6 +46,7 @@ export const QueryMatchesForCaseSchema = QueryMatchesSchema.omit({
   maxMatchScore: true,
   status: true,
   minMatchScore: true,
+  userId: true,
 }).extend({
   minMatchScore: z.coerce.number().min(0).max(1).optional(),
 });

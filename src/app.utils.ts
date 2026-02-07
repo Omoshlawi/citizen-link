@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { UserSession } from './auth/auth.types';
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -100,4 +101,8 @@ export const safeParseJson = <T>(
   } catch (error) {
     return { success: false, error: error as Error };
   }
+};
+
+export const isSuperUser = (user: UserSession['user']) => {
+  return !!user?.role?.includes('admin');
 };

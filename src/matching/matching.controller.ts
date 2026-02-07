@@ -24,6 +24,8 @@ import {
   DeleteQueryDto,
   OriginalUrl,
 } from '../common/query-builder';
+import { Session } from '@thallesp/nestjs-better-auth';
+import { UserSession } from '../auth/auth.types';
 
 @Controller('matching')
 export class MatchingController {
@@ -51,8 +53,12 @@ export class MatchingController {
   @ApiOperation({ summary: 'Query Matches' })
   @ApiOkResponse({ type: QueryMatchesResponseDto })
   @ApiErrorsResponse()
-  findAll(@Query() query: QueryMatchesDto, @OriginalUrl() originalUrl: string) {
-    return this.matchingService.findAll(query, originalUrl);
+  findAll(
+    @Query() query: QueryMatchesDto,
+    @OriginalUrl() originalUrl: string,
+    @Session() { user }: UserSession,
+  ) {
+    return this.matchingService.findAll(query, originalUrl, user);
   }
 
   @Get(':id')
