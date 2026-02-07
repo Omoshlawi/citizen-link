@@ -74,7 +74,7 @@ export class MatchLostDocumentService {
 
       const searchText = this.embeddingService.createDocumentText(foundDoc);
       const searchEmbedding = await lastValueFrom(
-        this.embeddingService.generateEmbedding(searchText),
+        this.embeddingService.generateEmbedding(searchText, 'search'),
       );
       const vectorString = `[${searchEmbedding.join(',')}]`;
 

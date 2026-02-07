@@ -14,6 +14,8 @@ import { CustomRepresentationQueryDto } from '../common/query-builder';
 import { S3Service } from '../s3/s3.service';
 import { CreateFoundDocumentCaseDto } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
+import { EmbeddingService } from '../ai/embeding.service';
+import { MatchingService } from '../matching/matching.service';
 
 @Injectable()
 export class DocumentCasesCreateService {
@@ -25,6 +27,8 @@ export class DocumentCasesCreateService {
     private readonly ocrService: OcrService,
     private readonly extractionService: ExtractionService,
     private readonly documentCasesQueryService: DocumentCasesQueryService,
+    private readonly embeddingService: EmbeddingService,
+    private readonly matchingService: MatchingService,
   ) {}
 
   private async filesExists(
@@ -306,6 +310,23 @@ export class DocumentCasesCreateService {
       },
     });
     await this.moveAndGenerateBluredVersions(images, documentCase.id);
+    if (documentCase.document?.id) {
+      await this.embeddingService.indexDocument(documentCase.document.id);
+      const matches =
+        await this.matchingService.findMatchesForLostDocumentAndVerify(
+          documentCase.document.id,
+          userId,
+          {
+            limit: 20,
+            similarityThreshold: 0.5,
+            minVerificationScore: 0.6,
+          },
+        );
+      this.logger.debug(
+        `Found ${matches.length} matches for document ${documentCase.document.id}`,
+        matches,
+      );
+    }
     return await this.documentCasesQueryService.findOne(
       documentCase.id,
       query,

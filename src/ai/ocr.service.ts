@@ -113,7 +113,7 @@ export class OcrService {
     buffer: Buffer,
     type: 'gaussian' | 'light' | 'strong' = 'gaussian',
   ) {
-    const b = type === 'gaussian' ? 5 : type === 'light' ? 0.8 : 12;
+    const b = type === 'gaussian' ? 5 : type === 'light' ? 0.8 : 20;
     // Use Sharp to create a blurred buffer
     // We resize it small so it's tiny (e.g., 20px) and apply a heavy blur
     return sharp(buffer).blur(b).toBuffer();

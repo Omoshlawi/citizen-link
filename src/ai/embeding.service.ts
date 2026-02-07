@@ -17,22 +17,30 @@ export class EmbeddingService {
     private readonly prisma: PrismaService,
   ) {}
 
-  generateEmbedding(text: string): Observable<Array<number>> {
+  generateEmbedding(
+    text: string,
+    useCase: 'search' | 'document' = 'document',
+  ): Observable<Array<number>> {
     const url = `/api/embeddings`;
+
+    // Use task-specific prefixes for better accuracy
+    const prefix =
+      useCase === 'search' ? 'search_query: ' : 'search_document: ';
+
     const response = this.httpService.post<{
       embedding: Array<number>;
     }>(url, {
-      model: 'nomic-embed-text',
-      prompt: text,
+      model: 'nomic-embed-text', // or consider 'mxbai-embed-large' for better quality
+      prompt: prefix + text,
     });
-    const data = response.pipe(
+
+    return response.pipe(
       map((res) => res.data.embedding),
       catchError((error) => {
         this.logger.error('Error generating embedding', error);
         throw error;
       }),
     );
-    return data;
   }
 
   // Create a searchable text representation of a document
@@ -43,66 +51,66 @@ export class EmbeddingService {
       case: DocumentCase;
     },
   ): string {
-    const parts = [
-      // Add additional fields
-      ...(document.additionalFields || []).map(
-        (f) => `${f.fieldName}: ${f.fieldValue}`,
-      ),
-    ];
+    const parts: string[] = [];
 
-    // Add document type
-    if (document.type?.name) {
-      parts.push(`Document Type: ${document.type.name}`);
+    // Add context-rich description first (most important information first)
+    if (document.type?.name && document.ownerName) {
+      parts.push(
+        `This is a ${document.type.name} document belonging to ${document.ownerName}`,
+      );
     }
 
-    // Add owner name
+    // Add structured identity information
     if (document.ownerName) {
-      parts.push(`Owner: ${document.ownerName}`);
+      parts.push(`Full name: ${document.ownerName}`);
     }
 
-    // Add document number
-    if (document.documentNumber) {
-      parts.push(`Document Number: ${document.documentNumber}`);
-    }
-
-    // Add serial number
-    if (document.serialNumber) {
-      parts.push(`Serial: ${document.serialNumber}`);
-    }
-
-    // Add date of birth
     if (document.dateOfBirth) {
-      parts.push(`DOB: ${document.dateOfBirth.toISOString().split('T')[0]}`);
+      const dob = document.dateOfBirth.toISOString().split('T')[0];
+      parts.push(`Date of birth: ${dob}`);
     }
 
-    // Add place of birth
-    if (document.placeOfBirth) {
-      parts.push(`Birth Place: ${document.placeOfBirth}`);
-    }
-
-    // Add gender
     if (document.gender) {
       parts.push(`Gender: ${document.gender}`);
     }
 
-    // Add issuer
+    if (document.placeOfBirth) {
+      parts.push(`Place of birth: ${document.placeOfBirth}`);
+    }
+
+    // Document identification
+    if (document.documentNumber) {
+      parts.push(`Document number: ${document.documentNumber}`);
+    }
+
+    if (document.serialNumber) {
+      parts.push(`Serial number: ${document.serialNumber}`);
+    }
+
+    // Issuance information
     if (document.issuer) {
-      parts.push(`Issuer: ${document.issuer}`);
+      parts.push(`Issued by: ${document.issuer}`);
     }
 
-    // Add place of issue
     if (document.placeOfIssue) {
-      parts.push(`Issue Place: ${document.placeOfIssue}`);
+      parts.push(`Place of issue: ${document.placeOfIssue}`);
     }
 
-    // Add Tags
-    if ((document.case.tags as Array<string>).length) {
-      parts.push(
-        `Tags/Keywords: ${(document.case.tags as Array<string>).join(', ')}`,
-      );
+    // Additional fields with better formatting
+    if (document.additionalFields?.length) {
+      document.additionalFields.forEach((f) => {
+        parts.push(`${f.fieldName}: ${f.fieldValue}`);
+      });
     }
 
-    return parts.join(' | ');
+    // Tags - very important for semantic search
+    if (document.case.tags && (document.case.tags as Array<string>).length) {
+      const tags = (document.case.tags as Array<string>).join(', ');
+      parts.push(`Related keywords and categories: ${tags}`);
+    }
+
+    // Join with periods for better sentence structure
+    return parts.join('. ') + '.';
   }
 
   /**
@@ -128,7 +136,9 @@ export class EmbeddingService {
       this.logger.debug(`Indexing document ${documentId}: ${searchText}`);
 
       // Generate embedding
-      const embedding = await lastValueFrom(this.generateEmbedding(searchText));
+      const embedding = await lastValueFrom(
+        this.generateEmbedding(searchText, 'document'),
+      );
 
       // Convert embedding array to PostgreSQL vector format
       const vectorString = `[${embedding.join(',  ')}]`;

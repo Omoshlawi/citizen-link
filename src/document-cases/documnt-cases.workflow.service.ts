@@ -68,7 +68,7 @@ export class DocumentCasesWorkflowService {
   ) {
     this.logger.log(`Verifying found document case ${id} for user ${userId}`);
     const documentCase = await this.prismaService.documentCase.findUnique({
-      where: { id, userId },
+      where: { id },
       include: {
         foundDocumentCase: true,
         document: true,

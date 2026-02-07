@@ -35,7 +35,7 @@ export class MatchingStatisticsService {
 
     const searchText = this.embeddingService.createDocumentText(document);
     const searchEmbedding = await lastValueFrom(
-      this.embeddingService.generateEmbedding(searchText),
+      this.embeddingService.generateEmbedding(searchText, 'search'),
     );
     const vectorString = `[${searchEmbedding.join(',')}]`;
 

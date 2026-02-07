@@ -44,7 +44,7 @@ export class AddressController {
     @Session() { user }: UserSession,
     @OriginalUrl() originalUrl: string,
   ) {
-    return this.addressService.getAll(query, originalUrl, user.id);
+    return this.addressService.getAll(query, originalUrl, user);
   }
 
   @Get('/:id')

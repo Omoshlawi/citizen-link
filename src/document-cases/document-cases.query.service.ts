@@ -86,9 +86,23 @@ export class DocumentCasesQueryService {
           {
             OR: query.search
               ? [
-                  { document: { serialNumber: { contains: query?.search } } },
-                  { description: { contains: query?.search } },
-                  { document: { ownerName: { contains: query?.search } } },
+                  {
+                    document: {
+                      serialNumber: {
+                        contains: query?.search,
+                        mode: 'insensitive',
+                      },
+                    },
+                  },
+
+                  {
+                    document: {
+                      ownerName: {
+                        contains: query?.search,
+                        mode: 'insensitive',
+                      },
+                    },
+                  },
                 ]
               : undefined,
           },
@@ -98,85 +112,98 @@ export class DocumentCasesQueryService {
                 ? [
                     {
                       label: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       id: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       address1: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       address2: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       cityVillage: {
                         contains: query.location,
-                        // mode: 'insensitive',
+                        mode: 'insensitive',
                       },
                     },
                     {
                       country: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       formatted: {
                         contains: query.location,
-                        // mode: 'insensitive',
+                        mode: 'insensitive',
                       },
                     },
                     {
                       label: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       landmark: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       level1: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       level2: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       level3: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       level4: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       level5: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       plusCode: {
-                        contains: query.location, //mode: 'insensitive'
+                        contains: query.location,
+                        mode: 'insensitive',
                       },
                     },
                     {
                       postalCode: {
                         contains: query.location,
-                        // mode: 'insensitive',
+                        mode: 'insensitive',
                       },
                     },
                   ]
