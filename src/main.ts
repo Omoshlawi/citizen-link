@@ -26,7 +26,7 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('Docufind API')
+    .setTitle('CitizenLink API')
     .setDescription('Docufind API Documentation')
     .setVersion('1.0')
     .build();

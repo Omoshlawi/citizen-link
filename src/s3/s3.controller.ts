@@ -26,6 +26,7 @@ export class S3Controller {
   @ApiErrorsResponse({ badRequest: true })
   async getUploadUrl(@Query() query: GetUploadUrlDto) {
     const url = await this.s3Service.generateUploadSignedUrl(
+      'tmp',
       query.fileName,
       query.mimeType,
       this.config.expiresIn,
@@ -48,6 +49,7 @@ export class S3Controller {
     const url = await this.s3Service.generateDownloadSignedUrl(
       query.fileName,
       this.config.expiresIn,
+      'cases',
     );
     return { url };
   }
@@ -61,7 +63,7 @@ export class S3Controller {
     @Res() res: Response,
   ): Promise<void> {
     const { stream, contentType, contentLength } =
-      await this.s3Service.streamFile(query.fileName);
+      await this.s3Service.streamFile(query.fileName, 'cases');
 
     res.setHeader('Content-Type', contentType);
     res.setHeader(

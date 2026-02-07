@@ -33,7 +33,7 @@ export class DocumentCasesCreateService {
   ): Promise<void> {
     this.logger.debug('Checking if images exist', images);
     const exists = await Promise.all(
-      images.map((image) => this.s3Service.fileExists(image)),
+      images.map((image) => this.s3Service.fileExists(image, 'tmp')),
     );
     const allExists = exists.every(Boolean);
     if (!allExists) {
@@ -42,6 +42,42 @@ export class DocumentCasesCreateService {
       else onFailed();
     }
     this.logger.debug('All images exist');
+  }
+
+  private moveAndGenerateBluredVersions(images: Array<string>, caseId: string) {
+    return Promise.all(
+      images.map(async (image) => {
+        const caseImageKey = `${caseId}/${image}`;
+
+        // Generate blured version and save to case bucket
+        const buffer = await this.s3Service.downloadFile(image, 'tmp');
+        const metadata = await this.s3Service.getFileMetadata(image, 'tmp');
+        const mimeType =
+          metadata?.ContentType ?? `image/${image.split('.').pop()}`;
+        const bluredKey = `${caseId}/${this.s3Service.generateFileName(image)}`;
+        const bluredBuffer = await this.ocrService.blueImage(buffer, 'strong');
+        await this.s3Service.uploadFile(
+          bluredKey,
+          'cases',
+          bluredBuffer,
+          mimeType,
+          {
+            isBlurred: 'true',
+            originalKey: caseImageKey,
+          },
+        );
+
+        // Move file from tmp to cases
+        await this.s3Service.moveFileToCasesBucket(image, caseId);
+        return await this.prismaService.image.update({
+          where: { document: { caseId }, url: image },
+          data: {
+            url: caseImageKey,
+            blurredUrl: bluredKey,
+          },
+        });
+      }),
+    );
   }
 
   private async runAiExtraction(
@@ -74,9 +110,8 @@ export class DocumentCasesCreateService {
     });
     const _extractionTasks = await Promise.all(
       images.map(async (image) => {
-        const url = await this.s3Service.generateDownloadSignedUrl(image);
-        const buffer = await this.ocrService.downloadFileAsBuffer(url);
-        const metadata = await this.s3Service.getFileMetadata(image);
+        const buffer = await this.s3Service.downloadFile(image, 'tmp');
+        const metadata = await this.s3Service.getFileMetadata(image, 'tmp');
         const mimeType =
           metadata?.ContentType ?? `image/${image.split('.').pop()}`;
         return { buffer, mimeType };
@@ -193,7 +228,7 @@ export class DocumentCasesCreateService {
         document: true,
       },
     });
-
+    await this.moveAndGenerateBluredVersions(images, documentCase.id);
     return await this.documentCasesQueryService.findOne(
       documentCase.id,
       query,
@@ -270,7 +305,7 @@ export class DocumentCasesCreateService {
         document: true,
       },
     });
-
+    await this.moveAndGenerateBluredVersions(images, documentCase.id);
     return await this.documentCasesQueryService.findOne(
       documentCase.id,
       query,

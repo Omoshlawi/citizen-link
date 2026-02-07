@@ -18,8 +18,10 @@ export const QueryMatchesSchema = z.object({
   lostDocumentCaseId: z.uuid().optional(),
   foundDocumentCaseId: z.uuid().optional(),
   status: MatchStatusSchema.optional(),
-  minMatchScore: z.coerce.number().min(0).max(1).optional(),
-  maxMatchScore: z.coerce.number().min(0).max(1).optional(),
+  minMatchScore: z.coerce.number().min(0).max(100).optional(),
+  maxMatchScore: z.coerce.number().min(0).max(100).optional(),
+  documentCaseId: z.uuid().optional(),
+  search: z.string().optional(),
   adminVerified: z
     .stringbool({
       truthy: ['true', '1'],
@@ -39,6 +41,9 @@ export const QueryMatchesForCaseSchema = QueryMatchesSchema.omit({
   adminVerified: true,
   maxMatchScore: true,
   status: true,
+  minMatchScore: true,
+}).extend({
+  minMatchScore: z.coerce.number().min(0).max(1).optional(),
 });
 
 export const QueryMatechesForLostCaseSchema = QueryMatchesForCaseSchema.omit({

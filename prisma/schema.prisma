@@ -334,7 +334,7 @@ model DocumentField {
 
 model Image {
   id         String    @id @default(uuid())
-  url        String
+  url        String    @unique
   blurredUrl String? // Privacy-protected version
   aiAnalysis Json? // { "quality": 0.95, "readability": 0.88, "tampering_detected": false }
   documentId String?
@@ -555,7 +555,6 @@ model Match {
 
 enum MatchStatus {
   PENDING // Match found, awaiting user action
-  VIEWED // User viewed the match
   REJECTED // User rejected match
   CLAIMED // User claimed this match
   EXPIRED // Match expired without action

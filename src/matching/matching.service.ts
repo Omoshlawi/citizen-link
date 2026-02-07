@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { pick } from 'lodash';
-import { Match } from '../../generated/prisma/client';
+import { Match, Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
@@ -106,6 +106,77 @@ export class MatchingService {
             matchScore: { gte: query.minMatchScore, lte: query.maxMatchScore },
           },
         ],
+        OR:
+          query.search || query.documentCaseId
+            ? [
+                ...(query.search
+                  ? [
+                      {
+                        foundDocumentCase: {
+                          case: {
+                            document: {
+                              ownerName: {
+                                contains: query.search,
+                                mode: Prisma.QueryMode.insensitive,
+                              },
+                            },
+                          },
+                        },
+                      },
+                      {
+                        foundDocumentCase: {
+                          case: {
+                            document: {
+                              documentNumber: {
+                                contains: query.search,
+                                mode: Prisma.QueryMode.insensitive,
+                              },
+                            },
+                          },
+                        },
+                      },
+                      {
+                        lostDocumentCase: {
+                          case: {
+                            document: {
+                              ownerName: {
+                                contains: query.search,
+                                mode: Prisma.QueryMode.insensitive,
+                              },
+                            },
+                          },
+                        },
+                      },
+                      {
+                        lostDocumentCase: {
+                          case: {
+                            document: {
+                              documentNumber: {
+                                contains: query.search,
+                                mode: Prisma.QueryMode.insensitive,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ]
+                  : []),
+                ...(query.documentCaseId
+                  ? [
+                      {
+                        foundDocumentCase: {
+                          caseId: query.documentCaseId,
+                        },
+                      },
+                      {
+                        lostDocumentCase: {
+                          caseId: query.documentCaseId,
+                        },
+                      },
+                    ]
+                  : []),
+              ]
+            : undefined,
       },
       ...this.paginationService.buildPaginationQuery(query),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),

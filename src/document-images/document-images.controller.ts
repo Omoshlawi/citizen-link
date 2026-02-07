@@ -1,37 +1,17 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
-import { CustomRepresentationQueryDto } from '../common/query-builder/query-builder.utils';
 import { OriginalUrl } from '../common/query-builder';
+import { CustomRepresentationQueryDto } from '../common/query-builder/query-builder.utils';
 import {
-  CreateDocumentImageDto,
   GetDocumentImageResponseDto,
   QueryDocumentImageDto,
-  CreateDocumentImageResponseDto,
 } from './document-images.dto';
 import { DocumentImagesService } from './document-images.service';
 
 @Controller('documents/cases/:caseId/documents/:documentId/images')
 export class DocumentImagesController {
   constructor(private readonly documentImagesService: DocumentImagesService) {}
-
-  @Post()
-  @ApiOperation({ summary: 'Create Image' })
-  @ApiOkResponse({ type: CreateDocumentImageResponseDto })
-  @ApiErrorsResponse({ badRequest: true })
-  create(
-    @Body() createDocumentImageDto: CreateDocumentImageDto,
-    @Query() query: CustomRepresentationQueryDto,
-    @Param('caseId') caseId: string,
-    @Param('documentId') documentId: string,
-  ) {
-    return this.documentImagesService.create(
-      createDocumentImageDto,
-      caseId,
-      documentId,
-      query,
-    );
-  }
 
   @Get()
   @ApiOperation({ summary: 'Get Images' })
