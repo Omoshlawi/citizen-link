@@ -1,10 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { pick } from 'lodash';
-import { EmbeddingService } from '../ai/embeding.service';
-import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
-import { MatchingService } from '../matching/matching.service';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
@@ -12,7 +8,10 @@ import {
   PaginationService,
   SortService,
 } from '../common/query-builder';
+import { PrismaService } from '../prisma/prisma.service';
 import { QueryDocumentCaseDto } from './document-cases.dto';
+import { UserSession } from '../auth/auth.types';
+import { isSuperUser } from 'src/app.utils';
 
 @Injectable()
 export class DocumentCasesQueryService {
@@ -21,15 +20,13 @@ export class DocumentCasesQueryService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
-    private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
-    private readonly embeddingService: EmbeddingService,
-    private readonly matchingService: MatchingService,
   ) {}
   async findAll(
     query: QueryDocumentCaseDto,
-    userId: string,
+    user: UserSession['user'],
     originalUrl: string,
   ) {
+    const isAdmin = isSuperUser(user);
     const dbQuery: FunctionFirstArgument<
       typeof this.prismaService.documentCase.findMany
     > = {
@@ -37,7 +34,7 @@ export class DocumentCasesQueryService {
         AND: [
           {
             voided: query?.includeVoided ? undefined : false,
-            userId: query?.includeForOtherUsers ? undefined : userId, // only admin users can view all cases
+            userId: isAdmin ? query?.userId : user.id, // only admin users can view all cases
             document: {
               typeId: query.documentType,
               serialNumber: query.documentNumber,

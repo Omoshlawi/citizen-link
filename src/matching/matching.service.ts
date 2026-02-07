@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { pick } from 'lodash';
 import { Match, Prisma } from '../../generated/prisma/client';
@@ -100,6 +101,8 @@ export class MatchingService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
+    const rep =
+      'custom:select(id,matchNumber,matchScore,status,createdAt,updatedAt,aiAnalysis,foundDocumentCase:select(case:select(document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(document:select(images:select(blurredUrl)))))';
     const isAdmin = isSuperUser(user);
     const dbQuery: FunctionFirstArgument<
       typeof this.prismaService.match.findMany
@@ -207,18 +210,37 @@ export class MatchingService {
       },
       ...this.paginationService.buildPaginationQuery(query),
       ...this.representationService.buildCustomRepresentationQuery(
-        isAdmin ? query?.v : undefined,
+        isAdmin ? (query?.v ?? rep) : rep,
       ),
       ...this.sortService.buildSortQuery(query?.orderBy),
     };
-    console.log(JSON.stringify(dbQuery, null, 2));
-
     const [data, totalCount] = await Promise.all([
       this.prismaService.match.findMany(dbQuery),
       this.prismaService.match.count(pick(dbQuery, 'where')),
     ]);
     return {
-      results: data,
+      results: isAdmin
+        ? data
+        : data.map((d) => {
+            const aiAnalysis = (d.aiAnalysis ?? {}) as Record<string, any>;
+            return {
+              ...pick(d, [
+                'id',
+                'matchNumber',
+                'matchScore',
+                'status',
+                'foundDocumentCase',
+                'lostDocumentCase',
+                'createdAt',
+                'updatedAt',
+              ]),
+              aiAnalysis: pick(aiAnalysis, [
+                'overallScore',
+                'confidence',
+                'recommendation',
+              ]),
+            };
+          }),
       ...this.paginationService.buildPaginationControls(
         totalCount,
         originalUrl,

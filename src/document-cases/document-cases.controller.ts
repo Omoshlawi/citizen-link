@@ -99,7 +99,7 @@ export class DocumentCasesController {
     @Session() { user }: UserSession,
     @OriginalUrl() originalUrl: string,
   ) {
-    return this.documentCasesService.findAll(query, user.id, originalUrl);
+    return this.documentCasesService.findAll(query, user, originalUrl);
   }
 
   @Get(':id')

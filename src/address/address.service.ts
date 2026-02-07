@@ -16,6 +16,8 @@ import {
 } from './address.dto';
 import { Address, AddressType } from '../../generated/prisma/browser';
 import dayjs from 'dayjs';
+import { UserSession } from '../auth/auth.types';
+import { isSuperUser } from 'src/app.utils';
 
 @Injectable()
 export class AddressService {
@@ -26,7 +28,12 @@ export class AddressService {
     private readonly representationService: CustomRepresentationService,
   ) {}
 
-  async getAll(query: QueryAddressDto, originalUrl: string, userId: string) {
+  async getAll(
+    query: QueryAddressDto,
+    originalUrl: string,
+    user: UserSession['user'],
+  ) {
+    const isAdmin = isSuperUser(user);
     const dbQuery: FunctionFirstArgument<
       typeof this.prismaService.address.findMany
     > = {
@@ -34,7 +41,7 @@ export class AddressService {
         AND: [
           {
             voided: query?.includeVoided ? undefined : false,
-            userId,
+            userId: isAdmin ? query.userId : user.id,
             type: query?.type as AddressType,
             level1: query?.level1,
             level2: query?.level2,
@@ -62,12 +69,14 @@ export class AddressService {
               ? [
                   {
                     label: {
-                      contains: query.search, //mode: 'insensitive'
+                      contains: query.search,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     formatted: {
-                      contains: query.search, //mode: 'insensitive'
+                      contains: query.search,
+                      mode: 'insensitive',
                     },
                   },
                 ]
@@ -78,85 +87,98 @@ export class AddressService {
               ? [
                   {
                     label: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     id: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     address1: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     address2: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     cityVillage: {
                       contains: query.location,
-                      // mode: 'insensitive',
+                      mode: 'insensitive',
                     },
                   },
                   {
                     country: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     formatted: {
                       contains: query.location,
-                      // mode: 'insensitive',
+                      mode: 'insensitive',
                     },
                   },
                   {
                     label: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     landmark: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     level1: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     level2: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     level3: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     level4: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     level5: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     plusCode: {
-                      contains: query.location, //mode: 'insensitive'
+                      contains: query.location,
+                      mode: 'insensitive',
                     },
                   },
                   {
                     postalCode: {
                       contains: query.location,
-                      // mode: 'insensitive',
+                      mode: 'insensitive',
                     },
                   },
                 ]

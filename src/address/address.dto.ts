@@ -25,6 +25,10 @@ export const QueryAddressSchema = z.object({
       'OTHER',
     ])
     .optional(),
+  userId: z
+    .string()
+    .optional()
+    .describe('Admin only - query address for user with supplied id'),
   level1: z.string().optional(),
   level2: z.string().optional(),
   level3: z.string().optional(),

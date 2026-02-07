@@ -33,14 +33,11 @@ export const QueryDocumentCaseSchema = z
     docuemtExpiryDateTo: z.iso.date().optional(),
     docuemtIssueDateFrom: z.iso.date().optional(),
     docuemtIssueDateTo: z.iso.date().optional(),
-    includeVoided: z
-      .stringbool({
-        truthy: ['true', '1'],
-        falsy: ['false', '0'],
-      })
+    userId: z
+      .string()
       .optional()
-      .default(false),
-    includeForOtherUsers: z // TODO:  validate only for admin users else throw forbidden error
+      .describe('Admin only - Query cases for supplied user id'),
+    includeVoided: z
       .stringbool({
         truthy: ['true', '1'],
         falsy: ['false', '0'],

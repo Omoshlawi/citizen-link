@@ -28,6 +28,7 @@ import {
 import { DocumentCasesQueryService } from './document-cases.query.service';
 import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
 import { DocumentCasesCreateService } from './document-cases.create.service';
+import { UserSession } from '../auth/auth.types';
 
 @Injectable()
 export class DocumentCasesService {
@@ -42,8 +43,12 @@ export class DocumentCasesService {
     private readonly documentCasesCreateService: DocumentCasesCreateService,
   ) {}
 
-  findAll(query: QueryDocumentCaseDto, userId: string, originalUrl: string) {
-    return this.documentCasesQueryService.findAll(query, userId, originalUrl);
+  findAll(
+    query: QueryDocumentCaseDto,
+    user: UserSession['user'],
+    originalUrl: string,
+  ) {
+    return this.documentCasesQueryService.findAll(query, user, originalUrl);
   }
 
   findOne(id: string, query: CustomRepresentationQueryDto, userId: string) {
