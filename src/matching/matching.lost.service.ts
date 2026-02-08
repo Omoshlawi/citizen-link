@@ -94,10 +94,12 @@ export class MatchLostDocumentService {
             AND d."typeId" = $1
             AND ldc.status = 'SUBMITTED'
             AND d.id != $2
-            AND 1 - (d.embedding <=> $3::vector) > $4
+            AND dc."userId" != $3
+            AND 1 - (d.embedding <=> $4::vector) > $5
           `,
           foundDoc.typeId,
           foundDocumentId,
+          foundDoc.case.userId,
           vectorString,
           similarityThreshold,
         );
@@ -127,14 +129,16 @@ export class MatchLostDocumentService {
           AND d."typeId" = $2
           AND ldc.status = 'SUBMITTED'
           AND d.id != $3
-          AND 1 - (d.embedding <=> $1::vector) > $4
+          AND dc."userId" != $4
+          AND 1 - (d.embedding <=> $1::vector) > $5
         ORDER BY d.embedding <=> $1::vector
-        LIMIT $5
-        OFFSET $6
+        LIMIT $6
+        OFFSET $7
         `,
         vectorString,
         foundDoc.typeId,
         foundDocumentId,
+        foundDoc.case.userId,
         similarityThreshold,
         limit,
         skip,

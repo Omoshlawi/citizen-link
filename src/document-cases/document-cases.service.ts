@@ -11,14 +11,15 @@ import {
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
 import { EmbeddingService } from '../ai/embeding.service';
-import { ProgressEvent } from '../extraction/extraction.interface';
-import { MatchingService } from '../matching/matching.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
 } from '../common/query-builder';
+import { ProgressEvent } from '../extraction/extraction.interface';
+import { PrismaService } from '../prisma/prisma.service';
+import { DocumentCasesCreateService } from './document-cases.create.service';
 import {
   CreateFoundDocumentCaseDto,
   CreateLostDocumentCaseDto,
@@ -27,8 +28,6 @@ import {
 } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
 import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
-import { DocumentCasesCreateService } from './document-cases.create.service';
-import { UserSession } from '../auth/auth.types';
 
 @Injectable()
 export class DocumentCasesService {
@@ -37,7 +36,6 @@ export class DocumentCasesService {
     private readonly prismaService: PrismaService,
     private readonly representationService: CustomRepresentationService,
     private readonly embeddingService: EmbeddingService,
-    private readonly matchingService: MatchingService,
     private readonly documentCasesQueryService: DocumentCasesQueryService,
     private readonly documentCasesWorkflowService: DocumentCasesWorkflowService,
     private readonly documentCasesCreateService: DocumentCasesCreateService,
@@ -195,23 +193,6 @@ export class DocumentCasesService {
         document: true,
       },
     });
-    if (documentCase.document?.id) {
-      await this.embeddingService.indexDocument(documentCase.document.id);
-      const matches =
-        await this.matchingService.findMatchesForLostDocumentAndVerify(
-          documentCase.document.id,
-          userId,
-          {
-            limit: 20,
-            similarityThreshold: 0.5,
-            minVerificationScore: 0.6,
-          },
-        );
-      this.logger.debug(
-        `Found ${matches.length} matches for document ${documentCase.document.id}`,
-        matches,
-      );
-    }
     return await this.findOne(documentCase.id, query, userId);
   }
 

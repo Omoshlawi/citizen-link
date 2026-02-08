@@ -35,6 +35,7 @@ export class DocumentCasesWorkflowService {
       include: {
         foundDocumentCase: true,
         lostDocumentCase: true,
+        document: true,
       },
     });
 
@@ -44,7 +45,7 @@ export class DocumentCasesWorkflowService {
 
     if (
       documentCase.foundDocumentCase?.status !==
-        FoundDocumentCaseStatus.DRAFT ||
+        FoundDocumentCaseStatus.DRAFT &&
       documentCase.lostDocumentCase?.status !== LostDocumentCaseStatus.DRAFT
     ) {
       throw new BadRequestException(
@@ -52,13 +53,38 @@ export class DocumentCasesWorkflowService {
       );
     }
 
-    return await this.caseStatusTransitionsService.transitionStatus(
-      id,
-      'SUBMITTED',
-      ActorType.USER,
-      userId,
-      query?.v,
-    );
+    const statustransition =
+      await this.caseStatusTransitionsService.transitionStatus(
+        id,
+        'SUBMITTED',
+        ActorType.USER,
+        userId,
+        query?.v,
+      );
+
+    // Index document after submission
+    if (documentCase.document?.id) {
+      await this.embeddingService.indexDocument(documentCase.document.id);
+      // For lost cass run match algorithm on submission
+      if (documentCase.lostDocumentCase) {
+        const matches =
+          await this.matchingService.findMatchesForLostDocumentAndVerify(
+            documentCase.document.id,
+            userId,
+            {
+              limit: 20,
+              similarityThreshold: 0.5,
+              minVerificationScore: 0.6,
+            },
+          );
+        this.logger.debug(
+          `Found ${matches.length} matches for document ${documentCase.document.id}`,
+          matches,
+        );
+      }
+    }
+
+    return statustransition;
   }
 
   async verifyFoundDocumentCase(
@@ -90,6 +116,8 @@ export class DocumentCasesWorkflowService {
         userId,
         query?.v,
       );
+
+    // Index document on veriication and run match algorithm
     if (documentCase.document?.id) {
       await this.embeddingService.indexDocument(documentCase.document.id);
       const matches =

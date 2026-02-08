@@ -195,7 +195,7 @@ export class CaseStatusTransitionsService {
         throw new BadRequestException(
           'Invalid transition from DRAFT to ' +
             toStatus +
-            ' for found document case. Allowed transitions are: DRAFT -> SUBMITTED',
+            ' for lost document case. Allowed transitions are: DRAFT -> SUBMITTED',
         );
       }
       if (

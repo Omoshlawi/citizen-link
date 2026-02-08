@@ -96,10 +96,12 @@ export class MatchFoundDocumentService {
                 AND d."typeId" = $1
                 AND fdc.status IN ('VERIFIED')
                 AND d.id != $2
-                AND 1 - (d.embedding <=> $3::vector) > $4
+                AND dc."userId" != $3
+                AND 1 - (d.embedding <=> $4::vector) > $5
               `,
           lostDoc.typeId,
           lostDocumentId,
+          lostDoc.case.userId,
           vectorString,
           similarityThreshold,
         );
@@ -129,14 +131,16 @@ export class MatchFoundDocumentService {
               AND d."typeId" = $2
               AND fdc.status IN ('VERIFIED')
               AND d.id != $3
-              AND 1 - (d.embedding <=> $1::vector) > $4
+              AND dc."userId" != $4
+              AND 1 - (d.embedding <=> $1::vector) > $5
             ORDER BY d.embedding <=> $1::vector
-            LIMIT $5
-            OFFSET $6
+            LIMIT $6
+            OFFSET $7
             `,
         vectorString,
         lostDoc.typeId,
         lostDocumentId,
+        lostDoc.case.userId,
         similarityThreshold,
         limit,
         skip,
@@ -257,8 +261,8 @@ export class MatchFoundDocumentService {
         const match = await this.prismaService.match.create({
           data: {
             aiInteractionId: aiInteraction.id,
-            foundDocumentCaseId: sourceDoc.case.lostDocumentCase.id,
-            lostDocumentCaseId: candidateDoc.case.foundDocumentCase.id,
+            lostDocumentCaseId: sourceDoc.case.lostDocumentCase.id,
+            foundDocumentCaseId: candidateDoc.case.foundDocumentCase.id,
             matchScore: matchData.overallScore,
             aiAnalysis: matchData as any,
           },

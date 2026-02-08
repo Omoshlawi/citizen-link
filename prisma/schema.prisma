@@ -514,7 +514,7 @@ enum ActorType {
 
 model Match {
   id          String @id @default(uuid())
-  matchNumber Int    @default(autoincrement())
+  matchNumber Int    @unique @default(autoincrement())
 
   aiInteractionId String        @unique
   aiInteraction   AIInteraction @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
