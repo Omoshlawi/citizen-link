@@ -26,6 +26,8 @@ import { isSuperUser } from 'src/app.utils';
 @Injectable()
 export class MatchingService {
   private readonly logger = new Logger(MatchingService.name);
+  private readonly defaultRep =
+    'custom:select(id,matchNumber,matchScore,status,createdAt,updatedAt,aiAnalysis,foundDocumentCase:select(case:select(document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(document:select(images:select(blurredUrl)))))';
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -96,13 +98,32 @@ export class MatchingService {
     );
   }
 
+  private mapMatch(d: Match) {
+    const aiAnalysis = (d.aiAnalysis ?? {}) as Record<string, any>;
+    return {
+      ...pick(d, [
+        'id',
+        'matchNumber',
+        'matchScore',
+        'status',
+        'foundDocumentCase',
+        'lostDocumentCase',
+        'createdAt',
+        'updatedAt',
+      ]),
+      aiAnalysis: pick(aiAnalysis, [
+        'overallScore',
+        'confidence',
+        'recommendation',
+      ]),
+    };
+  }
+
   async findAll(
     query: QueryMatchesDto,
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const rep =
-      'custom:select(id,matchNumber,matchScore,status,createdAt,updatedAt,aiAnalysis,foundDocumentCase:select(case:select(document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(document:select(images:select(blurredUrl)))))';
     const isAdmin = isSuperUser(user);
     const dbQuery: FunctionFirstArgument<
       typeof this.prismaService.match.findMany
@@ -210,7 +231,7 @@ export class MatchingService {
       },
       ...this.paginationService.buildPaginationQuery(query),
       ...this.representationService.buildCustomRepresentationQuery(
-        isAdmin ? (query?.v ?? rep) : rep,
+        isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
       ),
       ...this.sortService.buildSortQuery(query?.orderBy),
     };
@@ -222,24 +243,7 @@ export class MatchingService {
       results: isAdmin
         ? data
         : data.map((d) => {
-            const aiAnalysis = (d.aiAnalysis ?? {}) as Record<string, any>;
-            return {
-              ...pick(d, [
-                'id',
-                'matchNumber',
-                'matchScore',
-                'status',
-                'foundDocumentCase',
-                'lostDocumentCase',
-                'createdAt',
-                'updatedAt',
-              ]),
-              aiAnalysis: pick(aiAnalysis, [
-                'overallScore',
-                'confidence',
-                'recommendation',
-              ]),
-            };
+            return this.mapMatch(d);
           }),
       ...this.paginationService.buildPaginationControls(
         totalCount,
@@ -249,13 +253,20 @@ export class MatchingService {
     };
   }
 
-  async findOne(id: string, query: CustomRepresentationQueryDto) {
+  async findOne(
+    id: string,
+    query: CustomRepresentationQueryDto,
+    user: UserSession['user'],
+  ) {
+    const isAdmin = isSuperUser(user);
     const data = await this.prismaService.match.findUnique({
       where: { id },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      ...this.representationService.buildCustomRepresentationQuery(
+        isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
+      ),
     });
     if (!data) throw new NotFoundException('Document type not found');
-    return data;
+    return isAdmin ? data : this.mapMatch(data);
   }
 
   async remove(id: string, query: DeleteQueryDto) {

@@ -68,8 +68,9 @@ export class MatchingController {
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
   ) {
-    return this.matchingService.findOne(id, query);
+    return this.matchingService.findOne(id, query, user);
   }
 
   @Delete(':id')
