@@ -111,11 +111,12 @@ export class MatchingService {
         'createdAt',
         'updatedAt',
       ]),
-      aiAnalysis: pick(aiAnalysis, [
-        'overallScore',
-        'confidence',
-        'recommendation',
-      ]),
+      aiAnalysis: {
+        ...pick(aiAnalysis, ['overallScore', 'confidence', 'recommendation']),
+        fieldAnalysis: (
+          aiAnalysis.fieldAnalysis as Array<Record<string, any>>
+        ).filter((f) => f.match && f.confidence),
+      },
     };
   }
 
