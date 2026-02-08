@@ -58,7 +58,7 @@ embedding    Unsupported("vector")?
 6. Create Vector Index migration
 
 ```bash
-migrate dev --create-only --name add_vector_index
+pnpm db migrate dev --create-only --name add_vector_index
 ```
 
 7. Paste bellow sql commands

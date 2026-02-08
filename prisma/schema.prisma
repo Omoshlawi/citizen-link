@@ -420,7 +420,7 @@ model LostDocumentCase {
   id        String                 @id @default(uuid())
   caseId    String                 @unique
   case      DocumentCase           @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  status    LostDocumentCaseStatus @default(SUBMITTED)
+  status    LostDocumentCaseStatus @default(DRAFT)
   createdAt DateTime               @default(now())
   updatedAt DateTime               @updatedAt
   matches   Match[]
@@ -447,6 +447,7 @@ model FoundDocumentCase {
 }
 
 enum LostDocumentCaseStatus {
+  DRAFT
   SUBMITTED // When user submit lost document info
   COMPLETED // When the document is reunited with the owner
 }

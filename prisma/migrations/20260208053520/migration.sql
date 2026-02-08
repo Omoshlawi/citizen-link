@@ -5,10 +5,10 @@ CREATE TYPE "AddressType" AS ENUM ('HOME', 'WORK', 'BILLING', 'SHIPPING', 'OFFIC
 CREATE TYPE "DocumentCategory" AS ENUM ('IDENTITY', 'ACADEMIC', 'PROFESSIONAL', 'VEHICLE', 'FINANCIAL', 'MEDICAL', 'LEGAL', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "AIExtractionInteractionType" AS ENUM ('DATA_EXTRACTION', 'CONFIDENCE_SCORE', 'IMAGE_ANALYSIS');
+CREATE TYPE "AIExtractionInteractionType" AS ENUM ('DATA_EXTRACTION', 'CONFIDENCE_SCORE', 'IMAGE_ANALYSIS', 'SECURITY_QUESTIONS');
 
 -- CreateEnum
-CREATE TYPE "LostDocumentCaseStatus" AS ENUM ('SUBMITTED', 'COMPLETED');
+CREATE TYPE "LostDocumentCaseStatus" AS ENUM ('DRAFT', 'SUBMITTED', 'COMPLETED');
 
 -- CreateEnum
 CREATE TYPE "FoundDocumentCaseStatus" AS ENUM ('DRAFT', 'SUBMITTED', 'VERIFIED', 'REJECTED', 'COMPLETED');
@@ -20,7 +20,7 @@ CREATE TYPE "CaseType" AS ENUM ('LOST', 'FOUND');
 CREATE TYPE "ActorType" AS ENUM ('USER', 'ADMIN', 'DEVICE', 'SYSTEM');
 
 -- CreateEnum
-CREATE TYPE "MatchStatus" AS ENUM ('PENDING', 'VIEWED', 'REJECTED', 'CLAIMED', 'EXPIRED');
+CREATE TYPE "MatchStatus" AS ENUM ('PENDING', 'REJECTED', 'CLAIMED', 'EXPIRED');
 
 -- CreateEnum
 CREATE TYPE "ClaimVerificationStatus" AS ENUM ('PENDING', 'VERIFIED', 'FAILED');
@@ -65,6 +65,9 @@ CREATE TABLE "user" (
     "banExpires" TIMESTAMP(3),
     "username" TEXT,
     "displayUsername" TEXT,
+    "twoFactorEnabled" BOOLEAN DEFAULT false,
+    "phoneNumber" TEXT,
+    "phoneNumberVerified" BOOLEAN,
 
     CONSTRAINT "user_pkey" PRIMARY KEY ("id")
 );
@@ -303,6 +306,7 @@ CREATE TABLE "DocumentCase" (
     "userId" TEXT NOT NULL,
     "eventDate" TIMESTAMP(3) NOT NULL,
     "addressId" TEXT NOT NULL,
+    "extractionId" TEXT,
     "tags" JSONB NOT NULL DEFAULT '[]',
     "description" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -316,7 +320,7 @@ CREATE TABLE "DocumentCase" (
 CREATE TABLE "LostDocumentCase" (
     "id" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
-    "status" "LostDocumentCaseStatus" NOT NULL DEFAULT 'SUBMITTED',
+    "status" "LostDocumentCaseStatus" NOT NULL DEFAULT 'DRAFT',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -327,7 +331,6 @@ CREATE TABLE "LostDocumentCase" (
 CREATE TABLE "FoundDocumentCase" (
     "id" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
-    "extractionId" TEXT NOT NULL,
     "status" "FoundDocumentCaseStatus" NOT NULL DEFAULT 'DRAFT',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -362,10 +365,10 @@ CREATE TABLE "CaseStatusTransition" (
 -- CreateTable
 CREATE TABLE "Match" (
     "id" TEXT NOT NULL,
-    "matchNumber" TEXT NOT NULL,
+    "matchNumber" SERIAL NOT NULL,
+    "aiInteractionId" TEXT NOT NULL,
     "lostDocumentCaseId" TEXT NOT NULL,
     "foundDocumentCaseId" TEXT NOT NULL,
-    "aiModel" TEXT NOT NULL,
     "matchScore" DOUBLE PRECISION NOT NULL,
     "aiAnalysis" JSON NOT NULL,
     "status" "MatchStatus" NOT NULL DEFAULT 'PENDING',
@@ -385,9 +388,6 @@ CREATE TABLE "Claim" (
     "userId" TEXT NOT NULL,
     "foundDocumentCaseId" TEXT NOT NULL,
     "matchId" TEXT NOT NULL,
-    "verificationAttempts" INTEGER NOT NULL DEFAULT 0,
-    "maxAttempts" INTEGER NOT NULL DEFAULT 3,
-    "verifiedAt" TIMESTAMP(3),
     "verificationStatus" "ClaimVerificationStatus" NOT NULL DEFAULT 'PENDING',
     "pickupStationId" TEXT,
     "preferredPickupDate" TIMESTAMP(3),
@@ -402,12 +402,10 @@ CREATE TABLE "Claim" (
 );
 
 -- CreateTable
-CREATE TABLE "AIVerificationAttempt" (
+CREATE TABLE "AIVerification" (
     "id" TEXT NOT NULL,
     "claimId" TEXT NOT NULL,
-    "attemptNumber" INTEGER NOT NULL,
-    "aiModel" TEXT NOT NULL,
-    "modelVersion" TEXT NOT NULL,
+    "aiInteractionId" TEXT NOT NULL,
     "userResponses" JSONB NOT NULL,
     "aiAnalysis" JSONB NOT NULL,
     "overallVerdict" "VerificationVerdict" NOT NULL,
@@ -417,7 +415,7 @@ CREATE TABLE "AIVerificationAttempt" (
     "passed" BOOLEAN NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "AIVerificationAttempt_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "AIVerification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -612,11 +610,24 @@ CREATE TABLE "Setting" (
     CONSTRAINT "Setting_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "twoFactor" (
+    "id" TEXT NOT NULL,
+    "secret" TEXT NOT NULL,
+    "backupCodes" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+
+    CONSTRAINT "twoFactor_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_username_key" ON "user"("username");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_phoneNumber_key" ON "user"("phoneNumber");
 
 -- CreateIndex
 CREATE INDEX "session_userId_idx" ON "session"("userId");
@@ -682,6 +693,9 @@ CREATE UNIQUE INDEX "Document_caseId_key" ON "Document"("caseId");
 CREATE UNIQUE INDEX "DocumentField_documentId_fieldName_key" ON "DocumentField"("documentId", "fieldName");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Image_url_key" ON "Image"("url");
+
+-- CreateIndex
 CREATE INDEX "DocumentCase_eventDate_idx" ON "DocumentCase"("eventDate");
 
 -- CreateIndex
@@ -706,10 +720,7 @@ CREATE INDEX "CaseStatusTransition_toStatus_idx" ON "CaseStatusTransition"("toSt
 CREATE INDEX "CaseStatusTransition_createdAt_idx" ON "CaseStatusTransition"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Match_matchNumber_key" ON "Match"("matchNumber");
-
--- CreateIndex
-CREATE INDEX "Match_aiModel_idx" ON "Match"("aiModel");
+CREATE UNIQUE INDEX "Match_aiInteractionId_key" ON "Match"("aiInteractionId");
 
 -- CreateIndex
 CREATE INDEX "Match_status_idx" ON "Match"("status");
@@ -733,10 +744,13 @@ CREATE INDEX "Claim_matchId_idx" ON "Claim"("matchId");
 CREATE INDEX "Claim_status_idx" ON "Claim"("status");
 
 -- CreateIndex
-CREATE INDEX "AIVerificationAttempt_claimId_idx" ON "AIVerificationAttempt"("claimId");
+CREATE UNIQUE INDEX "AIVerification_claimId_key" ON "AIVerification"("claimId");
 
 -- CreateIndex
-CREATE INDEX "AIVerificationAttempt_attemptNumber_idx" ON "AIVerificationAttempt"("attemptNumber");
+CREATE UNIQUE INDEX "AIVerification_aiInteractionId_key" ON "AIVerification"("aiInteractionId");
+
+-- CreateIndex
+CREATE INDEX "AIVerification_claimId_idx" ON "AIVerification"("claimId");
 
 -- CreateIndex
 CREATE INDEX "AIInteraction_userId_idx" ON "AIInteraction"("userId");
@@ -871,19 +885,22 @@ ALTER TABLE "DocumentCase" ADD CONSTRAINT "DocumentCase_userId_fkey" FOREIGN KEY
 ALTER TABLE "DocumentCase" ADD CONSTRAINT "DocumentCase_addressId_fkey" FOREIGN KEY ("addressId") REFERENCES "Address"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "DocumentCase" ADD CONSTRAINT "DocumentCase_extractionId_fkey" FOREIGN KEY ("extractionId") REFERENCES "AIExtraction"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "LostDocumentCase" ADD CONSTRAINT "LostDocumentCase_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "DocumentCase"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "FoundDocumentCase" ADD CONSTRAINT "FoundDocumentCase_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "DocumentCase"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FoundDocumentCase" ADD CONSTRAINT "FoundDocumentCase_extractionId_fkey" FOREIGN KEY ("extractionId") REFERENCES "AIExtraction"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "FoundDocumentCase" ADD CONSTRAINT "FoundDocumentCase_pickupStationId_fkey" FOREIGN KEY ("pickupStationId") REFERENCES "PickupStation"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CaseStatusTransition" ADD CONSTRAINT "CaseStatusTransition_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "DocumentCase"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Match" ADD CONSTRAINT "Match_aiInteractionId_fkey" FOREIGN KEY ("aiInteractionId") REFERENCES "AIInteraction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Match" ADD CONSTRAINT "Match_lostDocumentCaseId_fkey" FOREIGN KEY ("lostDocumentCaseId") REFERENCES "LostDocumentCase"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -904,7 +921,10 @@ ALTER TABLE "Claim" ADD CONSTRAINT "Claim_matchId_fkey" FOREIGN KEY ("matchId") 
 ALTER TABLE "Claim" ADD CONSTRAINT "Claim_pickupStationId_fkey" FOREIGN KEY ("pickupStationId") REFERENCES "PickupStation"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AIVerificationAttempt" ADD CONSTRAINT "AIVerificationAttempt_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "Claim"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AIVerification" ADD CONSTRAINT "AIVerification_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "Claim"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AIVerification" ADD CONSTRAINT "AIVerification_aiInteractionId_fkey" FOREIGN KEY ("aiInteractionId") REFERENCES "AIInteraction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "AIInteraction" ADD CONSTRAINT "AIInteraction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -938,3 +958,6 @@ ALTER TABLE "Dispute" ADD CONSTRAINT "Dispute_initiatedBy_fkey" FOREIGN KEY ("in
 
 -- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "twoFactor" ADD CONSTRAINT "twoFactor_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

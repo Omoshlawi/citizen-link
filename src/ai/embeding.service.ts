@@ -54,7 +54,7 @@ export class EmbeddingService {
     const parts: string[] = [];
 
     // Add context-rich description first (most important information first)
-    if (document.type?.name && document.ownerName) {
+    if (document.ownerName) {
       parts.push(
         `This is a ${document.type.name} document belonging to ${document.ownerName}`,
       );
