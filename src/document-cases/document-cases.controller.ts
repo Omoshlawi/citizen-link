@@ -75,7 +75,7 @@ export class DocumentCasesController {
   }
 
   @Post(':id/submit')
-  @ApiOperation({ summary: 'Submit Found Document Case' })
+  @ApiOperation({ summary: 'Submit Document Case' })
   @ApiOkResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse({ badRequest: true, notFound: true })
   submitFoundDocumentCase(
@@ -83,11 +83,7 @@ export class DocumentCasesController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.submitFoundDocumentCase(
-      id,
-      query,
-      user.id,
-    );
+    return this.documentCasesService.submitDocumentCase(id, query, user.id);
   }
 
   @Get()

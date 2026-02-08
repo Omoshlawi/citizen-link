@@ -186,6 +186,19 @@ export class CaseStatusTransitionsService {
     } else {
       // LOST DOCUMENT CASE TRANSITIONS
       if (
+        currentStatus.status === LostDocumentCaseStatus.DRAFT &&
+        toStatus !== LostDocumentCaseStatus.SUBMITTED
+      ) {
+        this.logger.warn(
+          `Invalid transition from DRAFT to ${toStatus} for found document case ${caseId}`,
+        );
+        throw new BadRequestException(
+          'Invalid transition from DRAFT to ' +
+            toStatus +
+            ' for found document case. Allowed transitions are: DRAFT -> SUBMITTED',
+        );
+      }
+      if (
         currentStatus.status === LostDocumentCaseStatus.SUBMITTED &&
         toStatus !== LostDocumentCaseStatus.COMPLETED
       ) {

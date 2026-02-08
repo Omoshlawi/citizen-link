@@ -214,12 +214,12 @@ export class DocumentCasesService {
     return await this.findOne(documentCase.id, query, userId);
   }
 
-  submitFoundDocumentCase(
+  submitDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    return this.documentCasesWorkflowService.submitFoundDocumentCase(
+    return this.documentCasesWorkflowService.submitDocumentCase(
       id,
       query,
       userId,

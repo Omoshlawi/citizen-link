@@ -7,6 +7,7 @@ import {
 import {
   ActorType,
   FoundDocumentCaseStatus,
+  LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
 import { EmbeddingService } from '../ai/embeding.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
@@ -23,7 +24,7 @@ export class DocumentCasesWorkflowService {
     private readonly embeddingService: EmbeddingService,
     private readonly matchingService: MatchingService,
   ) {}
-  async submitFoundDocumentCase(
+  async submitDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
     userId: string,
@@ -33,6 +34,7 @@ export class DocumentCasesWorkflowService {
       where: { id, userId },
       include: {
         foundDocumentCase: true,
+        lostDocumentCase: true,
       },
     });
 
@@ -40,21 +42,19 @@ export class DocumentCasesWorkflowService {
       throw new NotFoundException('Document case not found');
     }
 
-    if (!documentCase.foundDocumentCase) {
-      throw new BadRequestException('This is not a found document case');
-    }
-
     if (
-      documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
+      documentCase.foundDocumentCase?.status !==
+        FoundDocumentCaseStatus.DRAFT ||
+      documentCase.lostDocumentCase?.status !== LostDocumentCaseStatus.DRAFT
     ) {
       throw new BadRequestException(
-        `Cannot submit case. Current status: ${documentCase.foundDocumentCase.status}. Only DRAFT cases can be submitted.`,
+        `Cannot submit case. Current status: ${documentCase.foundDocumentCase?.status ?? documentCase?.lostDocumentCase?.status}. Only DRAFT cases can be submitted.`,
       );
     }
 
     return await this.caseStatusTransitionsService.transitionStatus(
       id,
-      FoundDocumentCaseStatus.SUBMITTED,
+      'SUBMITTED',
       ActorType.USER,
       userId,
       query?.v,
