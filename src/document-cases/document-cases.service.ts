@@ -152,6 +152,7 @@ export class DocumentCasesService {
         addressId: createLostDocumentCaseDto.addressId,
         document: {
           create: {
+            documentNumber: createLostDocumentCaseDto.documentNumber,
             ownerName: createLostDocumentCaseDto.ownerName,
             typeId: createLostDocumentCaseDto.typeId,
             batchNumber: createLostDocumentCaseDto.batchNumber,

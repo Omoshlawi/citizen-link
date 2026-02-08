@@ -70,20 +70,6 @@
     }
   },
   {
-    "name": "University ID",
-    "category": "ACADEMIC",
-    "description": "Student or staff identification card for university or college. Provides access to campus facilities, library, and academic services.",
-    "icon": "university",
-    "loyaltyPoints": 250,
-    "replacementInstructions": "Contact your university's student services or ID card office. Requires application form and may have a replacement fee. Processing typically takes 3-7 business days. Temporary access may be granted while waiting.",
-    "averageReplacementCost": 20.0,
-    "verificationStrategy": {
-      "strictFields": ["studentId", "universityName"],
-      "flexibleFields": ["name"],
-      "requiredFields": ["studentId", "name", "universityName"]
-    }
-  },
-  {
     "name": "Work ID",
     "category": "PROFESSIONAL",
     "description": "Employee identification card issued by employer. Used for building access, time tracking, and employee benefits.",
