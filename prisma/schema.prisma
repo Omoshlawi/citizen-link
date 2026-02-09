@@ -563,7 +563,7 @@ enum MatchStatus {
 
 model Claim {
   id          String @id @default(uuid())
-  claimNumber String @unique
+  claimNumber Int    @unique @default(autoincrement())
 
   // Claimant
   userId String // Redundant field but kept for optimization through index and ease of querying

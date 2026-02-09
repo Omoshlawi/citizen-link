@@ -27,7 +27,7 @@ import { isSuperUser } from 'src/app.utils';
 export class MatchingService {
   private readonly logger = new Logger(MatchingService.name);
   private readonly defaultRep =
-    'custom:select(id,matchNumber,matchScore,status,createdAt,updatedAt,aiAnalysis,foundDocumentCase:select(case:select(document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(document:select(images:select(blurredUrl)))))';
+    'custom:select(id,matchNumber,matchScore,status,createdAt,updatedAt,aiAnalysis,foundDocumentCase:select(securityQuestion,case:select(userId,document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))))';
 
   constructor(
     private readonly prismaService: PrismaService,

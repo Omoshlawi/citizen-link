@@ -214,6 +214,7 @@ export class DocumentCasesCreateService {
             additionalFields: additionalFields?.length
               ? {
                   createMany: {
+                    skipDuplicates: true,
                     data: additionalFields.map((field) => ({
                       fieldName: field.fieldName,
                       fieldValue: field.fieldValue,
@@ -291,6 +292,7 @@ export class DocumentCasesCreateService {
             additionalFields: additionalFields?.length
               ? {
                   createMany: {
+                    skipDuplicates: true,
                     data: additionalFields.map((field) => ({
                       fieldName: field.fieldName,
                       fieldValue: field.fieldValue,

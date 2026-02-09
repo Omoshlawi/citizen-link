@@ -172,6 +172,7 @@ export class DocumentCasesService {
             additionalFields: createLostDocumentCaseDto.additionalFields?.length
               ? {
                   createMany: {
+                    skipDuplicates: true,
                     data: createLostDocumentCaseDto.additionalFields.map(
                       (field) => ({
                         fieldName: field.fieldName,
