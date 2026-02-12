@@ -135,7 +135,6 @@ model UserActivity {
 }
 
 // Universal Address Model with Hierarchical Support
-
 model Address {
   id String @id @default(uuid())
 
@@ -164,7 +163,7 @@ model Address {
   cityVillage   String? // Maps to appropriate level
   stateProvince String? // Maps to appropriate level
 
-  country    String // ISO 3166-1 alpha-2 code (KE, US, etc.)
+  country    String  @default("KE") // ISO 3166-1 alpha-2 code (KE, US, etc.)
   postalCode String?
 
   // Geolocation
@@ -241,9 +240,10 @@ model AddressLocale {
 
   addresses Address[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  voided    Boolean  @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  voided         Boolean         @default(false)
+  pickupStations PickupStation[]
 
   @@index([country])
   @@index([regionName])
@@ -580,14 +580,11 @@ model Claim {
 
   // AI tracks all verification attempts
   // Pickup Details
-  pickupStationId     String?
-  pickupStation       PickupStation? @relation(fields: [pickupStationId], references: [id])
-  preferredPickupDate DateTime?
-
-  // 
-
+  pickupStationId       String?
+  pickupStation         PickupStation? @relation(fields: [pickupStationId], references: [id])
+  preferredHandoverDate DateTime?
   // Status
-  status ClaimStatus @default(PENDING_VERIFICATION)
+  status                ClaimStatus    @default(PENDING_VERIFICATION)
 
   // Fees & Payment
   serviceFee   Float @default(0)
@@ -736,37 +733,44 @@ enum AIInteractionType {
 }
 
 model PickupStation {
-  id      String  @id @default(uuid())
-  name    String
-  code    String  @unique
-  address String
-  city    String
-  region  String?
+  id   String @id @default(uuid())
+  code String @unique // hUMAN FRIENDLY i dentifier e.g KE-NRB-CBD-001
+  name String
 
-  // Contact
-  phone String
-  email String?
+  addressLocaleCode String
+  addressLocale     AddressLocale @relation(fields: [addressLocaleCode], references: [code])
 
-  // Location
-  latitude  Float?
-  longitude Float?
+  country    String  @default("KE") // ISO 3166-1 alpha-2 code (KE, US, etc.)
+  postalCode String?
+
+  // Street-level details
+  address1 String // Building/house number and street
+  address2 String? // Apartment, suite, floor, etc.
+  landmark String? // Nearby landmark or directions
+
+  // Administrative Hierarchy (flexible for any country)
+  level1      String // County (Kenya), State (US), Province (Canada)
+  level2      String? // Sub-County (Kenya), City (US), District
+  level3      String? // Ward (Kenya), Borough, Municipality  
+  level4      String? // Village/Estate (Kenya), Neighborhood
+  level5      String? // Additional granularity if needed
+  coordinates Json?
+
+  phoneNumber String?
+  email       String?
+  voided      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Operating Hours
-  operatingHours Json
-
-  // Capacity
-  isActive Boolean @default(true)
+  operatingHours Json?
 
   // Relations
   foundDocumentCases FoundDocumentCase[]
   claims             Claim[]
   handovers          Handover[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([code])
-  @@index([city])
+  @@map("pickup_stations")
 }
 
 model Handover {

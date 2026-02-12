@@ -10,6 +10,8 @@ const scripts = [
   'seed-address-hierarchy.ts',
   'seed-address-locales.ts',
   'seed-document-types.ts',
+  'seed-pickup-stations.ts',
+  // 'seed-admin-user.ts',
 ];
 
 async function runScript(scriptName: string): Promise<void> {

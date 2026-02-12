@@ -1,0 +1,899 @@
+[
+    {
+        "code": "KE-NRB-CBD-001",
+        "name": "Nairobi Central Police Station",
+        "country": "KE",
+        "postalCode": "00100",
+        "address1": "Mama Ngina Street",
+        "address2": "Opposite City Hall",
+        "landmark": "Near Kenyatta Avenue Roundabout",
+        "level1": "Nairobi",
+        "level2": "Starehe",
+        "level3": "Nairobi West",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": -1.286389,
+            "lng": 36.817223
+        },
+        "phoneNumber": "+254700000001",
+        "email": "cbd@police.go.ke",
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-NRB-KSR-002",
+        "name": "Kasarani Police Station",
+        "country": "KE",
+        "postalCode": "00618",
+        "address1": "Kasarani-Mwiki Road",
+        "address2": null,
+        "landmark": "Near Kasarani Stadium",
+        "level1": "Nairobi",
+        "level2": "Kasarani",
+        "level3": "Clay City",
+        "level4": "Kasarani",
+        "level5": null,
+        "coordinates": {
+            "lat": -1.228000,
+            "lng": 36.895000
+        },
+        "phoneNumber": "+254700000002",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-NRB-EMB-003",
+        "name": "Embakasi Police Station",
+        "country": "KE",
+        "postalCode": "00501",
+        "address1": "Airport North Road",
+        "address2": null,
+        "landmark": "Near JKIA Cargo Center",
+        "level1": "Nairobi",
+        "level2": "Embakasi",
+        "level3": "Embakasi South",
+        "level4": "Pipeline",
+        "level5": null,
+        "coordinates": {
+            "lat": -1.319167,
+            "lng": 36.927500
+        },
+        "phoneNumber": "+254700000003",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-NRB-WST-004",
+        "name": "Westlands Police Station",
+        "country": "KE",
+        "postalCode": "00800",
+        "address1": "Waiyaki Way",
+        "address2": null,
+        "landmark": "Near Sarit Centre",
+        "level1": "Nairobi",
+        "level2": "Westlands",
+        "level3": "Parklands",
+        "level4": "Westlands",
+        "level5": null,
+        "coordinates": {
+            "lat": -1.263500,
+            "lng": 36.804000
+        },
+        "phoneNumber": "+254700000004",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-NRB-KNG-005",
+        "name": "Kangemi Police Post",
+        "country": "KE",
+        "postalCode": "00625",
+        "address1": "Waiyaki Way",
+        "address2": null,
+        "landmark": "Near Kangemi Market",
+        "level1": "Nairobi",
+        "level2": "Westlands",
+        "level3": "Mountain View",
+        "level4": "Kangemi",
+        "level5": null,
+        "coordinates": {
+            "lat": -1.270000,
+            "lng": 36.750000
+        },
+        "phoneNumber": "+254700000005",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-MSA-CBD-006",
+        "name": "Mombasa Central Police Station",
+        "country": "KE",
+        "postalCode": "80100",
+        "address1": "Digo Road",
+        "address2": null,
+        "landmark": "Near Treasury Square",
+        "level1": "Mombasa",
+        "level2": "Mvita",
+        "level3": "Tononoka",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": -4.043477,
+            "lng": 39.668206
+        },
+        "phoneNumber": "+254700000006",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-KSM-CBD-007",
+        "name": "Kisumu Central Police Station",
+        "country": "KE",
+        "postalCode": "40100",
+        "address1": "Oginga Odinga Street",
+        "address2": null,
+        "landmark": "Near Kisumu Law Courts",
+        "level1": "Kisumu",
+        "level2": "Kisumu Central",
+        "level3": "Railways",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": -0.102200,
+            "lng": 34.761700
+        },
+        "phoneNumber": "+254700000007",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-NAK-CBD-008",
+        "name": "Nakuru Central Police Station",
+        "country": "KE",
+        "postalCode": "20100",
+        "address1": "Kenyatta Avenue",
+        "address2": null,
+        "landmark": "Near Nakuru Law Courts",
+        "level1": "Nakuru",
+        "level2": "Nakuru Town East",
+        "level3": "Biashara",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": -0.303100,
+            "lng": 36.080000
+        },
+        "phoneNumber": "+254700000008",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-ELD-CBD-009",
+        "name": "Eldoret Central Police Station",
+        "country": "KE",
+        "postalCode": "30100",
+        "address1": "Uganda Road",
+        "address2": null,
+        "landmark": "Near Eldoret Sports Club",
+        "level1": "Uasin Gishu",
+        "level2": "Eldoret East",
+        "level3": "Kapsoya",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": 0.514300,
+            "lng": 35.269800
+        },
+        "phoneNumber": "+254700000009",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-NYR-CBD-010",
+        "name": "Nyeri Police Station",
+        "country": "KE",
+        "postalCode": "10100",
+        "address1": "Gakere Road",
+        "address2": null,
+        "landmark": "Near Nyeri Law Courts",
+        "level1": "Nyeri",
+        "level2": "Nyeri Town",
+        "level3": "Ruring'u",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": -0.417000,
+            "lng": 36.951000
+        },
+        "phoneNumber": "+254700000010",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-default"
+    },
+    {
+        "code": "KE-KIL-MTW-011",
+        "name": "Mtito Andei Police Station",
+        "country": "KE",
+        "postalCode": "90128",
+        "address1": "Mombasa Road",
+        "address2": null,
+        "landmark": "Near Tsavo River Gate",
+        "level1": "Makueni",
+        "level2": "Kibwezi West",
+        "level3": "Mtito Andei",
+        "level4": "Town Centre",
+        "level5": null,
+        "coordinates": {
+            "lat": -2.690000,
+            "lng": 38.170000
+        },
+        "phoneNumber": "+254700000011",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-rural"
+    },
+    {
+        "code": "KE-BNG-KMB-012",
+        "name": "Kimilili Police Station",
+        "country": "KE",
+        "postalCode": "50204",
+        "address1": "Kimilili-Webuye Road",
+        "address2": null,
+        "landmark": "Near Kimilili Market",
+        "level1": "Bungoma",
+        "level2": "Kimilili",
+        "level3": "Kibingei",
+        "level4": "Town Centre",
+        "level5": null,
+        "coordinates": {
+            "lat": 0.788000,
+            "lng": 34.718000
+        },
+        "phoneNumber": "+254700000012",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-rural"
+    },
+    {
+        "code": "KE-MRU-TIM-013",
+        "name": "Timau Police Post",
+        "country": "KE",
+        "postalCode": "10406",
+        "address1": "Meru-Nanyuki Road",
+        "address2": null,
+        "landmark": "Near Timau Market",
+        "level1": "Meru",
+        "level2": "Buuri",
+        "level3": "Timau",
+        "level4": "Town Centre",
+        "level5": null,
+        "coordinates": {
+            "lat": 0.089000,
+            "lng": 37.560000
+        },
+        "phoneNumber": "+254700000013",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-rural"
+    },
+    {
+        "code": "KE-KRT-KIP-014",
+        "name": "Kipkelion Police Station",
+        "country": "KE",
+        "postalCode": "20202",
+        "address1": "Kericho-Kisumu Road",
+        "address2": null,
+        "landmark": "Near Kipkelion Market",
+        "level1": "Kericho",
+        "level2": "Kipkelion East",
+        "level3": "Chilchila",
+        "level4": "Town Centre",
+        "level5": null,
+        "coordinates": {
+            "lat": -0.224000,
+            "lng": 35.468000
+        },
+        "phoneNumber": "+254700000014",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-rural"
+    },
+    {
+        "code": "KE-KJI-LOI-015",
+        "name": "Loitokitok Police Station",
+        "country": "KE",
+        "postalCode": "00209",
+        "address1": "Loitokitok Road",
+        "address2": null,
+        "landmark": "Near Loitokitok Border Point",
+        "level1": "Kajiado",
+        "level2": "Loitokitok",
+        "level3": "Entonet",
+        "level4": "Town Centre",
+        "level5": null,
+        "coordinates": {
+            "lat": -2.933000,
+            "lng": 37.510000
+        },
+        "phoneNumber": "+254700000015",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "ke-rural"
+    },
+    {
+        "code": "US-NYC-MNH-001",
+        "name": "Manhattan Central Police Station",
+        "country": "US",
+        "postalCode": "10007",
+        "address1": "1 Police Plaza",
+        "address2": null,
+        "landmark": "Near Brooklyn Bridge",
+        "level1": "New York",
+        "level2": "New York County",
+        "level3": "Manhattan",
+        "level4": "Civic Center",
+        "level5": null,
+        "coordinates": {
+            "lat": 40.712772,
+            "lng": -74.006058
+        },
+        "phoneNumber": "+12120000001",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "us-default"
+    },
+    {
+        "code": "US-LAX-DWT-002",
+        "name": "Los Angeles Downtown Police Station",
+        "country": "US",
+        "postalCode": "90012",
+        "address1": "251 E 6th St",
+        "address2": null,
+        "landmark": "Near LA City Hall",
+        "level1": "California",
+        "level2": "Los Angeles County",
+        "level3": "Los Angeles",
+        "level4": "Downtown",
+        "level5": null,
+        "coordinates": {
+            "lat": 34.052235,
+            "lng": -118.243683
+        },
+        "phoneNumber": "+13100000002",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "us-default"
+    },
+    {
+        "code": "US-CHI-LOP-003",
+        "name": "Chicago Loop Police Station",
+        "country": "US",
+        "postalCode": "60601",
+        "address1": "1718 S State St",
+        "address2": null,
+        "landmark": "Near Grant Park",
+        "level1": "Illinois",
+        "level2": "Cook County",
+        "level3": "Chicago",
+        "level4": "The Loop",
+        "level5": null,
+        "coordinates": {
+            "lat": 41.878113,
+            "lng": -87.629799
+        },
+        "phoneNumber": "+13120000003",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "us-default"
+    },
+    {
+        "code": "US-HOU-DWT-004",
+        "name": "Houston Central Police Station",
+        "country": "US",
+        "postalCode": "77002",
+        "address1": "1200 Travis St",
+        "address2": null,
+        "landmark": "Near City Hall",
+        "level1": "Texas",
+        "level2": "Harris County",
+        "level3": "Houston",
+        "level4": "Downtown",
+        "level5": null,
+        "coordinates": {
+            "lat": 29.760427,
+            "lng": -95.369804
+        },
+        "phoneNumber": "+17130000004",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "us-default"
+    },
+    {
+        "code": "US-MIA-CBD-005",
+        "name": "Miami Central Police Station",
+        "country": "US",
+        "postalCode": "33128",
+        "address1": "400 NW 2nd Ave",
+        "address2": null,
+        "landmark": "Near Government Center",
+        "level1": "Florida",
+        "level2": "Miami-Dade County",
+        "level3": "Miami",
+        "level4": "Downtown",
+        "level5": null,
+        "coordinates": {
+            "lat": 25.761681,
+            "lng": -80.191788
+        },
+        "phoneNumber": "+13050000005",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "us-default"
+    },
+    {
+        "code": "US-MT-BZN-006",
+        "name": "Bozeman County Sheriff Office",
+        "country": "US",
+        "postalCode": "59715",
+        "address1": "615 S 16th Ave",
+        "address2": null,
+        "landmark": "Near Gallatin County Fairgrounds",
+        "level1": "Montana",
+        "level2": "Gallatin County",
+        "level3": "Bozeman",
+        "level4": "Rural District",
+        "level5": null,
+        "coordinates": {
+            "lat": 45.676998,
+            "lng": -111.042931
+        },
+        "phoneNumber": "+14060000006",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "us-rural"
+    },
+    {
+        "code": "US-WY-CAS-007",
+        "name": "Casper Sheriff Department",
+        "country": "US",
+        "postalCode": "82601",
+        "address1": "201 N David St",
+        "address2": null,
+        "landmark": "Near Casper Mountain",
+        "level1": "Wyoming",
+        "level2": "Natrona County",
+        "level3": "Casper",
+        "level4": "County Center",
+        "level5": null,
+        "coordinates": {
+            "lat": 42.850075,
+            "lng": -106.325172
+        },
+        "phoneNumber": "+13070000007",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "us-rural"
+    },
+    {
+        "code": "GB-LDN-WST-001",
+        "name": "Westminster Police Station",
+        "country": "GB",
+        "postalCode": "SW1A 2JL",
+        "address1": "Broadway",
+        "address2": null,
+        "landmark": "Near Houses of Parliament",
+        "level1": "England",
+        "level2": "Greater London",
+        "level3": "City of Westminster",
+        "level4": "Westminster",
+        "level5": null,
+        "coordinates": {
+            "lat": 51.497494,
+            "lng": -0.135658
+        },
+        "phoneNumber": "+44200000001",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "gb-default"
+    },
+    {
+        "code": "ZA-JHB-CBD-001",
+        "name": "Johannesburg Central Police Station",
+        "country": "ZA",
+        "postalCode": "2001",
+        "address1": "Commissioner Street",
+        "address2": null,
+        "landmark": "Near Carlton Centre",
+        "level1": "Gauteng",
+        "level2": "City of Johannesburg",
+        "level3": "Johannesburg",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": -26.204103,
+            "lng": 28.047304
+        },
+        "phoneNumber": "+27110000001",
+        "email": null,
+        "isActive": true,
+        "operatingHours": {
+            "24hrs": true
+        },
+        "addressLocaleCode": "za-default"
+    },
+    {
+        "code": "CA-ON-TOR-DT-001",
+        "name": "Toronto Downtown Station",
+        "country": "CA",
+        "postalCode": "M5H 2N2",
+        "address1": "100 Queen St W",
+        "address2": "Suite 101",
+        "landmark": "Opposite Toronto City Hall",
+        "level1": "Ontario",
+        "level2": "Toronto",
+        "level3": "Old Toronto",
+        "level4": "Downtown",
+        "level5": null,
+        "coordinates": {
+            "lat": 43.6532,
+            "lng": -79.3832
+        },
+        "phoneNumber": "+14165550101",
+        "email": "toronto.downtown@pickup.ca",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "08:00-18:00",
+            "sat": "09:00-15:00",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "ca-default"
+    },
+    {
+        "code": "CA-BC-VAN-DT-002",
+        "name": "Vancouver Central Station",
+        "country": "CA",
+        "postalCode": "V6B 1A1",
+        "address1": "650 W Georgia St",
+        "address2": null,
+        "landmark": "Near Vancouver Art Gallery",
+        "level1": "British Columbia",
+        "level2": "Vancouver",
+        "level3": "Vancouver",
+        "level4": "Downtown",
+        "level5": null,
+        "coordinates": {
+            "lat": 49.2827,
+            "lng": -123.1207
+        },
+        "phoneNumber": "+16045550102",
+        "email": "vancouver.central@pickup.ca",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "08:30-17:30",
+            "sat": "09:00-14:00",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "ca-default"
+    },
+    {
+        "code": "CA-QC-MTL-DT-003",
+        "name": "Montreal Downtown Station",
+        "country": "CA",
+        "postalCode": "H3B 2Y5",
+        "address1": "1250 René-Lévesque Blvd W",
+        "address2": null,
+        "landmark": "Near Bell Centre",
+        "level1": "Quebec",
+        "level2": "Montreal",
+        "level3": "Ville-Marie",
+        "level4": "Downtown",
+        "level5": null,
+        "coordinates": {
+            "lat": 45.5017,
+            "lng": -73.5673
+        },
+        "phoneNumber": "+15145550103",
+        "email": "montreal@pickup.ca",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "09:00-18:00",
+            "sat": "10:00-14:00",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "ca-default"
+    },
+    {
+        "code": "CA-AB-CGY-CBD-004",
+        "name": "Calgary CBD Station",
+        "country": "CA",
+        "postalCode": "T2P 3H7",
+        "address1": "200 8 Ave SW",
+        "address2": null,
+        "landmark": "Near Calgary Tower",
+        "level1": "Alberta",
+        "level2": "Calgary",
+        "level3": "Calgary",
+        "level4": "Downtown",
+        "level5": null,
+        "coordinates": {
+            "lat": 51.0447,
+            "lng": -114.0719
+        },
+        "phoneNumber": "+14035550104",
+        "email": "calgary@pickup.ca",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "08:00-17:00",
+            "sat": "Closed",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "ca-default"
+    },
+    {
+        "code": "CA-ON-OTT-CBD-005",
+        "name": "Ottawa Central Station",
+        "country": "CA",
+        "postalCode": "K1P 1J1",
+        "address1": "240 Sparks St",
+        "address2": null,
+        "landmark": "Near Parliament Hill",
+        "level1": "Ontario",
+        "level2": "Ottawa",
+        "level3": "Ottawa",
+        "level4": "Centretown",
+        "level5": null,
+        "coordinates": {
+            "lat": 45.4215,
+            "lng": -75.6972
+        },
+        "phoneNumber": "+16135550105",
+        "email": "ottawa@pickup.ca",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "09:00-17:00",
+            "sat": "Closed",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "ca-default"
+    },
+    {
+        "code": "AU-NSW-SYD-CBD-001",
+        "name": "Sydney CBD Station",
+        "country": "AU",
+        "postalCode": "2000",
+        "address1": "1 Market St",
+        "address2": null,
+        "landmark": "Near Sydney Tower",
+        "level1": "New South Wales",
+        "level2": "Sydney",
+        "level3": "Sydney",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": -33.8688,
+            "lng": 151.2093
+        },
+        "phoneNumber": "+61290000001",
+        "email": "sydney@pickup.au",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "08:00-17:30",
+            "sat": "09:00-13:00",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "au-default"
+    },
+    {
+        "code": "AU-VIC-MEL-CBD-002",
+        "name": "Melbourne Central Station",
+        "country": "AU",
+        "postalCode": "3000",
+        "address1": "200 Bourke St",
+        "address2": null,
+        "landmark": "Opposite Melbourne Central",
+        "level1": "Victoria",
+        "level2": "Melbourne",
+        "level3": "Melbourne",
+        "level4": "CBD",
+        "level5": null,
+        "coordinates": {
+            "lat": -37.8136,
+            "lng": 144.9631
+        },
+        "phoneNumber": "+61390000002",
+        "email": "melbourne@pickup.au",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "08:30-17:30",
+            "sat": "Closed",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "au-default"
+    },
+    {
+        "code": "BR-SP-SAO-CBD-001",
+        "name": "São Paulo Central Station",
+        "country": "BR",
+        "postalCode": "01000-000",
+        "address1": "Praça da Sé, 1",
+        "address2": null,
+        "landmark": "Near São Paulo Cathedral",
+        "level1": "São Paulo",
+        "level2": "São Paulo",
+        "level3": "Sé",
+        "level4": "Centro",
+        "level5": null,
+        "coordinates": {
+            "lat": -23.5505,
+            "lng": -46.6333
+        },
+        "phoneNumber": "+551190000001",
+        "email": "saopaulo@pickup.br",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "09:00-18:00",
+            "sat": "09:00-14:00",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "br-default"
+    },
+    {
+        "code": "DE-BE-BER-MIT-001",
+        "name": "Berlin Mitte Station",
+        "country": "DE",
+        "postalCode": "10117",
+        "address1": "Friedrichstraße 100",
+        "address2": null,
+        "landmark": "Near Brandenburg Gate",
+        "level1": "Berlin",
+        "level2": "Berlin",
+        "level3": "Mitte",
+        "level4": "Mitte",
+        "level5": null,
+        "coordinates": {
+            "lat": 52.5200,
+            "lng": 13.4050
+        },
+        "phoneNumber": "+49300000001",
+        "email": "berlin@pickup.de",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "08:00-18:00",
+            "sat": "Closed",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "de-default"
+    },
+    {
+        "code": "JP-13-TYO-CHI-001",
+        "name": "Tokyo Chiyoda Station",
+        "country": "JP",
+        "postalCode": "100-0001",
+        "address1": "1-1 Chiyoda",
+        "address2": null,
+        "landmark": "Near Imperial Palace",
+        "level1": "Tokyo",
+        "level2": "Tokyo",
+        "level3": "Chiyoda",
+        "level4": "Chiyoda",
+        "level5": null,
+        "coordinates": {
+            "lat": 35.6762,
+            "lng": 139.6503
+        },
+        "phoneNumber": "+81300000001",
+        "email": "tokyo@pickup.jp",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "09:00-18:00",
+            "sat": "Closed",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "jp-default"
+    },
+    {
+        "code": "AE-DU-DXB-CBD-001",
+        "name": "Dubai Central Station",
+        "country": "AE",
+        "postalCode": "00000",
+        "address1": "Sheikh Zayed Rd",
+        "address2": "Suite 201",
+        "landmark": "Near Burj Khalifa",
+        "level1": "Dubai",
+        "level2": "Dubai",
+        "level3": "Dubai",
+        "level4": "Downtown",
+        "level5": null,
+        "coordinates": {
+            "lat": 25.2048,
+            "lng": 55.2708
+        },
+        "phoneNumber": "+97140000001",
+        "email": "dubai@pickup.ae",
+        "voided": false,
+        "operatingHours": {
+            "mon-fri": "09:00-18:00",
+            "sat": "Closed",
+            "sun": "Closed"
+        },
+        "addressLocaleCode": "ae-default"
+    }
+]
