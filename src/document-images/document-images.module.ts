@@ -4,6 +4,6 @@ import { DocumentImagesService } from './document-images.service';
 
 @Module({
   controllers: [DocumentImagesController],
-  providers: [DocumentImagesService]
+  providers: [DocumentImagesService],
 })
 export class DocumentImagesModule {}

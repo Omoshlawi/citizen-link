@@ -103,6 +103,6 @@ export const safeParseJson = <T>(
   }
 };
 
-export const isSuperUser = (user: UserSession['user']) => {
+export const isSuperUser = (user?: UserSession['user']) => {
   return !!user?.role?.includes('admin');
 };

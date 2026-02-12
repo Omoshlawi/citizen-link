@@ -91,7 +91,7 @@ export class CreateAddressLocaleDto extends createZodDto(
 ) {}
 
 export class UpdateAddressLocaleDto extends createZodDto(
-  AddressLocaleSchema.partial(),
+  AddressLocaleSchema.omit({ code: true }).partial(),
 ) {}
 
 export class QueryAddressLocaleDto extends createZodDto(

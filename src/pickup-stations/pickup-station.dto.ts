@@ -2,8 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
+import { PHONE_NUMBER_REGEX } from '../app.constant';
 
-export const QueryAddressSchema = z.object({
+export const QueryPickupAddressSchema = z.object({
   ...QueryBuilderSchema.shape,
   search: z
     .string()
@@ -13,22 +14,6 @@ export const QueryAddressSchema = z.object({
     .string()
     .optional()
     .describe('Keyword to search across address levels'),
-  type: z
-    .enum([
-      'HOME',
-      'WORK',
-      'BILLING',
-      'SHIPPING',
-      'OFFICE',
-      'BRANCH',
-      'WAREHOUSE',
-      'OTHER',
-    ])
-    .optional(),
-  userId: z
-    .string()
-    .optional()
-    .describe('Admin only - query address for user with supplied id'),
   level1: z.string().optional(),
   level2: z.string().optional(),
   level3: z.string().optional(),
@@ -36,10 +21,7 @@ export const QueryAddressSchema = z.object({
   level5: z.string().optional(),
   country: z.string().optional(),
   postalCode: z.string().optional(),
-  startDateFrom: z.iso.date().optional(),
-  startDateTo: z.iso.date().optional(),
-  endDateFrom: z.iso.date().optional(),
-  endDateTo: z.iso.date().optional(),
+  code: z.string().optional(),
   createdAtFrom: z.iso.date().optional(),
   createdAtTo: z.iso.date().optional(),
   includeVoided: z
@@ -49,12 +31,12 @@ export const QueryAddressSchema = z.object({
     })
     .optional()
     .default(false),
-  localeId: z.string().uuid().optional(),
+  addressLocaleCode: z.string().optional(),
 });
 
-export const AddressSchema = z.object({
-  type: z.enum(['HOME', 'WORK', 'BILLING', 'SHIPPING', 'OFFICE', 'OTHER']),
-  label: z.string().optional(),
+export const PickUpStationSchema = z.object({
+  code: z.string(),
+  name: z.string(),
   address1: z.string(),
   address2: z.string().optional(),
   landmark: z.string().optional(),
@@ -69,20 +51,22 @@ export const AddressSchema = z.object({
   postalCode: z.string().optional(),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
-  plusCode: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  preferred: z.boolean().optional(),
-  localeId: z.uuid().optional(),
+  phoneNumber: z.string().regex(PHONE_NUMBER_REGEX).optional(),
+  email: z.email().optional(),
+  addressLocaleCode: z.string(),
 });
 
-export class QueryAddressDto extends createZodDto(QueryAddressSchema) {}
+export class QueryPickupStationDto extends createZodDto(
+  QueryPickupAddressSchema,
+) {}
 
-export class CreateAddressDto extends createZodDto(AddressSchema) {}
+export class CreatePickupStationDto extends createZodDto(PickUpStationSchema) {}
 
-export class UpdateAddressDto extends createZodDto(AddressSchema.partial()) {}
+export class UpdatePickupStationDto extends createZodDto(
+  PickUpStationSchema.omit({ code: true }).partial(),
+) {}
 
-export class GetAddressResponseDto extends CreateAddressDto {
+export class GetPickupStationResponseDto extends CreatePickupStationDto {
   @ApiProperty()
   id: string;
 
@@ -96,9 +80,9 @@ export class GetAddressResponseDto extends CreateAddressDto {
   updatedAt: string;
 }
 
-export class QueryAddressResponseDto {
-  @ApiProperty({ isArray: true, type: GetAddressResponseDto })
-  results: GetAddressResponseDto[];
+export class QueryPickupStationResponseDto {
+  @ApiProperty({ isArray: true, type: GetPickupStationResponseDto })
+  results: GetPickupStationResponseDto[];
 
   @ApiProperty()
   totalCount: number;

@@ -758,9 +758,10 @@ model PickupStation {
 
   phoneNumber String?
   email       String?
-  voided      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  formatted   String? // Cached formatted address
+  voided    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Operating Hours
   operatingHours Json?
