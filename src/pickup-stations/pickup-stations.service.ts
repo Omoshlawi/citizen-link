@@ -203,8 +203,9 @@ export class PickupStationsService {
     userId: string,
     query: CustomRepresentationQueryDto,
   ) {
+    const { latitude, longitude, ...props } = createDto;
     const data = await this.prismaService.pickupStation.create({
-      data: createDto,
+      data: { ...props, coordinates: { lat: latitude, lng: longitude } },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
 
@@ -217,9 +218,15 @@ export class PickupStationsService {
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
+    const { latitude, longitude, ...props } = updateDto;
+
     const data = await this.prismaService.pickupStation.update({
       where: { id },
-      data: updateDto,
+      data: {
+        ...props,
+        coordinates:
+          latitude && longitude ? { lat: latitude, lng: longitude } : undefined,
+      },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
     return data;

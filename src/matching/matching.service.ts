@@ -1,7 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { pick } from 'lodash';
-import { Match, Prisma } from '../../generated/prisma/client';
+import {
+  FoundDocumentCase,
+  Match,
+  Prisma,
+} from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
@@ -98,7 +103,7 @@ export class MatchingService {
     );
   }
 
-  private mapMatch(d: Match) {
+  private mapMatch(d: Match & { foundDocumentCase: FoundDocumentCase }) {
     const aiAnalysis = (d.aiAnalysis ?? {}) as Record<string, any>;
     return {
       ...pick(d, [
@@ -106,7 +111,7 @@ export class MatchingService {
         'matchNumber',
         'matchScore',
         'status',
-        'foundDocumentCase',
+        // 'foundDocumentCase',
         'lostDocumentCase',
         'createdAt',
         'updatedAt',
@@ -116,6 +121,12 @@ export class MatchingService {
         fieldAnalysis: (
           aiAnalysis.fieldAnalysis as Array<Record<string, any>>
         ).filter((f) => f.match && f.confidence),
+      },
+      foundDocumentCase: {
+        ...d.foundDocumentCase,
+        securityQuestion: (
+          (d.foundDocumentCase.securityQuestion as Array<any>) ?? []
+        ).map((q) => pick(q, 'question')),
       },
     };
   }
@@ -244,7 +255,7 @@ export class MatchingService {
       results: isAdmin
         ? data
         : data.map((d) => {
-            return this.mapMatch(d);
+            return this.mapMatch(d as any);
           }),
       ...this.paginationService.buildPaginationControls(
         totalCount,
@@ -267,7 +278,7 @@ export class MatchingService {
       ),
     });
     if (!data) throw new NotFoundException('Document type not found');
-    return isAdmin ? data : this.mapMatch(data);
+    return isAdmin ? data : this.mapMatch(data as any);
   }
 
   async remove(id: string, query: DeleteQueryDto) {

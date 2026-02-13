@@ -754,7 +754,7 @@ model PickupStation {
   level3      String? // Ward (Kenya), Borough, Municipality  
   level4      String? // Village/Estate (Kenya), Neighborhood
   level5      String? // Additional granularity if needed
-  coordinates Json?
+  coordinates Json
 
   phoneNumber String?
   email       String?

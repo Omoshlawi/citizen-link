@@ -27,6 +27,7 @@ import { PromptsModule } from './prompts/prompts.module';
 import { S3Module } from './s3/s3.module';
 import { ChatBotModule } from './chat-bot/chat-bot.module';
 import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
+import { ClaimModule } from './claim/claim.module';
 
 @Module({
   imports: [
@@ -37,7 +38,6 @@ import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
       useFactory: (config: PrismaConfig) => {
         return {
           adapter: new PrismaPg({ connectionString: config.databaseUrl }),
-          log: ['query'],
         };
       },
       inject: [PrismaConfig],
@@ -68,6 +68,7 @@ import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
     MatchingModule,
     ChatBotModule,
     PickupStationsModule,
+    ClaimModule,
   ],
   controllers: [AppController],
   providers: [
