@@ -239,6 +239,26 @@ export class MatchingService {
                   ]
                 : undefined,
           },
+          {
+            OR: !isAdmin
+              ? [
+                  {
+                    foundDocumentCase: {
+                      case: {
+                        userId: user.id,
+                      },
+                    },
+                  },
+                  {
+                    lostDocumentCase: {
+                      case: {
+                        userId: user.id,
+                      },
+                    },
+                  },
+                ]
+              : undefined,
+          },
         ],
       },
       ...this.paginationService.buildPaginationQuery(query),
