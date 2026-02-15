@@ -78,7 +78,7 @@ Create Vector Index migration
 pnpm db migrate dev --create-only --name add_vector_index
 ```
 
-7. Paste bellow sql commands
+Paste bellow sql commands
 
 ```sql
 
@@ -118,4 +118,49 @@ Unlike IVFFlat, the HNSW (Hierarchical Navigable Small Worlds) index does not re
 ```sql
 CREATE INDEX document_embedding_idx ON "documents"
 USING hnsw (embedding vector_cosine_ops);
+```
+
+
+## If getting error `ERROR: column does not have dimensions`, bellow is the fix
+
+This error occurs because, despite what  migration file says, the embedding column in your actual database is defined as a generic vector (variable dimensions) instead of vector(768) (fixed dimensions).
+
+PostgreSQL pgvector indexes (HNSW and IVFFLAT) strictly require the column to have a fixed dimension defined in the database schema. They cannot index a generic vector column because they need to know the exact size to build the graph/clusters.
+
+### The fix:
+
+You need to explicitly force the column to the correct type and dimension. Create a new migration to cast the column:
+
+```sql
+-- Force the column to have fixed 768 dimensions
+ALTER TABLE "documents" 
+ALTER COLUMN embedding TYPE vector(768);
+```
+Once you run this, retry your index creation command:
+
+Or better still instead of creating new migration to change type, you could just add the sql on top of you indexing migration to be run before the indexing
+
+- For hsnw
+```sql
+-- Force the column to have fixed 768 dimensions
+ALTER TABLE "documents" 
+ALTER COLUMN embedding TYPE vector(768);
+-- Create the index
+CREATE INDEX document_embedding_idx ON "documents" USING hnsw (embedding vector_cosine_ops);
+
+```
+- For ivfflat
+```sql
+-- Force the column to have fixed 768 dimensions
+ALTER TABLE "documents" 
+ALTER COLUMN embedding TYPE vector(768);
+
+
+-- migrations/XXXXXX_add_vector_index/migration.sql
+-- Create IVFFlat index for faster similarity searches
+-- Lists parameter should be roughly sqrt of expected number of rows
+-- Start with 100, adjust based on your data volume
+CREATE INDEX document_embedding_idx ON "documents"
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
 ```
