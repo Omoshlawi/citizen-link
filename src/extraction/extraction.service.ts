@@ -21,7 +21,6 @@ import {
   DocumentType,
 } from '../../generated/prisma/client';
 import { ExtractInformationInput } from './extraction.interface';
-import { safeParseJson } from '../app.utils';
 import { PromptsService } from 'src/prompts/prompts.service';
 
 @Injectable()
@@ -72,48 +71,6 @@ export class ExtractionService {
     });
   }
 
-  /**
-   * Parse AI response and validate against schema
-   */
-  private async parseAndValidate<T, E>(
-    response: string,
-    schema: z.ZodType<T>,
-    onError: (error: unknown) => Promise<E>,
-  ): Promise<T | E> {
-    try {
-      // Clean and parse JSON
-      const cleanedResponse = this.aiService.cleanResponseText(response);
-      const parsedResult = safeParseJson<Record<string, any>>(cleanedResponse, {
-        transformNullToUndefined: true,
-      });
-
-      if (!parsedResult.success) {
-        throw new Error(
-          JSON.stringify({
-            message: 'JSON parsing failed',
-            error: `${parsedResult.error.message}`,
-          }),
-        );
-      }
-
-      // Validate against schema
-      const validation = await schema.safeParseAsync(parsedResult.data);
-
-      if (!validation.success) {
-        throw new Error(
-          JSON.stringify({
-            message: 'Schema validation failed',
-            error: z.formatError(validation.error),
-          }),
-        );
-      }
-
-      return validation.data;
-    } catch (error: unknown) {
-      return await onError?.(error);
-    }
-  }
-
   async extractInformation(input: ExtractInformationInput) {
     this.logger.log('Starting four-step extraction process...');
     // Get document types once
@@ -139,7 +96,7 @@ export class ExtractionService {
       input.userId,
     );
 
-    const imageAnalysis = await this.parseAndValidate(
+    const imageAnalysis = await this.aiService.parseAndValidate(
       imageResult.response,
       ImageAnalysisSchema,
       async (error: Error) => {
@@ -197,7 +154,7 @@ export class ExtractionService {
 
       throw new BadRequestException('Document is not supported');
     }
-    this.logger.log('Step 1 completed: Image analysis finished');
+    this.logger.log('Step 1 completed: DocumentImage analysis finished');
     input?.options?.onPublishProgressEvent?.({
       key: 'IMAGE_ANALYSIS',
       state: {
@@ -223,7 +180,7 @@ export class ExtractionService {
       input.userId,
     );
 
-    const extractedData = await this.parseAndValidate(
+    const extractedData = await this.aiService.parseAndValidate(
       dataResult.response,
       DataExtractionSchema,
       async (error: Error) => {
@@ -333,7 +290,7 @@ export class ExtractionService {
         input.userId,
       );
 
-      securityQuestions = await this.parseAndValidate(
+      securityQuestions = await this.aiService.parseAndValidate(
         securityQuestionsResult.response,
         SecurityQuestionsSchema,
         async (error: Error) => {
@@ -410,7 +367,7 @@ export class ExtractionService {
       input.userId,
     );
 
-    const confidence = await this.parseAndValidate(
+    const confidence = await this.aiService.parseAndValidate(
       confidenceResult.response,
       ConfidenceSchema,
       async (error: Error) => {

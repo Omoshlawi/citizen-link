@@ -41,8 +41,8 @@ export class MatchingStatisticsService {
 
     // Build query based on document type
     const caseTypeTable = isLostDocument
-      ? 'FoundDocumentCase'
-      : 'LostDocumentCase';
+      ? 'found_document_cases'
+      : 'lost_document_cases';
     const statusCondition = isLostDocument
       ? `fdc.status IN ('VERIFIED')`
       : `ldc.status = 'SUBMITTED'`;
@@ -61,8 +61,8 @@ export class MatchingStatisticsService {
         COUNT(*) FILTER (WHERE 1 - (d.embedding <=> $1::vector) >= 0.70 AND 1 - (d.embedding <=> $1::vector) < 0.85) as medium_similarity,
         COUNT(*) FILTER (WHERE 1 - (d.embedding <=> $1::vector) >= $4 AND 1 - (d.embedding <=> $1::vector) < 0.70) as low_similarity,
         COUNT(*) as total
-      FROM "Document" d
-      INNER JOIN "DocumentCase" dc ON d."caseId" = dc.id
+      FROM "documents" d
+      INNER JOIN "document_cases" dc ON d."caseId" = dc.id
       INNER JOIN "${caseTypeTable}" ${isLostDocument ? 'fdc' : 'ldc'} ON dc.id = ${isLostDocument ? 'fdc' : 'ldc'}."caseId"
       WHERE 
         d.embedding IS NOT NULL

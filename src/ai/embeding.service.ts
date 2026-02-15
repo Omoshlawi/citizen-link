@@ -145,7 +145,7 @@ export class EmbeddingService {
 
       // Store embedding using raw SQL
       await this.prisma.$executeRawUnsafe(
-        `UPDATE "Document" SET embedding = $1::vector WHERE id = $2`,
+        `UPDATE "documents" SET embedding = $1::vector WHERE id = $2`,
         vectorString,
         documentId,
       );

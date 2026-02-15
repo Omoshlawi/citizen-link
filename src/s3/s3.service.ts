@@ -325,13 +325,16 @@ export class S3Service implements OnModuleInit {
    * @param key The S3 object key (path/filename)
    * @returns Promise resolving when the move is complete
    */
-  async moveFileToCasesBucket(key: string, caseId: string): Promise<void> {
+  async moveFileToCasesBucket(
+    key: string,
+    destinationDir: string,
+  ): Promise<void> {
     const sourceBucket = this.config.tmpBucket;
     const destinationBucket = this.config.casesBucket;
 
     try {
       this.logger.debug(
-        `Moving file ${key} from ${sourceBucket} to ${destinationBucket}/${caseId}`,
+        `Moving file ${key} from ${sourceBucket} to ${destinationBucket}/${destinationDir}`,
       );
 
       // 1. Copy the object to the destination bucket
@@ -339,7 +342,7 @@ export class S3Service implements OnModuleInit {
       await this.s3.send(
         new CopyObjectCommand({
           Bucket: destinationBucket,
-          Key: `${caseId}/${key}`,
+          Key: `${destinationDir}/${key}`,
           CopySource: `${sourceBucket}/${key}`,
         }),
       );

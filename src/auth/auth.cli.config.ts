@@ -32,4 +32,7 @@ export const auth: BetterAuthWithPlugins = betterAuth({
     twoFactor(),
     phoneNumber(),
   ],
+  emailAndPassword: {
+    enabled: true,
+  },
 });

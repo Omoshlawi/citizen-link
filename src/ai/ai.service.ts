@@ -14,6 +14,7 @@ import {
   GenerateParsedContentResponse,
   Part,
 } from './ai.types';
+import { safeParseJson } from '../app.utils';
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -288,6 +289,48 @@ export class AiService implements OnModuleInit {
           userId,
         },
       });
+    }
+  }
+
+  /**
+   * Parse AI response and validate against schema
+   */
+  async parseAndValidate<T, E>(
+    response: string,
+    schema: z.ZodType<T>,
+    onError: (error: unknown) => Promise<E>,
+  ): Promise<T | E> {
+    try {
+      // Clean and parse JSON
+      const cleanedResponse = this.cleanResponseText(response);
+      const parsedResult = safeParseJson<Record<string, any>>(cleanedResponse, {
+        transformNullToUndefined: true,
+      });
+
+      if (!parsedResult.success) {
+        throw new Error(
+          JSON.stringify({
+            message: 'JSON parsing failed',
+            error: `${parsedResult.error.message}`,
+          }),
+        );
+      }
+
+      // Validate against schema
+      const validation = await schema.safeParseAsync(parsedResult.data);
+
+      if (!validation.success) {
+        throw new Error(
+          JSON.stringify({
+            message: 'Schema validation failed',
+            error: z.formatError(validation.error),
+          }),
+        );
+      }
+
+      return validation.data;
+    } catch (error: unknown) {
+      return await onError?.(error);
     }
   }
 }

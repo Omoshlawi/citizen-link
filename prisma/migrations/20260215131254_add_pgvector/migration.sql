@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
-ALTER TABLE "Document"
+ALTER TABLE "documents"
 -- Creates a vector column sized for models like
 -- OpenAI text-embedding-3-small (768)
 -- Many sentence-transformer models

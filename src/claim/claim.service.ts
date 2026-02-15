@@ -1,4 +1,269 @@
-import { Injectable } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { pick } from 'lodash';
+import { isSuperUser, normalizeString, parseDate } from '../app.utils';
+import { UserSession } from '../auth/auth.types';
+import {
+  CustomRepresentationQueryDto,
+  CustomRepresentationService,
+  FunctionFirstArgument,
+  PaginationService,
+  SortService,
+} from '../common/query-builder';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateClaimDto, QueryClaimDto, UpdateClaimDto } from './claim.dto';
+import { SecurityQuestionsDto } from '../extraction/extraction.dto';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
-export class ClaimService {}
+export class ClaimService {
+  private readonly logger = new Logger(ClaimService.name);
+  private readonly defaultRep = 'custom:include(verification,attachments)';
+
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly paginationService: PaginationService,
+    private readonly representationService: CustomRepresentationService,
+    private readonly sortService: SortService,
+    private readonly s3Service: S3Service,
+  ) {}
+
+  private async validateMatch(matchId: string, userId: string) {
+    const match = await this.prismaService.match.findUnique({
+      where: {
+        id: matchId,
+        lostDocumentCase: {
+          case: {
+            userId,
+          },
+        },
+      },
+      include: {
+        foundDocumentCase: true,
+      },
+    });
+    if (!match) {
+      this.logger.error(
+        `No match found. Must be a valid match and lost case must be reported bu user raising a claim`,
+      );
+      throw new BadRequestException(
+        `Invalid Match. only document owner can claim the match`,
+      );
+    }
+    return match;
+  }
+
+  private async verify(
+    claimId: string,
+    securityQuestions: SecurityQuestionsDto['questions'] = [],
+    userResponse: CreateClaimDto['securityQuestions'] = [],
+  ) {
+    const allCorrect = securityQuestions.every((sq) => {
+      const res = userResponse.find(
+        (ur) => normalizeString(ur.question) === normalizeString(sq.question),
+      )?.response;
+      if (!res) return false;
+      this.logger.debug(`Nomalized ${res} to ${normalizeString(res)}`);
+      this.logger.debug(
+        `Nomalized ${sq.answer} to ${normalizeString(sq.answer)}`,
+      );
+      return normalizeString(res) === normalizeString(sq.answer);
+    });
+    await this.prismaService.claim.update({
+      where: { id: claimId },
+      data: {
+        // status: '',
+        verification: {
+          create: {
+            userResponses: userResponse,
+            passed: allCorrect,
+          },
+        },
+      },
+    });
+  }
+
+  private async validateAttachments(
+    attachments: CreateClaimDto['attachments'],
+  ): Promise<void> {
+    // Validate files if xist and are images
+    this.logger.debug('Checking if attachments exist', attachments);
+    const exists = await Promise.all(
+      attachments.map((image) => this.s3Service.fileExists(image, 'tmp')),
+    );
+    const allExists = exists.every(Boolean);
+    if (!allExists) {
+      throw new BadRequestException('One or more attachments do not exist');
+    }
+    this.logger.debug('All attachments exist');
+    // move files
+  }
+
+  async create(
+    { attachments, securityQuestions, ...createClaimDto }: CreateClaimDto,
+    query: CustomRepresentationQueryDto,
+    user: UserSession['user'],
+  ) {
+    const match = await this.validateMatch(createClaimDto.matchId, user.id);
+    await this.validateAttachments(attachments);
+    const claim = await this.prismaService.claim.create({
+      data: {
+        ...createClaimDto,
+        userId: user.id,
+        foundDocumentCaseId: match.foundDocumentCaseId,
+      },
+    });
+    // Verify security questions
+    await this.verify(
+      claim.id,
+      match.foundDocumentCase.securityQuestion as any,
+      securityQuestions,
+    );
+    // Move files
+    const keys = await Promise.all(
+      attachments.map(async (attachment) => {
+        const toDir = `${match.foundDocumentCase.caseId}/claims/${claim.claimNumber}`;
+        await this.s3Service.moveFileToCasesBucket(attachment, toDir);
+        return `${toDir}/${attachment}`;
+      }),
+    );
+    // Add attachments to the claim
+    await this.prismaService.claim.update({
+      where: { id: claim.id },
+      data: {
+        attachments: {
+          createMany: {
+            skipDuplicates: true,
+            data: keys.map((attachment) => ({
+              storageKey: attachment,
+              uploadedById: user.id,
+            })),
+          },
+        },
+      },
+    });
+
+    // Return created claim
+    return await this.findOne(claim.id, query, user);
+  }
+
+  async findAll(
+    query: QueryClaimDto,
+    originalUrl: string,
+    user: UserSession['user'],
+  ) {
+    const isAdmin = isSuperUser(user);
+    const dbQuery: FunctionFirstArgument<
+      typeof this.prismaService.claim.findMany
+    > = {
+      where: {
+        AND: [
+          {
+            claimNumber: query.claimNumber,
+            matchId: query.matchId,
+            pickupStationId: query.pickupStationId,
+            status: query.status,
+            preferredHandoverDate: {
+              gte: parseDate(query.preferredHandoverDateFrom),
+              lte: parseDate(query.preferredHandoverDateTo),
+            },
+            userId: isAdmin ? query.userId : user.id,
+            createdAt: {
+              lte: parseDate(query.createdAtTo),
+              gte: parseDate(query.createdAtFrom),
+            },
+            foundDocumentCaseId: query.foundDocumentCaseId,
+          },
+          {
+            OR: query.caseId
+              ? [
+                  {
+                    foundDocumentCase: {
+                      caseId: query.caseId,
+                    },
+                  },
+                  {
+                    match: {
+                      lostDocumentCase: {
+                        caseId: query.caseId,
+                      },
+                    },
+                  },
+                ]
+              : undefined,
+          },
+        ],
+      },
+      ...this.paginationService.buildPaginationQuery(query),
+      ...this.representationService.buildCustomRepresentationQuery(
+        isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
+      ),
+      ...this.sortService.buildSortQuery(query?.orderBy),
+    };
+    const [data, totalCount] = await Promise.all([
+      this.prismaService.claim.findMany(dbQuery),
+      this.prismaService.claim.count(pick(dbQuery, 'where')),
+    ]);
+    return {
+      results: data,
+      ...this.paginationService.buildPaginationControls(
+        totalCount,
+        originalUrl,
+        query,
+      ),
+    };
+  }
+
+  async findOne(
+    id: string,
+    query: CustomRepresentationQueryDto,
+    user: UserSession['user'],
+  ) {
+    const isAdmin = isSuperUser(user);
+    const data = await this.prismaService.claim.findUnique({
+      where: {
+        id,
+        match: {
+          OR: isAdmin
+            ? undefined
+            : [
+                {
+                  foundDocumentCase: {
+                    case: {
+                      userId: user.id,
+                    },
+                  },
+                },
+                {
+                  lostDocumentCase: {
+                    case: {
+                      userId: user.id,
+                    },
+                  },
+                },
+              ],
+        },
+      },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+    if (!data) throw new NotFoundException('Claim not found');
+    return data;
+  }
+
+  update(
+    id: string,
+    updateClaimDto: UpdateClaimDto,
+    query: CustomRepresentationQueryDto,
+  ) {
+    return this.prismaService.claim.update({
+      where: { id },
+      data: updateClaimDto,
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
+}

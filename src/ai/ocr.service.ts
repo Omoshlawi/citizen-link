@@ -118,17 +118,4 @@ export class OcrService {
     // We resize it small so it's tiny (e.g., 20px) and apply a heavy blur
     return sharp(buffer).blur(b).toBuffer();
   }
-  blueImageAsJpeg(buffer: Buffer) {
-    // Use Sharp to create a blurred buffer
-    // We resize it small so it's tiny (e.g., 20px) and apply a heavy blur
-    return sharp(buffer)
-      .resize(20, 20, { fit: 'inside' }) // Keep it tiny
-      .blur(10) // More blur allows for more compression artifacts to be hidden
-      .jpeg({
-        quality: 30, // Aggressive compression
-        progressive: true,
-        chromaSubsampling: '4:4:4',
-      })
-      .toBuffer();
-  }
 }

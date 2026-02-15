@@ -1,7 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
-import { Image } from '../../generated/prisma/browser';
+import { DocumentImage } from '../../generated/prisma/browser';
 import { ApiProperty } from '@nestjs/swagger';
 
 export const QueryDocumentImageSchema = z.object({
@@ -19,7 +19,7 @@ export class QueryDocumentImageDto extends createZodDto(
 
 export class CreateDocumentImageDto extends createZodDto(DocumentImageSchema) {}
 
-export class GetDocumentImageResponseDto implements Image {
+export class GetDocumentImageResponseDto implements DocumentImage {
   @ApiProperty()
   blurredUrl: string | null;
   @ApiProperty()

@@ -88,9 +88,9 @@ export class MatchFoundDocumentService {
         >(
           `
               SELECT COUNT(*) as count
-              FROM "Document" d
-              INNER JOIN "DocumentCase" dc ON d."caseId" = dc.id
-              INNER JOIN "FoundDocumentCase" fdc ON dc.id = fdc."caseId"
+              FROM "documents" d
+              INNER JOIN "document_cases" dc ON d."caseId" = dc.id
+              INNER JOIN "found_document_cases" fdc ON dc.id = fdc."caseId"
               WHERE 
                 d.embedding IS NOT NULL
                 AND d."typeId" = $1
@@ -123,9 +123,9 @@ export class MatchFoundDocumentService {
               d."dateOfBirth",
               d."placeOfBirth",
               1 - (d.embedding <=> $1::vector) as similarity
-            FROM "Document" d
-            INNER JOIN "DocumentCase" dc ON d."caseId" = dc.id
-            INNER JOIN "FoundDocumentCase" fdc ON dc.id = fdc."caseId"
+            FROM "documents" d
+            INNER JOIN "document_cases" dc ON d."caseId" = dc.id
+            INNER JOIN "found_document_cases" fdc ON dc.id = fdc."caseId"
             WHERE 
               d.embedding IS NOT NULL
               AND d."typeId" = $2

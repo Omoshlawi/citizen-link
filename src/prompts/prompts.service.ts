@@ -6,21 +6,24 @@ import {
   Document,
   DocumentField,
 } from '../../generated/prisma/client';
-import { DataExtractionSchema } from '../extraction/extraction.dto';
+import {
+  DataExtractionSchema,
+  SecurityQuestionsDto,
+} from '../extraction/extraction.dto';
 import z from 'zod';
 
 @Injectable()
 export class PromptsService {
   constructor(private templatesService: TemplatesService) {}
 
-  async getDocumentDataExtractionPrompt(
+  getDocumentDataExtractionPrompt(
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
   ) {
     return this.templatesService.render('prompts', 'document-data-extraction', {
       documentTypes,
     });
   }
-  async getSecurityQuestionsPrompt(
+  getSecurityQuestionsPrompt(
     documentType: DocumentType,
     extractedData: z.infer<typeof DataExtractionSchema>,
   ) {
@@ -30,7 +33,7 @@ export class PromptsService {
     });
   }
 
-  async getImageAnalysisPrompt(
+  getImageAnalysisPrompt(
     supportedDocumentTypes: Array<
       Pick<DocumentType, 'id' | 'name' | 'category'>
     >,
@@ -40,7 +43,7 @@ export class PromptsService {
     });
   }
 
-  async getConfidenceScorePrompt(
+  getConfidenceScorePrompt(
     extractedData: z.infer<typeof DataExtractionSchema>,
   ) {
     return this.templatesService.render('prompts', 'field-confidence-scoring', {
@@ -48,7 +51,7 @@ export class PromptsService {
     });
   }
 
-  async getMatchVerificationPrompt(
+  getMatchVerificationPrompt(
     foundCase: DocumentCase & {
       document: Document & {
         type: DocumentType;
@@ -76,13 +79,23 @@ export class PromptsService {
     });
   }
 
-  async getChatPromptMessage(
+  getChatPromptMessage(
     userQuery: string,
     supportedDocumentTypes: Array<string>,
   ) {
     return this.templatesService.render('prompts', 'chatbot-guide', {
       userQuery,
       supportedDocumentTypes,
+    });
+  }
+
+  getClaimVerificationPrompt(
+    securityQuestions: SecurityQuestionsDto['questions'],
+    userResponse: Array<{ question: string; response: string }>,
+  ) {
+    return this.templatesService.render('prompts', 'claim-verification', {
+      userResponse,
+      securityQuestions,
     });
   }
 }

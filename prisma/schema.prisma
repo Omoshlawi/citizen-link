@@ -42,10 +42,11 @@ model User {
   transactions   Transaction[]
   disputes       Dispute[]
 
-  twoFactorEnabled    Boolean?    @default(false)
+  twoFactorEnabled    Boolean?          @default(false)
   phoneNumber         String?
   phoneNumberVerified Boolean?
   twofactors          TwoFactor[]
+  claimAttachments    ClaimAttachment[]
 
   @@unique([email])
   @@unique([username])
@@ -131,7 +132,7 @@ model UserActivity {
   @@index([userId])
   @@index([createdAt])
   @@index([resource, resourceId])
-  @@map("user_activity")
+  @@map("user_activities")
 }
 
 // Universal Address Model with Hierarchical Support
@@ -196,6 +197,7 @@ model Address {
   @@index([country])
   @@index([localeId])
   @@index([level1, level2, level3])
+  @@map("addresses")
 }
 
 enum AddressType {
@@ -226,6 +228,7 @@ model AddressHierarchy {
   @@unique([country, code])
   @@index([country, level])
   @@index([parentId])
+  @@map("address_hierarchy")
 }
 
 model AddressLocale {
@@ -247,6 +250,7 @@ model AddressLocale {
 
   @@index([country])
   @@index([regionName])
+  @@map("address_locales")
 }
 
 // Document Types Enum - referenced by DocumentType model
@@ -281,6 +285,8 @@ model DocumentType {
 
   // AI Verification Configuration
   verificationStrategy Json // How AI should verify: { "strictFields": ["idNumber"], "flexibleFields": ["name"] }
+
+  @@map("document_types")
 }
 
 // Common fields in PII Docs, helpfull in narrowing down search as cases grow and grow larger hence reducing primsps as well
@@ -309,11 +315,13 @@ model Document {
   placeOfIssue String?
   expiryDate   DateTime?
   note         String? // Additional notes
-  embedding    Unsupported("vector")?
+  embedding    Unsupported("vector(768)")?
 
   createdAt        DateTime        @default(now())
-  images           Image[]
+  images           DocumentImage[]
   additionalFields DocumentField[]
+
+  @@map("documents")
 }
 
 // Dynamic Field Values - stores actual values for document-specific fields
@@ -330,9 +338,10 @@ model DocumentField {
   updatedAt DateTime @updatedAt
 
   @@unique([documentId, fieldName])
+  @@map("document_fields")
 }
 
-model Image {
+model DocumentImage {
   id         String    @id @default(uuid())
   url        String    @unique
   blurredUrl String? // Privacy-protected version
@@ -343,6 +352,8 @@ model Image {
   metadata   Json? // Additional metadata including ocrText(whn using seperate ocr to extratc text from image e.g tessaract), ai processing results, (size, format, etc.)
   document   Document? @relation(fields: [documentId], references: [id])
   createdAt  DateTime  @default(now())
+
+  @@map("document_images")
 }
 
 model AIExtraction {
@@ -352,6 +363,8 @@ model AIExtraction {
 
   aiextractionInteractions AIExtractionInteraction[]
   documentCases            DocumentCase[]
+
+  @@map("ai_extractions")
 }
 
 model AIExtractionInteraction {
@@ -373,6 +386,8 @@ model AIExtractionInteraction {
   extractionType AIExtractionInteractionType
 
   createdAt DateTime @default(now())
+
+  @@map("ai_extraction_interactions")
 }
 
 enum AIExtractionInteractionType {
@@ -409,9 +424,10 @@ model DocumentCase {
   updatedAt DateTime @updatedAt
   voided    Boolean  @default(false)
 
-  // images         Image[]
+  // images         DocumentImage[]
   // notifications  Notification[]
   @@index([eventDate])
+  @@map("document_cases")
 }
 
 // Lost Report model for documents reported lost
@@ -424,6 +440,8 @@ model LostDocumentCase {
   createdAt DateTime               @default(now())
   updatedAt DateTime               @updatedAt
   matches   Match[]
+
+  @@map("lost_document_cases")
 }
 
 // Found Report model for documents that were found
@@ -444,6 +462,8 @@ model FoundDocumentCase {
   claims           Claim[]
   pickupStation    PickupStation?          @relation(fields: [pickupStationId], references: [id])
   pickupStationId  String?
+
+  @@map("found_document_cases")
 }
 
 enum LostDocumentCaseStatus {
@@ -496,6 +516,7 @@ model CaseStatusTransition {
   @@index([actorType, actorId])
   @@index([toStatus])
   @@index([createdAt])
+  @@map("case_status_transitions")
 }
 
 enum CaseType {
@@ -552,6 +573,7 @@ model Match {
 
   @@unique([lostDocumentCaseId, foundDocumentCaseId])
   @@index([status])
+  @@map("matches")
 }
 
 enum MatchStatus {
@@ -576,15 +598,13 @@ model Claim {
   matchId String
   match   Match  @relation(fields: [matchId], references: [id])
 
-  verificationStatus ClaimVerificationStatus @default(PENDING)
-
-  // AI tracks all verification attempts
   // Pickup Details
   pickupStationId       String?
   pickupStation         PickupStation? @relation(fields: [pickupStationId], references: [id])
   preferredHandoverDate DateTime?
+
   // Status
-  status                ClaimStatus    @default(PENDING_VERIFICATION)
+  status ClaimStatus @default(PENDING)
 
   // Fees & Payment
   serviceFee   Float @default(0)
@@ -596,85 +616,57 @@ model Claim {
   handover    Handover?
   dispute     Dispute?
 
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  aiverification AIVerification?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  verification ClaimVerification?
+  attachments  ClaimAttachment[] // Support document attachments
 
   @@index([userId])
   @@index([foundDocumentCaseId])
   @@index([matchId])
   @@index([status])
-}
-
-enum ClaimVerificationStatus {
-  PENDING
-  VERIFIED
-  FAILED
+  @@map("claims")
 }
 
 enum ClaimStatus {
-  PENDING_VERIFICATION
+  PENDING
   VERIFIED
-  PAYMENT_PENDING
-  PAYMENT_COMPLETE
-  READY_FOR_PICKUP
-  COMPLETED
-  CANCELLED
+  REJECTED
   DISPUTED
+  CANCELLED
 }
 
-model AIVerification {
+model ClaimAttachment {
+  id      String @id @default(uuid())
+  claimId String
+  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  storageKey   String
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], onDelete: Cascade, references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("claim_attachments")
+}
+
+model ClaimVerification {
   id String @id @default(uuid())
 
   claimId String @unique
   claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
-  aiInteractionId String        @unique
-  aiInteraction   AIInteraction @relation(fields: [aiInteractionId], onDelete: Cascade, references: [id])
-
   userResponses Json // User's answers to security questions
 
-  // AI Analysis
-  aiAnalysis Json // AI's detailed analysis of each answer
-  // Example: {
-  //   "questions": [
-  //       {
-  //         "question": "What is the name of the document owner"?
-  //           "expected": "John Michael Doe",
-  //           "provided": "Doe John Michael",
-  //           "match": true,
-  //           "confidence": 95,
-  //           "reasoning": "Names reordered but all components present and correct"
-  //         }
-  //    ]
-  // }
-
-  // AI Decision
-  overallVerdict  VerificationVerdict
-  confidenceScore Float // 0-100, how confident AI is in its decision
-  reasoning       String              @db.Text // AI explains its decision
-
-  // Flexibility Factors AI Considered
-  flexibilityApplied Json // What variations AI accepted: name order, spelling, formatting, etc.
-
   // Result
-  passed Boolean
-
+  passed    Boolean
   createdAt DateTime @default(now())
 
   @@index([claimId])
-}
-
-enum VerificationVerdict {
-  STRONG_MATCH // High confidence, clear match
-  LIKELY_MATCH // Good confidence with acceptable variations
-  UNCERTAIN // Low confidence, borderline
-  NO_MATCH // Clear mismatch
-  INSUFFICIENT_DATA // Can't determine
+  @@map("claim_verifications")
 }
 
 //  AI INTERACTION LOGS
-
 model AIInteraction {
   id String @id @default(uuid())
 
@@ -709,7 +701,7 @@ model AIInteraction {
   createdAt              DateTime                  @default(now())
   extractionInteractions AIExtractionInteraction[]
   match                  Match?
-  aiverification         AIVerification?
+  // aiverification         ClaimVerification?
 
   // For analytics and cost tracking
   // Quick filtering of failed requests
@@ -718,6 +710,7 @@ model AIInteraction {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@index([success])
+  @@map("ai_interactions")
 }
 
 enum AIInteractionType {
@@ -759,9 +752,9 @@ model PickupStation {
   phoneNumber String?
   email       String?
   formatted   String? // Cached formatted address
-  voided    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  voided      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Operating Hours
   operatingHours Json?
@@ -804,6 +797,7 @@ model Handover {
 
   @@index([claimId])
   @@index([status])
+  @@map("handovers")
 }
 
 enum HandoverStatus {
@@ -851,6 +845,7 @@ model Transaction {
   @@index([userId])
   @@index([claimId])
   @@index([status])
+  @@map("transactions")
 }
 
 enum PaymentMethod {
@@ -890,6 +885,7 @@ model Rating {
   updatedAt DateTime @updatedAt
 
   @@index([raterId])
+  @@map("ratings")
 }
 
 model Notification {
@@ -922,6 +918,7 @@ model Notification {
   @@index([userId])
   @@index([read])
   @@index([type])
+  @@map("notifications")
 }
 
 enum NotificationType {
@@ -953,16 +950,24 @@ model Dispute {
   // AI Analysis
   aiAnalysis Json? // AI analyzes dispute and suggests resolution
 
-  status     DisputeStatus @default(OPEN)
-  resolution String?       @db.Text
-  resolvedBy String?
-  resolvedAt DateTime?
+  disputeType DisputeType
+  status      DisputeStatus @default(OPEN)
+  resolution  String?       @db.Text
+  resolvedBy  String?
+  resolvedAt  DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([claimId])
   @@index([status])
+  @@map("disputes")
+}
+
+enum DisputeType {
+  VERIFICATION_ERROR
+  ADMIN_OVERRIDE
+  FRAUD_SUSPECTED
 }
 
 enum DisputeStatus {
@@ -989,6 +994,7 @@ model Message {
   @@index([senderId])
   @@index([conversationId])
   @@index([createdAt])
+  @@map("messages")
 }
 
 // Conversation model for grouping messages
@@ -1003,6 +1009,7 @@ model Conversation {
   voided        Boolean   @default(false)
 
   @@index([participants])
+  @@map("conversations")
 }
 
 // FAQ model
@@ -1015,6 +1022,8 @@ model FAQ {
   order    Int
   isActive Boolean @default(true)
   voided   Boolean @default(false)
+
+  @@map("faqs")
 }
 
 // System Settings
@@ -1027,6 +1036,8 @@ model Setting {
   updatedAt   DateTime @updatedAt
   updatedBy   String?
   voided      Boolean  @default(false)
+
+  @@map("settings")
 }
 
 model TwoFactor {

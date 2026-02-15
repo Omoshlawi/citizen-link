@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import { UserSession } from './auth/auth.types';
+import dayjs from 'dayjs';
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -106,3 +107,22 @@ export const safeParseJson = <T>(
 export const isSuperUser = (user?: UserSession['user']) => {
   return !!user?.role?.includes('admin');
 };
+
+export function parseDate(
+  dateString: string | undefined | null,
+  defaultNow: boolean = false,
+) {
+  const date = dayjs(dateString);
+  if (dateString && date.isValid()) return date.toDate();
+  if (defaultNow) return dayjs().toDate();
+  return undefined;
+}
+
+export function normalizeString(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase()
+    .normalize('NFD') // split accents
+    .replace(/[\u0300-\u036f]/g, ''); // remove accents
+}
