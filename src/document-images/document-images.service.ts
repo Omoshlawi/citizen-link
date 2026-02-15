@@ -25,7 +25,7 @@ export class DocumentImagesService {
     documentId: string,
   ) {
     const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.image.findMany
+      typeof this.prismaService.documentImage.findMany
     > = {
       where: {
         documentId,
@@ -37,8 +37,8 @@ export class DocumentImagesService {
       ...this.sortService.buildSortQuery(query?.orderBy),
     };
     const [data, totalCount] = await Promise.all([
-      this.prismaService.image.findMany(dbQuery),
-      this.prismaService.image.count(pick(dbQuery, 'where')),
+      this.prismaService.documentImage.findMany(dbQuery),
+      this.prismaService.documentImage.count(pick(dbQuery, 'where')),
     ]);
     return {
       results: data,
@@ -56,7 +56,7 @@ export class DocumentImagesService {
     caseId: string,
     documentId: string,
   ) {
-    const data = await this.prismaService.image.findUnique({
+    const data = await this.prismaService.documentImage.findUnique({
       where: { id, documentId, document: { caseId } },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
