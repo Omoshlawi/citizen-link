@@ -54,7 +54,7 @@ export class DocumentCasesController {
       extraction.id,
       createFoundDocumentCaseDto,
       query,
-      user.id,
+      user,
     );
   }
 
@@ -70,7 +70,7 @@ export class DocumentCasesController {
     return this.documentCasesService.reportLostDocumentCase(
       createLostDocumentCaseDto,
       query,
-      user.id,
+      user,
     );
   }
 
@@ -107,7 +107,7 @@ export class DocumentCasesController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.findOne(id, query, user.id);
+    return this.documentCasesService.findOne(id, query, user);
   }
 
   @Patch(':id')
@@ -124,7 +124,7 @@ export class DocumentCasesController {
       id,
       updateDocumentCaseDto,
       query,
-      user.id,
+      user,
     );
   }
 

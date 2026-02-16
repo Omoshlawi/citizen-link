@@ -49,8 +49,12 @@ export class DocumentCasesService {
     return this.documentCasesQueryService.findAll(query, user, originalUrl);
   }
 
-  findOne(id: string, query: CustomRepresentationQueryDto, userId: string) {
-    return this.documentCasesQueryService.findOne(id, query, userId);
+  findOne(
+    id: string,
+    query: CustomRepresentationQueryDto,
+    user: UserSession['user'],
+  ) {
+    return this.documentCasesQueryService.findOne(id, query, user);
   }
 
   private async canUpdateCase(caseId: string) {
@@ -86,11 +90,15 @@ export class DocumentCasesService {
     id: string,
     updateDocumentCaseDto: UpdateDocumentCaseDto,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
+    // const isAdmin = isSuperUser(user);
     await this.canUpdateCase(id);
     const docCase = await this.prismaService.documentCase.update({
-      where: { id, userId },
+      where: {
+        id, // userId: isAdmin ? undefined : user.id
+        userId: user.id,
+      },
       data: {
         ...updateDocumentCaseDto,
         eventDate: updateDocumentCaseDto.eventDate
@@ -103,21 +111,21 @@ export class DocumentCasesService {
     });
     if (docCase.document?.id)
       await this.embeddingService.indexDocument(docCase.document.id);
-    return await this.findOne(docCase.id, query, userId);
+    return await this.findOne(docCase.id, query, user);
   }
 
   reportFoundDocumentCase(
     extractionId: string,
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
     onPublishProgressEvent?: (data: ProgressEvent) => void,
   ) {
     return this.documentCasesCreateService.reportFoundDocumentCase(
       extractionId,
       createDocumentCaseDto,
       query,
-      userId,
+      user,
       onPublishProgressEvent,
     );
   }
@@ -126,14 +134,14 @@ export class DocumentCasesService {
     extractionId: string,
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
     onPublishProgressEvent?: (data: ProgressEvent) => void,
   ) {
     return this.documentCasesCreateService.reportLostDocumentCaseScanned(
       extractionId,
       createDocumentCaseDto,
       query,
-      userId,
+      user,
       onPublishProgressEvent,
     );
   }
@@ -141,11 +149,11 @@ export class DocumentCasesService {
   async reportLostDocumentCase(
     createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
     const documentCase = await this.prismaService.documentCase.create({
       data: {
-        userId,
+        userId: user.id,
         eventDate: dayjs(createLostDocumentCaseDto.eventDate).toDate(),
         addressId: createLostDocumentCaseDto.addressId,
         document: {
@@ -194,7 +202,7 @@ export class DocumentCasesService {
         document: true,
       },
     });
-    return await this.findOne(documentCase.id, query, userId);
+    return await this.findOne(documentCase.id, query, user);
   }
 
   submitDocumentCase(

@@ -89,7 +89,7 @@ export class DocumentCaseGateway {
           extractionId,
           caseData,
           {},
-          session.user.id,
+          session.user,
           (data) => this.publishProgressEvent(extractionId, data),
         );
       } else {
@@ -97,7 +97,7 @@ export class DocumentCaseGateway {
           extractionId,
           caseData,
           {},
-          session.user.id,
+          session.user,
           (data) => this.publishProgressEvent(extractionId, data),
         );
       }

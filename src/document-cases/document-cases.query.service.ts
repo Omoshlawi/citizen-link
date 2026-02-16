@@ -233,10 +233,11 @@ export class DocumentCasesQueryService {
   async findOne(
     id: string,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
+    const isAdmin = isSuperUser(user);
     const data = await this.prismaService.documentCase.findUnique({
-      where: { id, userId },
+      where: { id, userId: isAdmin ? undefined : user.id },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
     if (!data) throw new NotFoundException('Document case not found');

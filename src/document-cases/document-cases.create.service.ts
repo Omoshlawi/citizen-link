@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateFoundDocumentCaseDto } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
+import { UserSession } from '../auth/auth.types';
 
 @Injectable()
 export class DocumentCasesCreateService {
@@ -156,7 +157,7 @@ export class DocumentCasesCreateService {
     extractionId: string,
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
     onPublishProgressEvent?: (data: ProgressEvent) => void,
   ) {
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
@@ -169,7 +170,7 @@ export class DocumentCasesCreateService {
     } = await this.runAiExtraction(
       extractionId,
       images,
-      userId,
+      user.id,
       false,
       onPublishProgressEvent,
     );
@@ -183,7 +184,7 @@ export class DocumentCasesCreateService {
             securityQuestion: securityQuestions.questions,
           },
         },
-        userId,
+        userId: user.id,
         document: {
           create: {
             ...documentpayload,
@@ -233,7 +234,7 @@ export class DocumentCasesCreateService {
     return await this.documentCasesQueryService.findOne(
       documentCase.id,
       query,
-      userId,
+      user,
     );
   }
 
@@ -241,7 +242,7 @@ export class DocumentCasesCreateService {
     extractionId: string,
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
     onPublishProgressEvent?: (data: ProgressEvent) => void,
   ) {
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
@@ -249,7 +250,7 @@ export class DocumentCasesCreateService {
       await this.runAiExtraction(
         extractionId,
         images,
-        userId,
+        user.id,
         true,
         onPublishProgressEvent,
       );
@@ -261,7 +262,7 @@ export class DocumentCasesCreateService {
         lostDocumentCase: {
           create: {},
         },
-        userId,
+        userId: user.id,
         document: {
           create: {
             ...documentpayload,
@@ -311,7 +312,7 @@ export class DocumentCasesCreateService {
     return await this.documentCasesQueryService.findOne(
       documentCase.id,
       query,
-      userId,
+      user,
     );
   }
 }
