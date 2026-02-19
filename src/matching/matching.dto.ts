@@ -101,10 +101,6 @@ const AcceptMatchSchema = z.object({
   notes: z.string().optional(),
 });
 
-const RejectMatchSchema = z.object({
-  reason: z.string().optional(),
-});
-
 const CompleteMatchSchema = z.object({
   handoverDate: z.string().datetime().optional(),
   handoverLocation: z.string().optional(),
@@ -115,6 +111,15 @@ const CompleteMatchSchema = z.object({
 const AdminVerifyMatchSchema = z.object({
   verified: z.boolean(),
   notes: z.string().optional(),
+});
+
+export const RejectMatchSchema = z.object({
+  reason: z.enum([
+    'OWNERSHIP_DENIED', // User indicates the document does not belong to them.
+    'DOCUMENT_SUPERSEDED',
+    'OTHER',
+  ]),
+  comment: z.string().optional(),
 });
 
 export class MatchResultDto extends createZodDto(MatchResultSchema) {}

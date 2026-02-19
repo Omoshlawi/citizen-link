@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
@@ -14,6 +15,7 @@ import {
   QueryMatchesResponseDto,
   QueryMatechesForFoundCaseDto,
   QueryMatechesForLostCaseDto,
+  RejectMatchDto,
 } from './matching.dto';
 import { ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
@@ -95,5 +97,18 @@ export class MatchingController {
     @Query() query: CustomRepresentationQueryDto,
   ) {
     return this.matchingService.restore(id, query);
+  }
+
+  @Post(':id/reject')
+  @ApiOperation({ summary: 'Reject your Match' })
+  @ApiOkResponse({ type: GetMatchResponseDto })
+  @ApiErrorsResponse()
+  reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() rejectDto: RejectMatchDto,
+    @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
+  ) {
+    return this.matchingService.reject(id, rejectDto, user, query);
   }
 }

@@ -6,6 +6,7 @@ import { MatchingVerifierService } from './matching.verifier.service';
 import { MatchingController } from './matching.controller';
 import { MatchingStatisticsService } from './matching.statistics.service';
 import { PromptsModule } from '../prompts/prompts.module';
+import { MatchingStatusTransitionService } from './matching.transitions.service';
 
 @Module({
   imports: [PromptsModule],
@@ -15,6 +16,7 @@ import { PromptsModule } from '../prompts/prompts.module';
     MatchLostDocumentService,
     MatchingVerifierService,
     MatchingStatisticsService,
+    MatchingStatusTransitionService,
   ],
   exports: [MatchingService],
   controllers: [MatchingController],

@@ -20,6 +20,7 @@ import {
   QueryMatchesDto,
   QueryMatechesForFoundCaseDto,
   QueryMatechesForLostCaseDto,
+  RejectMatchDto,
 } from './matching.dto';
 import { MatchFoundDocumentService } from './matching.found.service';
 import { FindMatchesOptions, VerifyMatchesOptions } from './matching.interface';
@@ -27,6 +28,7 @@ import { MatchLostDocumentService } from './matching.lost.service';
 import { MatchingStatisticsService } from './matching.statistics.service';
 import { UserSession } from 'src/auth/auth.types';
 import { isSuperUser } from 'src/app.utils';
+import { MatchingStatusTransitionService } from './matching.transitions.service';
 
 @Injectable()
 export class MatchingService {
@@ -42,6 +44,7 @@ export class MatchingService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly matchTransitionsService: MatchingStatusTransitionService,
   ) {}
 
   getMatchStatistics(
@@ -54,6 +57,15 @@ export class MatchingService {
       isLostDocument,
       options,
     );
+  }
+
+  reject(
+    matchId: string,
+    rejectDto: RejectMatchDto,
+    user: UserSession['user'],
+    query: CustomRepresentationQueryDto,
+  ) {
+    return this.matchTransitionsService.reject(matchId, rejectDto, user, query);
   }
 
   findMatchesForLostDocument(

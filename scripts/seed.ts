@@ -11,6 +11,7 @@ const scripts = [
   'seed-address-locales.ts',
   'seed-document-types.ts',
   'seed-pickup-stations.ts',
+  'seed-transition-statuses.ts',
   'seed-admin-user.ts',
 ];
 

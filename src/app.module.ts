@@ -28,6 +28,7 @@ import { S3Module } from './s3/s3.module';
 import { ChatBotModule } from './chat-bot/chat-bot.module';
 import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
 import { ClaimModule } from './claim/claim.module';
+import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { ClaimModule } from './claim/claim.module';
     ChatBotModule,
     PickupStationsModule,
     ClaimModule,
+    StatusTransitionsModule,
   ],
   controllers: [AppController],
   providers: [

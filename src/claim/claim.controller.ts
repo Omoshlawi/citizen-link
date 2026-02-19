@@ -18,16 +18,14 @@ import {
   OriginalUrl,
 } from '../common/query-builder';
 import {
-  CancelClaimDto,
   CreateClaimDto,
   GetClaimResponseDto,
   QueryClaimDto,
   QueryClaimResponseDto,
-  RejectClaimDto,
   UpdateClaimDto,
-  VerifyClaimDto,
 } from './claim.dto';
 import { ClaimService } from './claim.service';
+import { StatusTransitionDto } from '../status-transitions/status-transitions.dto';
 
 @Controller('claim')
 export class ClaimController {
@@ -87,7 +85,7 @@ export class ClaimController {
   @RequireSystemPermission({ claim: ['reject'] })
   reject(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() rejectDto: RejectClaimDto,
+    @Body() rejectDto: StatusTransitionDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
@@ -101,7 +99,7 @@ export class ClaimController {
   @RequireSystemPermission({ claim: ['verify'] })
   verify(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() verifyDto: VerifyClaimDto,
+    @Body() verifyDto: StatusTransitionDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
@@ -109,12 +107,12 @@ export class ClaimController {
   }
 
   @Post(':id/cancel')
-  @ApiOperation({ summary: 'Cancel Claim' })
+  @ApiOperation({ summary: 'Cancel your Claim' })
   @ApiOkResponse({ type: GetClaimResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() cancelDto: CancelClaimDto,
+    @Body() cancelDto: StatusTransitionDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {

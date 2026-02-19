@@ -1,0 +1,255 @@
+[
+  {
+    "entityType": "Match",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECT",
+    "code": "OWNERSHIP_DENIED",
+    "auto": false,
+    "label": "This is not my document",
+    "description": "User indicates the document does not belong to them."
+  },
+  {
+    "entityType": "Match",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECT",
+    "code": "DOCUMENT_SUPERSEDED",
+    "auto": false,
+    "label": "I already replaced this document",
+    "description": "The matched document has been replaced and is no longer valid (probably an old document)."
+  },
+  {
+    "entityType": "Match",
+    "fromStatus": "PENDING",
+    "toStatus": "CLAIMED",
+    "code": "USER_CLAIMED",
+    "auto": true,
+    "label": "User claimed",
+    "description": "Applied automaticaaly to a match when asociated claim is created."
+  },
+  {
+    "entityType": "Match",
+    "fromStatus": "CLAIMED",
+    "toStatus": "PENDING",
+    "code": "USER_CANCELLED_CLAIM",
+    "auto": true,
+    "label": "User cancelled claim",
+    "description": "Applied automatically to a match when asociated claim is canclled by user"
+  },
+  {
+    "entityType": "Match",
+    "fromStatus": "CLAIMED",
+    "toStatus": "REJECTED",
+    "code": "CLAIM_REJECTED",
+    "auto": true,
+    "label": "Claim Rejected",
+    "description": "Applied automatically to a match when asociated claim is rejected by admin"
+  },
+  {
+    "entityType": "Match",
+    "fromStatus": "REJECTED",
+    "toStatus": "CLAIMED",
+    "code": "CLAIM_VERIFIED",
+    "auto": true,
+    "label": "Claim Verified",
+    "description": "Applied automatically to a match when asociated claim is verified by admin"
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECTED",
+    "code": "INVALID_DOCUMENT",
+    "auto": false,
+    "label": "Invalid document",
+    "description": "Submitted document is invalid or unacceptable."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECTED",
+    "code": "INCOMPLETE_DOCUMENTATION",
+    "auto": false,
+    "label": "Incomplete documentation",
+    "description": "Required supporting documents were missing."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECTED",
+    "code": "INCORRECT_INFORMATION",
+    "auto": false,
+    "label": "Incorrect information",
+    "description": "Submitted information does not match official records."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECTED",
+    "code": "NOT_ELIGIBLE",
+    "auto": false,
+    "label": "Not eligible",
+    "description": "Claimant does not meet eligibility requirements."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECTED",
+    "code": "POLICY_VIOLATION",
+    "auto": false,
+    "label": "Policy violation",
+    "description": "Claim violates defined policy or operational guidelines."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "VERIFIED",
+    "toStatus": "REJECTED",
+    "code": "POLICY_VIOLATION",
+    "auto": false,
+    "label": "Policy violation",
+    "description": "Claim violates defined policy or operational guidelines."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "DISPUTED",
+    "toStatus": "REJECTED",
+    "code": "POLICY_VIOLATION",
+    "auto": false,
+    "label": "Policy violation",
+    "description": "Claim violates defined policy or operational guidelines."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECTED",
+    "code": "FRAUD_SUSPECTED",
+    "auto": false,
+    "label": "Fraud suspected",
+    "description": "Suspicion of fraudulent activity during review."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "VERIFIED",
+    "toStatus": "REJECTED",
+    "code": "FRAUD_SUSPECTED",
+    "auto": false,
+    "label": "Fraud suspected",
+    "description": "Suspicion of fraudulent activity during review."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "DISPUTED",
+    "toStatus": "REJECTED",
+    "code": "FRAUD_SUSPECTED",
+    "auto": false,
+    "label": "Fraud suspected",
+    "description": "Suspicion of fraudulent activity during review."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECTED",
+    "code": "FRAUD_CONFIRMED",
+    "auto": false,
+    "label": "Fraud confirmed",
+    "description": "Fraud was confirmed after investigation."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "VERIFIED",
+    "toStatus": "REJECTED",
+    "code": "FRAUD_CONFIRMED",
+    "auto": false,
+    "label": "Fraud confirmed",
+    "description": "Fraud was confirmed after investigation."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "DISPUTED",
+    "toStatus": "REJECTED",
+    "code": "FRAUD_CONFIRMED",
+    "auto": false,
+    "label": "Fraud confirmed",
+    "description": "Fraud was confirmed after investigation."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "REJECTED",
+    "code": "NEW_EVIDENCE_INVALIDATES_CLAIM",
+    "auto": false,
+    "label": "New evidence invalidates claim",
+    "description": "New evidence invalidates a previously verified claim."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "VERIFIED",
+    "code": "DOCUMENTS_VALIDATED",
+    "auto": false,
+    "label": "Documents validated",
+    "description": "Claim documents and information were reviewed and confirmed valid."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "DISPUTED",
+    "toStatus": "VERIFIED",
+    "code": "DISPUTE_RESOLVED_IN_FAVOR",
+    "auto": true,
+    "label": "Dispute resolved in favor",
+    "description": "A previously rejected claim was reinstated after dispute review."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "PENDING",
+    "toStatus": "CANCELLED",
+    "code": "INVALID_SUBMISSION",
+    "auto": true,
+    "label": "Invalid submission",
+    "description": "Claimant submitted claim with invalid attachment or information."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "DISPUTED",
+    "toStatus": "CANCELLED",
+    "code": "USER_WITHDREW_DISPUTE",
+    "auto": true,
+    "label": "Claimant withdrew dispute",
+    "description": "Claimant submitted claim with invalid attachment or information."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "REJECTED",
+    "toStatus": "DISPUTED",
+    "code": "USER_DISPUTE_SUBMITTED",
+    "auto": true,
+    "label": "Claimant disputed claim rejection",
+    "description": " Claimant formally challenged a rejection decision."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "DISPUTED",
+    "toStatus": "REJECTED",
+    "code": "DISPUTE_REVIEW_COMPLETED",
+    "auto": true,
+    "label": "Dispute review completed",
+    "description": "Dispute review process was completed."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "DISPUTED",
+    "toStatus": "VERIFIED",
+    "code": "DISPUTE_REVIEW_COMPLETED",
+    "auto": true,
+    "label": "Dispute review completed",
+    "description": "Dispute review process was completed."
+  },
+
+  {
+    "entityType": "*",
+    "fromStatus": "*",
+    "toStatus": "*",
+    "auto": false,
+    "code": "OTHER",
+    "label": "Other",
+    "description": "Other reason not list in the reasons"
+  }
+]
