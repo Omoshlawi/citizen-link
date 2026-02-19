@@ -1,54 +1,49 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
-  CreateDocumentTypeDto,
-  QueryDocumentTypeDto,
-  UpdateDocumentTypeDto,
-} from './document-type.dto';
-import { PrismaService } from '../prisma/prisma.service';
-import { PaginationService } from '../common/query-builder/pagination.service';
-import { CustomRepresentationService } from '../common/query-builder/representation.service';
-import { SortService } from '../common/query-builder/sort.service';
-import {
   CustomRepresentationQueryDto,
+  CustomRepresentationService,
   DeleteQueryDto,
-} from '../common/query-builder/query-builder.utils';
-import { FunctionFirstArgument } from '../common/query-builder/query-builder.types';
+  FunctionFirstArgument,
+  PaginationService,
+  SortService,
+} from '../common/query-builder';
+import { PrismaService } from '../prisma/prisma.service';
+import { QueryStatusTransitionReasonsDto } from './status-transitions.dto';
 import { pick } from 'lodash';
-import { DocumentType } from '../../generated/prisma/browser';
+import { TransitionReason } from '../../generated/prisma/client';
 
 @Injectable()
-export class DocumentTypesService {
+export class TransitionReasonsService {
   constructor(
-    private readonly prismaService: PrismaService,
+    private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
   ) {}
-  create(
-    createDocumentTypeDto: CreateDocumentTypeDto,
-    query: CustomRepresentationQueryDto,
-  ) {
-    return this.prismaService.documentType.create({
-      data: { ...createDocumentTypeDto, verificationStrategy: {} },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
-    });
-  }
 
-  async findAll(query: QueryDocumentTypeDto, originalUrl: string) {
+  async findAll(query: QueryStatusTransitionReasonsDto, originalUrl: string) {
     const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.documentType.findMany
+      typeof this.prisma.transitionReason.findMany
     > = {
       where: {
         AND: [
           {
             voided: query?.includeVoided ? undefined : false,
-            category: query?.category,
+            entityType: query?.entityType,
+            fromStatus: query?.fromStatus,
+            toStatus: query?.toStatus,
           },
           {
             OR: query.search
               ? [
                   {
-                    name: {
+                    label: {
+                      contains: query.search,
+                      mode: 'insensitive',
+                    },
+                  },
+                  {
+                    code: {
                       contains: query.search,
                       mode: 'insensitive',
                     },
@@ -63,8 +58,8 @@ export class DocumentTypesService {
       ...this.sortService.buildSortQuery(query?.orderBy),
     };
     const [data, totalCount] = await Promise.all([
-      this.prismaService.documentType.findMany(dbQuery),
-      this.prismaService.documentType.count(pick(dbQuery, 'where')),
+      this.prisma.transitionReason.findMany(dbQuery),
+      this.prisma.transitionReason.count(pick(dbQuery, 'where')),
     ]);
     return {
       results: data,
@@ -77,35 +72,23 @@ export class DocumentTypesService {
   }
 
   async findOne(id: string, query: CustomRepresentationQueryDto) {
-    const data = await this.prismaService.documentType.findUnique({
+    const data = await this.prisma.transitionReason.findUnique({
       where: { id },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
-    if (!data) throw new NotFoundException('Document type not found');
+    if (!data) throw new NotFoundException('Transition reason not found');
     return data;
   }
 
-  update(
-    id: string,
-    updateDocumentTypeDto: UpdateDocumentTypeDto,
-    query: CustomRepresentationQueryDto,
-  ) {
-    return this.prismaService.documentType.update({
-      where: { id },
-      data: updateDocumentTypeDto,
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
-    });
-  }
-
   async remove(id: string, query: DeleteQueryDto) {
-    let data: DocumentType;
+    let data: TransitionReason;
     if (query?.purge) {
-      data = await this.prismaService.documentType.delete({
+      data = await this.prisma.transitionReason.delete({
         where: { id },
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
       });
     } else {
-      data = await this.prismaService.documentType.update({
+      data = await this.prisma.transitionReason.update({
         where: { id },
         data: { voided: true },
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
@@ -115,7 +98,7 @@ export class DocumentTypesService {
   }
 
   async restore(id: string, query: CustomRepresentationQueryDto) {
-    const data = await this.prismaService.documentType.update({
+    const data = await this.prisma.transitionReason.update({
       where: { id },
       data: { voided: false },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),

@@ -20,7 +20,7 @@ import { CreateClaimDto, QueryClaimDto, UpdateClaimDto } from './claim.dto';
 import { SecurityQuestionsDto } from '../extraction/extraction.dto';
 import { S3Service } from '../s3/s3.service';
 import { ClaimStatusTransitionService } from './claim.transitions.service';
-import { StatusTransitionDto } from '../status-transitions/status-transitions.dto';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 
 @Injectable()
 export class ClaimService {
@@ -306,7 +306,7 @@ export class ClaimService {
 
   async reject(
     claimId: string,
-    rejectDto: StatusTransitionDto,
+    rejectDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {
@@ -320,7 +320,7 @@ export class ClaimService {
 
   async verify(
     claimId: string,
-    verifyDto: StatusTransitionDto,
+    verifyDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {
@@ -334,7 +334,7 @@ export class ClaimService {
 
   async cancel(
     claimId: string,
-    cancelDto: StatusTransitionDto,
+    cancelDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {

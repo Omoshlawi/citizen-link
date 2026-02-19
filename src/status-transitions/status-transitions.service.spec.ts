@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StatusTransitionsService } from './status-transitions.service';
+import { TransitionReasonsService } from './status-transitions.reasons.service';
 
 describe('StatusTransitionsService', () => {
-  let service: StatusTransitionsService;
+  let service: TransitionReasonsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [StatusTransitionsService],
+      providers: [TransitionReasonsService],
     }).compile();
 
-    service = module.get<StatusTransitionsService>(StatusTransitionsService);
+    service = module.get<TransitionReasonsService>(TransitionReasonsService);
   });
 
   it('should be defined', () => {

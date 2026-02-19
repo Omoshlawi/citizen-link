@@ -267,6 +267,7 @@ model TransitionReason {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   statusTransitions StatusTransition[]
+  voided            Boolean            @default(false)
 
   // Prevent duplicates for same entity + from + to + code
   @@unique([entityType, fromStatus, toStatus, code])

@@ -25,7 +25,7 @@ import {
   UpdateClaimDto,
 } from './claim.dto';
 import { ClaimService } from './claim.service';
-import { StatusTransitionDto } from '../status-transitions/status-transitions.dto';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 
 @Controller('claim')
 export class ClaimController {
@@ -85,7 +85,7 @@ export class ClaimController {
   @RequireSystemPermission({ claim: ['reject'] })
   reject(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() rejectDto: StatusTransitionDto,
+    @Body() rejectDto: StatusTransitionReasonsDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
@@ -99,7 +99,7 @@ export class ClaimController {
   @RequireSystemPermission({ claim: ['verify'] })
   verify(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() verifyDto: StatusTransitionDto,
+    @Body() verifyDto: StatusTransitionReasonsDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
@@ -112,7 +112,7 @@ export class ClaimController {
   @ApiErrorsResponse({ badRequest: true })
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() cancelDto: StatusTransitionDto,
+    @Body() cancelDto: StatusTransitionReasonsDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {

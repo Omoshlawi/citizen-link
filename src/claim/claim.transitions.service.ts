@@ -5,7 +5,7 @@ import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
 } from '../common/query-builder';
-import { StatusTransitionDto } from '../status-transitions/status-transitions.dto';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 
 @Injectable()
 export class ClaimStatusTransitionService {
@@ -16,7 +16,7 @@ export class ClaimStatusTransitionService {
 
   async reject(
     claimId: string,
-    rejectDto: StatusTransitionDto,
+    rejectDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {
@@ -95,7 +95,7 @@ export class ClaimStatusTransitionService {
 
   async verify(
     claimId: string,
-    verifyDto: StatusTransitionDto,
+    verifyDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {
@@ -179,7 +179,7 @@ export class ClaimStatusTransitionService {
 
   async cancel(
     claimId: string,
-    cancelDto: StatusTransitionDto,
+    cancelDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     query: CustomRepresentationQueryDto,

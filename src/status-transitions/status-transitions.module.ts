@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
 import { StatusTransitionsController } from './status-transitions.controller';
-import { StatusTransitionsService } from './status-transitions.service';
+import { TransitionReasonsService } from './status-transitions.reasons.service';
+import { StatusTransitionsReasonsController } from './status-transitions.reasons.controller';
 
 @Module({
-  controllers: [StatusTransitionsController],
-  providers: [StatusTransitionsService]
+  controllers: [
+    StatusTransitionsController,
+    StatusTransitionsReasonsController,
+  ],
+  providers: [TransitionReasonsService],
 })
 export class StatusTransitionsModule {}
