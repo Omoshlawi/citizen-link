@@ -8,22 +8,26 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ClaimService } from './claim.service';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { Session } from '@thallesp/nestjs-better-auth';
+import { RequireSystemPermission } from 'src/auth/auth.decorators';
 import { ApiErrorsResponse } from '../app.decorators';
-import {
-  CreateClaimDto,
-  GetClaimResponseDto,
-  QueryClaimDto,
-  QueryClaimResponseDto,
-  UpdateClaimDto,
-} from './claim.dto';
+import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   OriginalUrl,
 } from '../common/query-builder';
-import { Session } from '@thallesp/nestjs-better-auth';
-import { UserSession } from '../auth/auth.types';
+import {
+  CancelClaimDto,
+  CreateClaimDto,
+  GetClaimResponseDto,
+  QueryClaimDto,
+  QueryClaimResponseDto,
+  RejectClaimDto,
+  UpdateClaimDto,
+  VerifyClaimDto,
+} from './claim.dto';
+import { ClaimService } from './claim.service';
 
 @Controller('claim')
 export class ClaimController {
@@ -74,5 +78,46 @@ export class ClaimController {
     @Query() query: CustomRepresentationQueryDto,
   ) {
     return this.claimService.update(id, updateDocumentTypeDto, query);
+  }
+
+  @Post(':id/reject')
+  @ApiOperation({ summary: 'Reject Claim' })
+  @ApiOkResponse({ type: GetClaimResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ claim: ['reject'] })
+  reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() rejectDto: RejectClaimDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.claimService.reject(id, rejectDto, user, query);
+  }
+
+  @Post(':id/verify')
+  @ApiOperation({ summary: 'Verify Claim' })
+  @ApiOkResponse({ type: GetClaimResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ claim: ['verify'] })
+  verify(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() verifyDto: VerifyClaimDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.claimService.verify(id, verifyDto, user, query);
+  }
+
+  @Post(':id/cancel')
+  @ApiOperation({ summary: 'Cancel Claim' })
+  @ApiOkResponse({ type: GetClaimResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() cancelDto: CancelClaimDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.claimService.cancel(id, cancelDto, user, query);
   }
 }

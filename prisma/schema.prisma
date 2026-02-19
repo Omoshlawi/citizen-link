@@ -42,11 +42,12 @@ model User {
   transactions   Transaction[]
   disputes       Dispute[]
 
-  twoFactorEnabled    Boolean?          @default(false)
-  phoneNumber         String?
-  phoneNumberVerified Boolean?
-  twofactors          TwoFactor[]
-  claimAttachments    ClaimAttachment[]
+  twoFactorEnabled       Boolean?                @default(false)
+  phoneNumber            String?
+  phoneNumberVerified    Boolean?
+  twofactors             TwoFactor[]
+  claimAttachments       ClaimAttachment[]
+  claimStatusTransitions ClaimStatusTransition[]
 
   @@unique([email])
   @@unique([username])
@@ -308,9 +309,9 @@ model Document {
   issuer       String?
   // Document Type Information
   typeId       String
-  type         DocumentType           @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  caseId       String                 @unique
-  case         DocumentCase           @relation(fields: [caseId], onDelete: Cascade, references: [id])
+  type         DocumentType                @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  caseId       String                      @unique
+  case         DocumentCase                @relation(fields: [caseId], onDelete: Cascade, references: [id])
   issuanceDate DateTime?
   placeOfIssue String?
   expiryDate   DateTime?
@@ -616,10 +617,11 @@ model Claim {
   handover    Handover?
   dispute     Dispute?
 
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  verification ClaimVerification?
-  attachments  ClaimAttachment[] // Support document attachments
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  verification      ClaimVerification?
+  attachments       ClaimAttachment[] // Support document attachments
+  statusTransitions ClaimStatusTransition[]
 
   @@index([userId])
   @@index([foundDocumentCaseId])
@@ -634,6 +636,58 @@ enum ClaimStatus {
   REJECTED
   DISPUTED
   CANCELLED
+}
+
+model ClaimStatusTransition {
+  id      String @id @default(uuid())
+  claimId String
+  claim   Claim  @relation(fields: [claimId], references: [id])
+
+  fromStatus ClaimStatus
+  toStatus   ClaimStatus
+
+  reason  ClaimTransitionReason?
+  comment String? // optional extra explanation
+
+  changedById String
+  changedBy   User   @relation(fields: [changedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("claim_status_transitions")
+}
+
+enum ClaimTransitionReason {
+  // ✅ Approval / Verification
+  DOCUMENTS_VALIDATED // Claim documents and information were reviewed and confirmed valid.
+  MANUAL_REVIEW_APPROVED // Claim was approved after manual review by authorized personnel.
+  DISPUTE_RESOLVED_IN_FAVOR // A previously rejected claim was reinstated after dispute review.
+  ADDITIONAL_EVIDENCE_ACCEPTED // Additional evidence submitted during dispute was accepted.
+
+  // ❌ Rejection Reasons
+  INVALID_DOCUMENT // Submitted document is invalid, corrupted, or unacceptable.
+  INCOMPLETE_DOCUMENTATION // Required supporting documents were missing.
+  INCORRECT_INFORMATION // Submitted information does not match official records.
+  DUPLICATE_CLAIM // Another claim already exists for the same case or event.
+  NOT_ELIGIBLE // Claimant does not meet eligibility requirements.
+  POLICY_VIOLATION // Claim violates defined policy or operational guidelines.
+  FRAUD_SUSPECTED // Suspicion of fraudulent activity during review.
+  FRAUD_CONFIRMED // Fraud was confirmed after investigation.
+  NEW_EVIDENCE_INVALIDATES_CLAIM // New evidence invalidated a previously verified claim.
+  VERIFIED_BY_MISTAKE // Claim was verified in error and later corrected.
+
+  // ⚖ Dispute / Review Reasons
+  USER_DISPUTE_SUBMITTED // Claimant formally challenged a rejection decision.
+  ADDITIONAL_EVIDENCE_PROVIDED // Additional documents or clarification were provided for review.
+  REVIEW_REQUESTED // Internal review was requested by staff or system.
+  DISPUTE_REVIEW_COMPLETED // Dispute review process was completed.
+
+  // 🚫 Cancellation Reasons (Client only)
+  USER_WITHDREW_DISPUTE // Claimant withdrew an ongoing dispute.
+  DUPLICATE_SUBMISSION // Duplicate submission detected and cancelled.
+
+  // 🔎 Fallback
+  OTHER // Used when none of the predefined reasons apply (requires comment).
 }
 
 model ClaimAttachment {

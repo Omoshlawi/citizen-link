@@ -16,9 +16,17 @@ import {
   SortService,
 } from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateClaimDto, QueryClaimDto, UpdateClaimDto } from './claim.dto';
+import {
+  CancelClaimDto,
+  CreateClaimDto,
+  QueryClaimDto,
+  RejectClaimDto,
+  UpdateClaimDto,
+  VerifyClaimDto,
+} from './claim.dto';
 import { SecurityQuestionsDto } from '../extraction/extraction.dto';
 import { S3Service } from '../s3/s3.service';
+import { ClaimStatusTransitionService } from './claim.transitions.service';
 
 @Injectable()
 export class ClaimService {
@@ -31,6 +39,7 @@ export class ClaimService {
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
     private readonly s3Service: S3Service,
+    private readonly claimStatusTransitionService: ClaimStatusTransitionService,
   ) {}
 
   private async validateMatch(matchId: string, userId: string) {
@@ -58,7 +67,7 @@ export class ClaimService {
     return match;
   }
 
-  private async verify(
+  private async _verify(
     claimId: string,
     securityQuestions: SecurityQuestionsDto['questions'] = [],
     userResponse: CreateClaimDto['securityQuestions'] = [],
@@ -119,7 +128,7 @@ export class ClaimService {
       },
     });
     // Verify security questions
-    await this.verify(
+    await this._verify(
       claim.id,
       match.foundDocumentCase.securityQuestion as any,
       securityQuestions,
@@ -265,5 +274,47 @@ export class ClaimService {
       data: updateClaimDto,
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
+  }
+
+  async reject(
+    claimId: string,
+    rejectDto: RejectClaimDto,
+    user: UserSession['user'],
+    query: CustomRepresentationQueryDto,
+  ) {
+    return this.claimStatusTransitionService.reject(
+      claimId,
+      rejectDto,
+      user,
+      query,
+    );
+  }
+
+  async verify(
+    claimId: string,
+    verifyDto: VerifyClaimDto,
+    user: UserSession['user'],
+    query: CustomRepresentationQueryDto,
+  ) {
+    return this.claimStatusTransitionService.verify(
+      claimId,
+      verifyDto,
+      user,
+      query,
+    );
+  }
+
+  async cancel(
+    claimId: string,
+    cancelDto: CancelClaimDto,
+    user: UserSession['user'],
+    query: CustomRepresentationQueryDto,
+  ) {
+    return this.claimStatusTransitionService.cancel(
+      claimId,
+      cancelDto,
+      user,
+      query,
+    );
   }
 }

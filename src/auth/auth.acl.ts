@@ -20,6 +20,7 @@ export const adminPluginAcl = createAccessControl({
     'verify',
     'query-case-matches',
   ],
+  claim: ['verify', 'reject', 'delete'],
 });
 
 const adminRole = adminPluginAcl.newRole({
@@ -35,6 +36,7 @@ const adminRole = adminPluginAcl.newRole({
     'verify',
     'query-case-matches',
   ],
+  claim: ['verify', 'reject', 'delete'],
   ...adminAc.statements,
 });
 

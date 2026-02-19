@@ -1,0 +1,15 @@
+/*
+  Warnings:
+
+  - The `reason` column on the `claim_status_transitions` table would be dropped and recreated. This will lead to data loss if there is data in the column.
+
+*/
+-- CreateEnum
+CREATE TYPE "ClaimTransitionReason" AS ENUM ('DOCUMENTS_VALIDATED', 'MANUAL_REVIEW_APPROVED', 'DISPUTE_RESOLVED_IN_FAVOR', 'ADDITIONAL_EVIDENCE_ACCEPTED', 'INVALID_DOCUMENT', 'INCOMPLETE_DOCUMENTATION', 'INCORRECT_INFORMATION', 'DUPLICATE_CLAIM', 'NOT_ELIGIBLE', 'POLICY_VIOLATION', 'FRAUD_SUSPECTED', 'FRAUD_CONFIRMED', 'NEW_EVIDENCE_INVALIDATES_CLAIM', 'VERIFIED_BY_MISTAKE', 'USER_DISPUTE_SUBMITTED', 'ADDITIONAL_EVIDENCE_PROVIDED', 'REVIEW_REQUESTED', 'DISPUTE_REVIEW_COMPLETED', 'USER_WITHDREW_DISPUTE', 'DUPLICATE_SUBMISSION', 'OTHER');
+
+-- AlterTable
+ALTER TABLE "claim_status_transitions" DROP COLUMN "reason",
+ADD COLUMN     "reason" "ClaimTransitionReason";
+
+-- DropEnum
+DROP TYPE "ClaimStatusReason";
