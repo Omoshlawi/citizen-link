@@ -85,19 +85,8 @@ export const MatchResultSchema = z.object({
   }),
 });
 
-const CreateMatchSchema = z.object({
-  lostDocumentCaseId: z.uuid(),
-  foundDocumentCaseId: z.uuid(),
-  matchScore: z.number().min(0).max(1).optional(),
-  aiMatchReasons: z.record(z.string(), z.any()).optional(),
-});
-
 const UpdateMatchStatusSchema = z.object({
   status: MatchStatusSchema,
-  notes: z.string().optional(),
-});
-
-const AcceptMatchSchema = z.object({
   notes: z.string().optional(),
 });
 
@@ -126,15 +115,9 @@ export class MatchResultDto extends createZodDto(MatchResultSchema) {}
 
 export class QueryMatchesDto extends createZodDto(QueryMatchesSchema) {}
 
-export class CreateMatchDto extends createZodDto(CreateMatchSchema) {}
-
 export class UpdateMatchStatusDto extends createZodDto(
   UpdateMatchStatusSchema,
 ) {}
-
-export class AcceptMatchDto extends createZodDto(AcceptMatchSchema) {}
-
-export class RejectMatchDto extends createZodDto(RejectMatchSchema) {}
 
 export class CompleteMatchDto extends createZodDto(CompleteMatchSchema) {}
 

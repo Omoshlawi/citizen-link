@@ -29,9 +29,21 @@ export class TransitionReasonsService {
         AND: [
           {
             voided: query?.includeVoided ? undefined : false,
-            entityType: query?.entityType,
-            fromStatus: query?.fromStatus,
-            toStatus: query?.toStatus,
+            entityType:
+              query?.entityType && query.includeGlobal
+                ? { in: [query?.entityType, '*'] }
+                : query?.entityType,
+            fromStatus:
+              query?.fromStatus && query.includeGlobal
+                ? { in: [query?.fromStatus, '*'] }
+                : query?.fromStatus,
+            toStatus:
+              query?.toStatus && query.includeGlobal
+                ? { in: [query?.toStatus, '*'] }
+                : query?.toStatus,
+            auto: query?.auto,
+            label: query?.label,
+            code: query?.code,
           },
           {
             OR: query.search

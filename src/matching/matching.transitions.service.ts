@@ -4,8 +4,8 @@ import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
 } from '../common/query-builder';
-import { RejectMatchDto } from './matching.dto';
 import { UserSession } from '../auth/auth.types';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 
 @Injectable()
 export class MatchingStatusTransitionService {
@@ -16,7 +16,7 @@ export class MatchingStatusTransitionService {
 
   async reject(
     matchId: string,
-    rejectDto: RejectMatchDto,
+    rejectDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     query: CustomRepresentationQueryDto,

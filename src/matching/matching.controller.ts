@@ -15,7 +15,6 @@ import {
   QueryMatchesResponseDto,
   QueryMatechesForFoundCaseDto,
   QueryMatechesForLostCaseDto,
-  RejectMatchDto,
 } from './matching.dto';
 import { ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
@@ -28,6 +27,7 @@ import {
 } from '../common/query-builder';
 import { Session } from '@thallesp/nestjs-better-auth';
 import { UserSession } from '../auth/auth.types';
+import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
 
 @Controller('matching')
 export class MatchingController {
@@ -105,7 +105,7 @@ export class MatchingController {
   @ApiErrorsResponse()
   reject(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() rejectDto: RejectMatchDto,
+    @Body() rejectDto: StatusTransitionReasonsDto,
     @Session() { user }: UserSession,
     @Query() query: CustomRepresentationQueryDto,
   ) {

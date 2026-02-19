@@ -2,7 +2,7 @@
   {
     "entityType": "Match",
     "fromStatus": "PENDING",
-    "toStatus": "REJECT",
+    "toStatus": "REJECTED",
     "code": "OWNERSHIP_DENIED",
     "auto": false,
     "label": "This is not my document",
@@ -11,7 +11,7 @@
   {
     "entityType": "Match",
     "fromStatus": "PENDING",
-    "toStatus": "REJECT",
+    "toStatus": "REJECTED",
     "code": "DOCUMENT_SUPERSEDED",
     "auto": false,
     "label": "I already replaced this document",

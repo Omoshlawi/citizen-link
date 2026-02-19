@@ -19,6 +19,13 @@ export const QueryStatusTransitionReasonsSchema = z.object({
     })
     .optional()
     .default(false),
+  includeGlobal: z
+    .stringbool({
+      truthy: ['true', '1'],
+      falsy: ['false', '0'],
+    })
+    .optional()
+    .default(false),
   auto: z
     .stringbool({
       truthy: ['true', '1'],

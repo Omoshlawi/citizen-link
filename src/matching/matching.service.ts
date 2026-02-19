@@ -20,7 +20,6 @@ import {
   QueryMatchesDto,
   QueryMatechesForFoundCaseDto,
   QueryMatechesForLostCaseDto,
-  RejectMatchDto,
 } from './matching.dto';
 import { MatchFoundDocumentService } from './matching.found.service';
 import { FindMatchesOptions, VerifyMatchesOptions } from './matching.interface';
@@ -29,6 +28,7 @@ import { MatchingStatisticsService } from './matching.statistics.service';
 import { UserSession } from 'src/auth/auth.types';
 import { isSuperUser } from 'src/app.utils';
 import { MatchingStatusTransitionService } from './matching.transitions.service';
+import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
 
 @Injectable()
 export class MatchingService {
@@ -61,7 +61,7 @@ export class MatchingService {
 
   reject(
     matchId: string,
-    rejectDto: RejectMatchDto,
+    rejectDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {
