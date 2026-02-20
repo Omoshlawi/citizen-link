@@ -230,14 +230,45 @@ export class DocumentCasesQueryService {
     };
   }
 
+  /**
+   * Checks if the claimant is a verified owner of the document case by
+   * if the latest claim is verified and belongs to the user
+   * @param caseId
+   * @param userId
+   * @returns
+   */
+  private async isClaimantAVerifiedOwner(caseId: string, userId: string) {
+    const verifiedOwner = await this.prismaService.claim.findFirst({
+      where: {
+        status: 'VERIFIED',
+        userId,
+        match: {
+          lostDocumentCase: {
+            case: {
+              userId, // User reported the doc as a lost case
+            },
+          },
+          foundDocumentCase: {
+            caseId,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return verifiedOwner;
+  }
+
   async findOne(
     id: string,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
     const isAdmin = isSuperUser(user);
+    const isVerifiedOwner = await this.isClaimantAVerifiedOwner(id, user.id);
     const data = await this.prismaService.documentCase.findUnique({
-      where: { id, userId: isAdmin ? undefined : user.id },
+      where: { id, userId: isAdmin || isVerifiedOwner ? undefined : user.id },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
     if (!data) throw new NotFoundException('Document case not found');
