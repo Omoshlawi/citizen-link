@@ -136,6 +136,15 @@ model UserActivity {
   @@map("user_activities")
 }
 
+model EntitySequence {
+  id        String   @id @default(uuid())
+  prefix    String   @unique // "CLM", "MCH", "INV", "TRX", etc.
+  lastSeq   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("entity_sequences")
+}
+
 // Universal Address Model with Hierarchical Support
 model Address {
   id String @id @default(uuid())
@@ -509,13 +518,14 @@ enum AIExtractionInteractionType {
 }
 
 model DocumentCase {
-  id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  eventDate DateTime // Lost or found date
+  id         String   @id @default(uuid())
+  caseNumber String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  eventDate  DateTime // Lost or found date
   // Location information
-  addressId String
-  address   Address  @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  addressId  String
+  address    Address  @relation(fields: [addressId], references: [id], onDelete: Cascade)
 
   // Related Extraction
   extractionId String?
@@ -646,7 +656,7 @@ enum ActorType {
 
 model Match {
   id          String @id @default(uuid())
-  matchNumber Int    @unique @default(autoincrement())
+  matchNumber String @unique
 
   aiInteractionId String        @unique
   aiInteraction   AIInteraction @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
@@ -695,7 +705,7 @@ enum MatchStatus {
 
 model Claim {
   id          String @id @default(uuid())
-  claimNumber Int    @unique @default(autoincrement())
+  claimNumber String @unique
 
   // Claimant
   userId String // Redundant field but kept for optimization through index and ease of querying

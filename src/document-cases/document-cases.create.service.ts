@@ -1,7 +1,9 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
+import { EntityPrefix } from 'src/human-id/human-id.constants';
 import { AIInteractionType } from '../../generated/prisma/enums';
 import { OcrService } from '../ai/ocr.service';
+import { UserSession } from '../auth/auth.types';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
 import {
   DataExtractionDto,
@@ -10,11 +12,11 @@ import {
 } from '../extraction/extraction.dto';
 import { ProgressEvent } from '../extraction/extraction.interface';
 import { ExtractionService } from '../extraction/extraction.service';
+import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateFoundDocumentCaseDto } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
-import { UserSession } from '../auth/auth.types';
 
 @Injectable()
 export class DocumentCasesCreateService {
@@ -26,6 +28,7 @@ export class DocumentCasesCreateService {
     private readonly ocrService: OcrService,
     private readonly extractionService: ExtractionService,
     private readonly documentCasesQueryService: DocumentCasesQueryService,
+    private readonly humanIdService: HumanIdService,
   ) {}
 
   private async filesExists(
@@ -177,6 +180,9 @@ export class DocumentCasesCreateService {
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         ...caseData,
+        caseNumber: await this.humanIdService.generate({
+          prefix: EntityPrefix.FOUND_DOCUMENT_CASE,
+        }),
         extractionId: extraction.id,
         eventDate: dayjs(eventDate).toDate(),
         foundDocumentCase: {
@@ -257,6 +263,9 @@ export class DocumentCasesCreateService {
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         ...caseData,
+        caseNumber: await this.humanIdService.generate({
+          prefix: EntityPrefix.LOST_DOCUMENT_CASE,
+        }),
         extractionId: extraction.id,
         eventDate: dayjs(eventDate).toDate(),
         lostDocumentCase: {

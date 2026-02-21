@@ -29,6 +29,8 @@ import { ChatBotModule } from './chat-bot/chat-bot.module';
 import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
 import { ClaimModule } from './claim/claim.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
+import { HumanIdModule } from './human-id/human-id.module';
+import { HumanIdConfig } from './human-id/human-id.config';
 
 @Module({
   imports: [
@@ -71,6 +73,15 @@ import { StatusTransitionsModule } from './status-transitions/status-transitions
     PickupStationsModule,
     ClaimModule,
     StatusTransitionsModule,
+    HumanIdModule.registerAsync({
+      global: true,
+      useFactory: (config: HumanIdConfig) => {
+        return {
+          paddingLength: config.paddingLength,
+        };
+      },
+      inject: [HumanIdConfig],
+    }),
   ],
   controllers: [AppController],
   providers: [

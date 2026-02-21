@@ -28,6 +28,8 @@ import {
 } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
 import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
+import { HumanIdService } from '../human-id/human-id.service';
+import { EntityPrefix } from '../human-id/human-id.constants';
 
 @Injectable()
 export class DocumentCasesService {
@@ -39,6 +41,7 @@ export class DocumentCasesService {
     private readonly documentCasesQueryService: DocumentCasesQueryService,
     private readonly documentCasesWorkflowService: DocumentCasesWorkflowService,
     private readonly documentCasesCreateService: DocumentCasesCreateService,
+    private readonly humanIdService: HumanIdService,
   ) {}
 
   findAll(
@@ -154,6 +157,9 @@ export class DocumentCasesService {
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         userId: user.id,
+        caseNumber: await this.humanIdService.generate({
+          prefix: EntityPrefix.LOST_DOCUMENT_CASE,
+        }),
         eventDate: dayjs(createLostDocumentCaseDto.eventDate).toDate(),
         addressId: createLostDocumentCaseDto.addressId,
         document: {

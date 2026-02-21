@@ -22,6 +22,8 @@ import {
 } from '../common/query-builder';
 import { QueryMatechesForLostCaseDto } from './matching.dto';
 import { lastValueFrom } from 'rxjs';
+import { EntityPrefix } from '../human-id/human-id.constants';
+import { HumanIdService } from '../human-id/human-id.service';
 
 @Injectable()
 export class MatchFoundDocumentService {
@@ -33,6 +35,7 @@ export class MatchFoundDocumentService {
     private readonly matchVerifierService: MatchingVerifierService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
+    private readonly humanIdService: HumanIdService,
   ) {}
 
   /**
@@ -260,6 +263,9 @@ export class MatchFoundDocumentService {
       if (matchData.overallScore >= minVerificationScore) {
         const match = await this.prismaService.match.create({
           data: {
+            matchNumber: await this.humanIdService.generate({
+              prefix: EntityPrefix.MATCH,
+            }),
             aiInteractionId: aiInteraction.id,
             lostDocumentCaseId: sourceDoc.case.lostDocumentCase.id,
             foundDocumentCaseId: candidateDoc.case.foundDocumentCase.id,

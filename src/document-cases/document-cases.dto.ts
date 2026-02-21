@@ -149,6 +149,8 @@ export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
 }
 
 export class GetDocumentCaseResponseDto implements DocumentCase {
+  @ApiProperty()
+  caseNumber: string;
   @ApiProperty({ required: false, nullable: true })
   extractionId: string | null;
   @ApiProperty()

@@ -1,0 +1,14 @@
+export enum EntityPrefix {
+  TEST = 'TST',
+  MATCH = 'MTH',
+  CLAIM = 'CLM',
+  HANDOVER = 'HND',
+  INVOICE = 'INV',
+  TRANSACTION = 'TRX',
+  DISPUTE = 'DSP',
+  DOCUMENT = 'DOC',
+  LOST_DOCUMENT_CASE = 'LDC',
+  FOUND_DOCUMENT_CASE = 'FDC',
+}
+
+export const HUMAN_ID_OPTIONS = 'HUMAN_ID_OPTIONS';

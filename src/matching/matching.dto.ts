@@ -141,7 +141,7 @@ export class GetMatchResponseDto implements Match {
   @ApiProperty({ enum: MatchStatus })
   status: MatchStatus;
   @ApiProperty()
-  matchNumber: number;
+  matchNumber: string;
   @ApiProperty()
   aiInteractionId: string;
   @ApiProperty({ type: MatchResultDto })

@@ -21,6 +21,8 @@ import { SecurityQuestionsDto } from '../extraction/extraction.dto';
 import { S3Service } from '../s3/s3.service';
 import { ClaimStatusTransitionService } from './claim.transitions.service';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
+import { HumanIdService } from '../human-id/human-id.service';
+import { EntityPrefix } from '../human-id/human-id.constants';
 
 @Injectable()
 export class ClaimService {
@@ -35,6 +37,7 @@ export class ClaimService {
     private readonly sortService: SortService,
     private readonly s3Service: S3Service,
     private readonly claimStatusTransitionService: ClaimStatusTransitionService,
+    private readonly humanIdService: HumanIdService,
   ) {}
 
   private async validateMatch(matchId: string, userId: string) {
@@ -128,10 +131,21 @@ export class ClaimService {
   }
 
   async create(
-    { attachments, securityQuestions, ...createClaimDto }: CreateClaimDto,
+    {
+      attachments,
+      securityQuestions,
+      pickupStationId,
+      addressId,
+      ...createClaimDto
+    }: CreateClaimDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
+    if (!pickupStationId && !addressId) {
+      throw new BadRequestException(
+        'Either pickupStationId or addressId must be provided',
+      );
+    }
     const match = await this.validateMatch(createClaimDto.matchId, user.id);
     await this.validateAttachments(attachments);
     // Ensure their is no other claim with same match urther than latest cancelled claim
@@ -142,8 +156,14 @@ export class ClaimService {
     const claim = await this.prismaService.claim.create({
       data: {
         ...createClaimDto,
+        claimNumber: await this.humanIdService.generate({
+          prefix: EntityPrefix.CLAIM,
+        }),
         userId: user.id,
         foundDocumentCaseId: match.foundDocumentCaseId,
+        pickupStationId,
+        pickupAddressId: addressId,
+        preferredHandoverDate: parseDate(createClaimDto.preferredHandoverDate),
       },
     });
     // Verify security questions

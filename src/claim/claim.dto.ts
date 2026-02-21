@@ -6,6 +6,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export const ClaimSchema = z.object({
   pickupStationId: z.uuid().optional(),
+  addressId: z.uuid().optional(),
   matchId: z.uuid(),
   preferredHandoverDate: z.iso.date().optional(),
   securityQuestions: z
@@ -37,7 +38,7 @@ export const ClaimVerificationSchema = z.object({
 
 export const QueryClaimSchema = z.object({
   ...QueryBuilderSchema.shape,
-  claimNumber: z.coerce.number().optional(),
+  claimNumber: z.string().optional(),
   userId: z
     .uuid()
     .optional()
@@ -61,11 +62,18 @@ export const SechduleClaimHandoverSchema = z.object({
   preferredHandoverDate: z.iso.date(),
 });
 
+export class ScheduleClaimHandoverDto extends createZodDto(
+  SechduleClaimHandoverSchema,
+) {}
+
 export class CreateClaimDto extends createZodDto(
   ClaimSchema.pick({
     matchId: true,
     securityQuestions: true,
     attachments: true,
+    pickupStationId: true,
+    addressId: true,
+    preferredHandoverDate: true,
   }),
 ) {}
 export class QueryClaimDto extends createZodDto(QueryClaimSchema) {}
@@ -73,7 +81,11 @@ export class ClaimVerificationDto extends createZodDto(
   ClaimVerificationSchema,
 ) {}
 export class UpdateClaimDto extends createZodDto(
-  ClaimSchema.pick({ pickupStationId: true, preferredHandoverDate: true }),
+  ClaimSchema.pick({
+    pickupStationId: true,
+    preferredHandoverDate: true,
+    addressId: true,
+  }),
 ) {}
 
 export class GetClaimResponseDto implements Claim {
@@ -83,8 +95,8 @@ export class GetClaimResponseDto implements Claim {
   matchId: string;
   @ApiProperty({ required: false })
   preferredHandoverDate: Date | null;
-  @ApiProperty({ type: 'number' })
-  claimNumber: number;
+  @ApiProperty({ type: 'string' })
+  claimNumber: string;
   @ApiProperty()
   userId: string;
   @ApiProperty()
