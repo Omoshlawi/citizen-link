@@ -55,6 +55,12 @@ export const QueryClaimSchema = z.object({
     .optional(),
 });
 
+export const SechduleClaimHandoverSchema = z.object({
+  pickupStationId: z.uuid().optional(),
+  addressId: z.uuid().optional(),
+  preferredHandoverDate: z.iso.date(),
+});
+
 export class CreateClaimDto extends createZodDto(
   ClaimSchema.pick({
     matchId: true,
@@ -87,12 +93,8 @@ export class GetClaimResponseDto implements Claim {
   status: ClaimStatus;
   @ApiProperty()
   id: string;
-  @ApiProperty()
-  serviceFee: number;
-  @ApiProperty()
-  finderReward: number;
-  @ApiProperty()
-  totalAmount: number;
+  @ApiProperty({ required: false })
+  pickupAddressId: string | null;
   @ApiProperty()
   createdAt: Date;
   @ApiProperty()

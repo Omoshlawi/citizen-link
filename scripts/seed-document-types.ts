@@ -13,6 +13,9 @@ interface DocumentType {
   description: string;
   icon: string;
   loyaltyPoints: number;
+  serviceFee: number;
+  finderReward: number;
+  currency: string;
   replacementInstructions: string;
   averageReplacementCost: number;
   verificationStrategy: string | object;
@@ -56,6 +59,10 @@ async function seedDocumentTypes(): Promise<void> {
         verificationStrategy: verificationStrategy,
         aiExtractionPrompt: docType.aiExtractionPrompt || null,
         voided: false,
+        serviceFee: docType.serviceFee,
+        finderReward: docType.finderReward,
+        currency: docType.currency,
+        totalAmount: docType.serviceFee + docType.finderReward,
       },
       create: {
         name: docType.name,
@@ -67,6 +74,10 @@ async function seedDocumentTypes(): Promise<void> {
         averageReplacementCost: docType.averageReplacementCost,
         verificationStrategy: verificationStrategy,
         aiExtractionPrompt: docType.aiExtractionPrompt || null,
+        serviceFee: docType.serviceFee,
+        finderReward: docType.finderReward,
+        currency: docType.currency,
+        totalAmount: docType.serviceFee + docType.finderReward,
       },
     });
 

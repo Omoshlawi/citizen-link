@@ -6,6 +6,7 @@ async function seedAddressHierarchy(): Promise<void> {
     const username = process.env.ADMIN_USERNAME as string;
     const email = process.env.ADMIN_EMAIL as string;
     const password = process.env.ADMIN_PASSWORD as string;
+    const skipAdminIfExist = process.env.SKIP_ADMIN_IF_EXIST as string;
     // Test database connection
     await prisma.$connect();
     console.log('✅ Database connection established');
@@ -13,10 +14,15 @@ async function seedAddressHierarchy(): Promise<void> {
       where: { OR: [{ email }, { username }] },
     });
     if (admin) {
-      console.log('Found admin User .Deleting ....');
-      await prisma.user.deleteMany({
-        where: { OR: [{ username }, { email }] },
-      });
+      if (skipAdminIfExist === 'true') {
+        console.log('Found admin User .Skipping ....');
+        return;
+      } else {
+        console.log('Found admin User .Deleting ....');
+        await prisma.user.deleteMany({
+          where: { OR: [{ username }, { email }] },
+        });
+      }
     }
 
     console.log('Seeding admin with credials: ');

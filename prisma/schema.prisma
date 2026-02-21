@@ -191,6 +191,7 @@ model Address {
   updatedAt DateTime @updatedAt
 
   voided Boolean @default(false)
+  claims Claim[]
 
   // For hierarchical queries
   @@index([userId])
@@ -320,6 +321,10 @@ model DocumentType {
   description             String?
   icon                    String?
   loyaltyPoints           Int // Points to award user who finds an post the document
+  serviceFee              Decimal          @default(0) @db.Decimal(10, 2)
+  finderReward            Decimal          @default(0) @db.Decimal(10, 2) // Amount rewarded to finder
+  totalAmount             Decimal          @default(0) @db.Decimal(10, 2) // Service fee + finder reward
+  currency                String           @default("KES")
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
   replacementInstructions String?
@@ -401,6 +406,65 @@ model DocumentImage {
   createdAt  DateTime  @default(now())
 
   @@map("document_images")
+}
+
+//  AI INTERACTION LOGS
+model AIInteraction {
+  id String @id @default(uuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Interaction Type
+  interactionType AIInteractionType
+
+  // AI Model Info
+  aiModel      String
+  modelVersion String?
+
+  // Context - What entity triggered this AI call
+  entityType String? // "LostDocument", "Match", "Claim", etc.
+  entityId   String?
+
+  // Request/Response
+  prompt   String @db.Text
+  response String @db.Text
+
+  // Performance & Cost Tracking
+  tokenUsage     Json? // { "input": 1500, "output": 800, "total": 2300 }
+  processingTime Int? // milliseconds
+  estimatedCost  Float? // Cost in USD (calculated from token usage)
+
+  // Status
+  success      Boolean @default(true)
+  errorMessage String? @db.Text
+  retryCount   Int     @default(0)
+
+  createdAt              DateTime                  @default(now())
+  extractionInteractions AIExtractionInteraction[]
+  match                  Match?
+  // aiverification         ClaimVerification?
+
+  // For analytics and cost tracking
+  // Quick filtering of failed requests
+  @@index([userId])
+  @@index([interactionType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([success])
+  @@map("ai_interactions")
+}
+
+enum AIInteractionType {
+  DATA_EXTRACTION // Extracting data from found document images
+  CONFIDENCE_SCORE // Calculating confidence score for extracted data
+  DOCUMENT_MATCHING // Finding matches between lost and found
+  CLAIM_VERIFICATION // Verifying user's security answers
+  IMAGE_ANALYSIS // Analyzing document image quality/authenticity
+  SECURITY_QUESTIONS_GEN // Generating security questions
+  DISPUTE_ANALYSIS // Analyzing disputes
+  USER_QUERY_RESPONSE // Responding to user questions/chat
+  ALTERNATIVE_MATCHES // Finding alternative matches when user rejects
 }
 
 model AIExtraction {
@@ -645,22 +709,20 @@ model Claim {
   match   Match  @relation(fields: [matchId], references: [id])
 
   // Pickup Details
-  pickupStationId       String?
-  pickupStation         PickupStation? @relation(fields: [pickupStationId], references: [id])
+  pickupStationId String?
+  pickupStation   PickupStation? @relation(fields: [pickupStationId], references: [id])
+  pickupAddressId String?
+  pickupAddress   Address?       @relation(fields: [pickupAddressId], references: [id])
+
   preferredHandoverDate DateTime?
 
   // Status
   status ClaimStatus @default(PENDING)
 
-  // Fees & Payment
-  serviceFee   Float @default(0)
-  finderReward Float @default(0)
-  totalAmount  Float @default(0)
-
   // Relations
-  transaction Transaction?
-  handover    Handover?
-  dispute     Dispute?
+  invoice  Invoice?
+  handover Handover?
+  dispute  Dispute?
 
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -710,65 +772,6 @@ model ClaimVerification {
 
   @@index([claimId])
   @@map("claim_verifications")
-}
-
-//  AI INTERACTION LOGS
-model AIInteraction {
-  id String @id @default(uuid())
-
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  // Interaction Type
-  interactionType AIInteractionType
-
-  // AI Model Info
-  aiModel      String
-  modelVersion String?
-
-  // Context - What entity triggered this AI call
-  entityType String? // "LostDocument", "Match", "Claim", etc.
-  entityId   String?
-
-  // Request/Response
-  prompt   String @db.Text
-  response String @db.Text
-
-  // Performance & Cost Tracking
-  tokenUsage     Json? // { "input": 1500, "output": 800, "total": 2300 }
-  processingTime Int? // milliseconds
-  estimatedCost  Float? // Cost in USD (calculated from token usage)
-
-  // Status
-  success      Boolean @default(true)
-  errorMessage String? @db.Text
-  retryCount   Int     @default(0)
-
-  createdAt              DateTime                  @default(now())
-  extractionInteractions AIExtractionInteraction[]
-  match                  Match?
-  // aiverification         ClaimVerification?
-
-  // For analytics and cost tracking
-  // Quick filtering of failed requests
-  @@index([userId])
-  @@index([interactionType])
-  @@index([entityType, entityId])
-  @@index([createdAt])
-  @@index([success])
-  @@map("ai_interactions")
-}
-
-enum AIInteractionType {
-  DATA_EXTRACTION // Extracting data from found document images
-  CONFIDENCE_SCORE // Calculating confidence score for extracted data
-  DOCUMENT_MATCHING // Finding matches between lost and found
-  CLAIM_VERIFICATION // Verifying user's security answers
-  IMAGE_ANALYSIS // Analyzing document image quality/authenticity
-  SECURITY_QUESTIONS_GEN // Generating security questions
-  DISPUTE_ANALYSIS // Analyzing disputes
-  USER_QUERY_RESPONSE // Responding to user questions/chat
-  ALTERNATIVE_MATCHES // Finding alternative matches when user rejects
 }
 
 model PickupStation {
@@ -854,7 +857,42 @@ enum HandoverStatus {
   NO_SHOW
 }
 
-// Notification model for user alerts
+// 2. The Invoice acts as the "Bill" and tracks the lipa mdogo mdogo progress
+model Invoice {
+  id            String @id @default(uuid())
+  invoiceNumber String @unique
+
+  claimId String @unique // 1-to-1 relationship retained!
+  claim   Claim  @relation(fields: [claimId], references: [id])
+
+  // Use Decimal for money!
+  serviceFee   Decimal @db.Decimal(10, 2)
+  finderReward Decimal @db.Decimal(10, 2)
+  totalAmount  Decimal @db.Decimal(10, 2)
+
+  // Tracking installments
+  amountPaid Decimal @default(0.00) @db.Decimal(10, 2)
+  balanceDue Decimal @db.Decimal(10, 2) // totalAmount - amountPaid
+
+  status InvoiceStatus @default(UNPAID)
+
+  // 1-to-Many relationship with Transactions
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([claimId])
+  @@index([status])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
 
 model Transaction {
   id                String @id @default(uuid())
@@ -863,33 +901,28 @@ model Transaction {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  claimId String @unique
-  claim   Claim  @relation(fields: [claimId], references: [id])
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
 
-  // Amounts
-  serviceFee   Float
-  finderReward Float
-  platformFee  Float @default(0)
-  totalAmount  Float
+  // The amount for this specific installment/attempt
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("KES")
 
   // Payment Details
   paymentMethod         PaymentMethod
   paymentProvider       String?
-  providerTransactionId String?
+  providerTransactionId String? // e.g., M-Pesa Receipt Number
 
   status TransactionStatus @default(PENDING)
 
   // Metadata
   metadata Json?
 
-  paidAt     DateTime?
-  refundedAt DateTime?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([invoiceId])
   @@index([userId])
-  @@index([claimId])
   @@index([status])
   @@map("transactions")
 }

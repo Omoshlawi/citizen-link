@@ -3,6 +3,7 @@ import { QueryBuilderSchema } from '../common/query-builder/query-builder.utils'
 import z from 'zod';
 import { DocumentCategory, DocumentType } from '../../generated/prisma/browser';
 import { ApiProperty } from '@nestjs/swagger';
+import { Decimal } from '@prisma/client/runtime/client';
 
 export const QueryDocumentTypeSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -43,6 +44,9 @@ export const DocumentTypeSchema = z.object({
   description: z.string().nullable().optional(),
   icon: z.string().min(1, 'Icon required').optional(),
   loyaltyPoints: z.coerce.number(),
+  serviceFee: z.coerce.number(),
+  finderReward: z.coerce.number(),
+  currency: z.string().min(1, 'Currency required').optional(),
   replacementInstructions: z.string().optional(),
   averageReplacementCost: z.coerce.number().optional(),
 });
@@ -58,6 +62,14 @@ export class QueryDocumentTypeDto extends createZodDto(
 ) {}
 
 export class GetDocumentTypeResponseDto implements DocumentType {
+  @ApiProperty()
+  serviceFee: Decimal;
+  @ApiProperty()
+  finderReward: Decimal;
+  @ApiProperty()
+  totalAmount: Decimal;
+  @ApiProperty()
+  currency: string;
   @ApiProperty()
   aiExtractionPrompt: string | null;
   @ApiProperty()

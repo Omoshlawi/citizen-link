@@ -29,7 +29,12 @@ export class DocumentTypesService {
     query: CustomRepresentationQueryDto,
   ) {
     return this.prismaService.documentType.create({
-      data: { ...createDocumentTypeDto, verificationStrategy: {} },
+      data: {
+        ...createDocumentTypeDto,
+        verificationStrategy: {},
+        totalAmount:
+          createDocumentTypeDto.serviceFee + createDocumentTypeDto.finderReward,
+      },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
   }
@@ -92,7 +97,14 @@ export class DocumentTypesService {
   ) {
     return this.prismaService.documentType.update({
       where: { id },
-      data: updateDocumentTypeDto,
+      data: {
+        ...updateDocumentTypeDto,
+        totalAmount:
+          updateDocumentTypeDto.serviceFee && updateDocumentTypeDto.finderReward
+            ? updateDocumentTypeDto.serviceFee +
+              updateDocumentTypeDto.finderReward
+            : undefined,
+      },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
   }
