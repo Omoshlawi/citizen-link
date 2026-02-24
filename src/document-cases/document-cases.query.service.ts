@@ -82,6 +82,7 @@ export class DocumentCasesQueryService {
                   lte: dayjs(query.dateReportedTo).toDate(),
                 }
               : undefined,
+            caseNumber: query.caseNumber,
           },
           {
             OR: query.search
@@ -94,13 +95,18 @@ export class DocumentCasesQueryService {
                       },
                     },
                   },
-
                   {
                     document: {
                       ownerName: {
                         contains: query?.search,
                         mode: 'insensitive',
                       },
+                    },
+                  },
+                  {
+                    caseNumber: {
+                      contains: query?.search,
+                      mode: 'insensitive',
                     },
                   },
                 ]

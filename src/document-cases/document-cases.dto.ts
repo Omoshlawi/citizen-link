@@ -19,6 +19,7 @@ export const QueryDocumentCaseSchema = z
   .object({
     ...QueryBuilderSchema.shape,
     search: z.string().optional(),
+    caseNumber: z.string().optional(),
     documentType: z.uuid().optional(),
     caseType: z.enum(['FOUND', 'LOST']).optional(),
     ownerName: z.string().optional(),

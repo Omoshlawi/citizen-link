@@ -31,6 +31,7 @@ import { ClaimModule } from './claim/claim.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
 import { HumanIdModule } from './human-id/human-id.module';
 import { HumanIdConfig } from './human-id/human-id.config';
+import { InvoiceModule } from './invoice/invoice.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { HumanIdConfig } from './human-id/human-id.config';
       },
       inject: [HumanIdConfig],
     }),
+    InvoiceModule,
   ],
   controllers: [AppController],
   providers: [

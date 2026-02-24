@@ -884,7 +884,7 @@ model Invoice {
   amountPaid Decimal @default(0.00) @db.Decimal(10, 2)
   balanceDue Decimal @db.Decimal(10, 2) // totalAmount - amountPaid
 
-  status InvoiceStatus @default(UNPAID)
+  status InvoiceStatus @default(PENDING)
 
   // 1-to-Many relationship with Transactions
   transactions Transaction[]
@@ -898,7 +898,7 @@ model Invoice {
 }
 
 enum InvoiceStatus {
-  UNPAID
+  PENDING
   PARTIALLY_PAID
   PAID
   CANCELLED

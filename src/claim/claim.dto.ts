@@ -39,6 +39,7 @@ export const ClaimVerificationSchema = z.object({
 export const QueryClaimSchema = z.object({
   ...QueryBuilderSchema.shape,
   claimNumber: z.string().optional(),
+  search: z.string().optional(),
   userId: z
     .uuid()
     .optional()

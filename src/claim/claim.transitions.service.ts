@@ -6,12 +6,14 @@ import {
   CustomRepresentationService,
 } from '../common/query-builder';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
+import { InvoiceService } from '../invoice/invoice.service';
 
 @Injectable()
 export class ClaimStatusTransitionService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly representationService: CustomRepresentationService,
+    private readonly invoiceService: InvoiceService,
   ) {}
 
   async reject(
@@ -106,6 +108,19 @@ export class ClaimStatusTransitionService {
       },
       include: {
         match: true,
+        foundDocumentCase: {
+          select: {
+            case: {
+              select: {
+                document: {
+                  select: {
+                    type: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
     if (!canVerify)
@@ -172,6 +187,22 @@ export class ClaimStatusTransitionService {
             reasonId: claimVerifiedReason.id,
           },
         });
+      }
+      // Create invoice for the claim if dont already exist
+      const invoice = await tx.invoice.findUnique({
+        where: { claimId },
+      });
+      if (!invoice) {
+        await this.invoiceService.create(
+          {
+            claimId,
+          },
+          {},
+          {
+            prismaClient: tx,
+            throwIfInvoiceExists: true,
+          },
+        );
       }
       return claim;
     });

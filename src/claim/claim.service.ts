@@ -236,6 +236,18 @@ export class ClaimService {
             foundDocumentCaseId: query.foundDocumentCaseId,
           },
           {
+            OR: query.search
+              ? [
+                  {
+                    claimNumber: {
+                      contains: query.search,
+                      mode: 'insensitive',
+                    },
+                  },
+                ]
+              : undefined,
+          },
+          {
             OR: query.caseId
               ? [
                   {
