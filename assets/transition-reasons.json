@@ -30,9 +30,9 @@
     "entityType": "Match",
     "fromStatus": "CLAIMED",
     "toStatus": "PENDING",
-    "code": "USER_CANCELLED_CLAIM",
+    "code": "CLAIMANT_CANCELLED_CLAIM",
     "auto": true,
-    "label": "User cancelled claim",
+    "label": "Claimant cancelled claim",
     "description": "Applied automatically to a match when asociated claim is canclled by user"
   },
   {
@@ -210,7 +210,7 @@
     "entityType": "Claim",
     "fromStatus": "DISPUTED",
     "toStatus": "CANCELLED",
-    "code": "USER_WITHDREW_DISPUTE",
+    "code": "CLAIMANT_WITHDREW_DISPUTE",
     "auto": true,
     "label": "Claimant withdrew dispute",
     "description": "Claimant submitted claim with invalid attachment or information."
@@ -219,30 +219,101 @@
     "entityType": "Claim",
     "fromStatus": "REJECTED",
     "toStatus": "DISPUTED",
-    "code": "USER_DISPUTE_SUBMITTED",
-    "auto": true,
-    "label": "Claimant disputed claim rejection",
-    "description": " Claimant formally challenged a rejection decision."
+    "code": "REQUEST_VERIFICATION_REVIEW",
+    "auto": false,
+    "label": "Request for verification review",
+    "description": "Claimant requested for verification review when their claim was rejected"
   },
   {
     "entityType": "Claim",
     "fromStatus": "DISPUTED",
-    "toStatus": "REJECTED",
-    "code": "DISPUTE_REVIEW_COMPLETED",
-    "auto": true,
-    "label": "Dispute review completed",
-    "description": "Dispute review process was completed."
+    "toStatus": "UNDER_REVIEW",
+    "code": "CLAIMANT_REQUESTED_REVIEW",
+    "auto": false,
+    "label": "Claimant requested verification review",
+    "description": "Claimant requested for verification review when their claim was rejected"
   },
   {
     "entityType": "Claim",
-    "fromStatus": "DISPUTED",
+    "fromStatus": "UNDER_REVIEW",
     "toStatus": "VERIFIED",
-    "code": "DISPUTE_REVIEW_COMPLETED",
-    "auto": true,
-    "label": "Dispute review completed",
-    "description": "Dispute review process was completed."
+    "code": "DOCUMENTS_VALIDATED",
+    "auto": false,
+    "label": "Documents validated",
+    "description": "All submitted documents were reviewed and confirmed valid."
   },
-
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "VERIFIED",
+    "code": "ADDITIONAL_EVIDENCE_ACCEPTED",
+    "auto": false,
+    "label": "Additional evidence accepted",
+    "description": "New evidence submitted during dispute resolved previous concerns."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "VERIFIED",
+    "code": "DISPUTE_RESOLVED_IN_FAVOR",
+    "auto": false,
+    "label": "Dispute resolved in favor",
+    "description": "Dispute review concluded in favor of the claimant."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "VERIFIED",
+    "code": "PREVIOUS_DECISION_OVERTURNED",
+    "auto": false,
+    "label": "Previous decision overturned",
+    "description": "A prior rejection was overturned after review."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "REJECTED",
+    "code": "INSUFFICIENT_EVIDENCE",
+    "auto": false,
+    "label": "Insufficient evidence",
+    "description": "Submitted evidence was not sufficient to verify ownership."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "REJECTED",
+    "code": "INCONSISTENT_INFORMATION",
+    "auto": false,
+    "label": "Inconsistent information",
+    "description": "Provided information does not match official records."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "REJECTED",
+    "code": "ELIGIBILITY_NOT_MET",
+    "auto": false,
+    "label": "Eligibility requirements not met",
+    "description": "Claimant does not meet the necessary eligibility criteria."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "REJECTED",
+    "code": "FRAUD_CONFIRMED",
+    "auto": false,
+    "label": "Fraud confirmed",
+    "description": "Fraudulent activity was confirmed during review."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "REJECTED",
+    "code": "POLICY_VIOLATION",
+    "auto": false,
+    "label": "Policy violation",
+    "description": "Claim violates operational or regulatory policy."
+  },
   {
     "entityType": "*",
     "fromStatus": "*",

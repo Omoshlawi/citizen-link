@@ -40,7 +40,6 @@ model User {
   claims         Claim[]
   aiinteractions AIInteraction[]
   transactions   Transaction[]
-  disputes       Dispute[]
 
   twoFactorEnabled    Boolean?           @default(false)
   phoneNumber         String?
@@ -273,6 +272,7 @@ model TransitionReason {
   auto        Boolean @default(false) // Whether the reason is system-generated
   label       String // Short UI label
   description String? // Longer explanation for logs/admin UI
+  metadata    Json? // Additional metadata for custom reasons
 
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -732,7 +732,6 @@ model Claim {
   // Relations
   invoice  Invoice?
   handover Handover?
-  dispute  Dispute?
 
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -749,9 +748,10 @@ model Claim {
 enum ClaimStatus {
   PENDING
   VERIFIED
+  CANCELLED
   REJECTED
   DISPUTED
-  CANCELLED
+  UNDER_REVIEW
 }
 
 model ClaimAttachment {
@@ -1020,50 +1020,6 @@ enum NotificationType {
   RATING_RECEIVED
   DOCUMENT_EXPIRED
   SYSTEM_ALERT
-}
-
-model Dispute {
-  id            String @id @default(uuid())
-  disputeNumber String @unique
-
-  claimId String @unique
-  claim   Claim  @relation(fields: [claimId], references: [id])
-
-  initiatedBy String
-  initiator   User   @relation(fields: [initiatedBy], references: [id])
-
-  reason      String @db.Text
-  description String @db.Text
-  evidence    Json?
-
-  // AI Analysis
-  aiAnalysis Json? // AI analyzes dispute and suggests resolution
-
-  disputeType DisputeType
-  status      DisputeStatus @default(OPEN)
-  resolution  String?       @db.Text
-  resolvedBy  String?
-  resolvedAt  DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([claimId])
-  @@index([status])
-  @@map("disputes")
-}
-
-enum DisputeType {
-  VERIFICATION_ERROR
-  ADMIN_OVERRIDE
-  FRAUD_SUSPECTED
-}
-
-enum DisputeStatus {
-  OPEN
-  INVESTIGATING
-  RESOLVED
-  CLOSED
 }
 
 // Message model for communication between users

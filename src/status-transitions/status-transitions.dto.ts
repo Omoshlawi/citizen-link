@@ -3,6 +3,7 @@ import { QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
 import { TransitionReason } from '../../generated/prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
+import { JsonValue } from '@prisma/client/runtime/client';
 
 export const QueryStatusTransitionReasonsSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -49,6 +50,8 @@ export class StatusTransitionReasonsDto extends createZodDto(
 ) {}
 
 export class GetTransitionReasonResponseDto implements TransitionReason {
+  @ApiProperty()
+  metadata: JsonValue;
   @ApiProperty()
   code: string;
 

@@ -342,12 +342,14 @@ export class ClaimService {
     rejectDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
+    underReview: boolean = false,
   ) {
     return this.claimStatusTransitionService.reject(
       claimId,
       rejectDto,
       user,
       query,
+      underReview,
     );
   }
 
@@ -356,12 +358,14 @@ export class ClaimService {
     verifyDto: StatusTransitionReasonsDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
+    underReview: boolean = false,
   ) {
     return this.claimStatusTransitionService.verify(
       claimId,
       verifyDto,
       user,
       query,
+      underReview,
     );
   }
 
@@ -374,6 +378,34 @@ export class ClaimService {
     return this.claimStatusTransitionService.cancel(
       claimId,
       cancelDto,
+      user,
+      query,
+    );
+  }
+
+  async dispute(
+    claimId: string,
+    disputeDto: StatusTransitionReasonsDto,
+    user: UserSession['user'],
+    query: CustomRepresentationQueryDto,
+  ) {
+    return this.claimStatusTransitionService.dispute(
+      claimId,
+      disputeDto,
+      user,
+      query,
+    );
+  }
+
+  async reviewDispute(
+    claimId: string,
+    reviewDisputeDto: StatusTransitionReasonsDto,
+    user: UserSession['user'],
+    query: CustomRepresentationQueryDto,
+  ) {
+    return this.claimStatusTransitionService.reviewDispute(
+      claimId,
+      reviewDisputeDto,
       user,
       query,
     );

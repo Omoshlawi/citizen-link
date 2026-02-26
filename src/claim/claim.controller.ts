@@ -89,7 +89,21 @@ export class ClaimController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.claimService.reject(id, rejectDto, user, query);
+    return this.claimService.reject(id, rejectDto, user, query, false);
+  }
+
+  @Post(':id/reject-reviewed')
+  @ApiOperation({ summary: 'Reject Claim after reviewing dispute' })
+  @ApiOkResponse({ type: GetClaimResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ claim: ['review-dispute'] })
+  rejectReviewed(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() rejectDto: StatusTransitionReasonsDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.claimService.reject(id, rejectDto, user, query, true);
   }
 
   @Post(':id/verify')
@@ -103,7 +117,21 @@ export class ClaimController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.claimService.verify(id, verifyDto, user, query);
+    return this.claimService.verify(id, verifyDto, user, query, false);
+  }
+
+  @Post(':id/verify-reviewed')
+  @ApiOperation({ summary: 'Verify Claim after reviewing dispute' })
+  @ApiOkResponse({ type: GetClaimResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ claim: ['review-dispute'] })
+  verifyReviewed(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() verifyDto: StatusTransitionReasonsDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.claimService.verify(id, verifyDto, user, query, true);
   }
 
   @Post(':id/cancel')
@@ -117,5 +145,32 @@ export class ClaimController {
     @Session() { user }: UserSession,
   ) {
     return this.claimService.cancel(id, cancelDto, user, query);
+  }
+
+  @Post(':id/dispute')
+  @ApiOperation({ summary: 'Request my rejected claim review' })
+  @ApiOkResponse({ type: GetClaimResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  dispute(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() disputeDto: StatusTransitionReasonsDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.claimService.dispute(id, disputeDto, user, query);
+  }
+
+  @Post(':id/review-dispute')
+  @ApiOperation({ summary: 'Review rejected claim dispute' })
+  @ApiOkResponse({ type: GetClaimResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ claim: ['review-dispute'] })
+  reviewDispute(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() reviewDisputeDto: StatusTransitionReasonsDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.claimService.reviewDispute(id, reviewDisputeDto, user, query);
   }
 }
