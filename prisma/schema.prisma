@@ -716,13 +716,13 @@ model Claim {
   foundDocumentCase   FoundDocumentCase @relation(fields: [foundDocumentCaseId], references: [id], onDelete: Cascade)
 
   matchId String
-  match   Match  @relation(fields: [matchId], references: [id])
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   // Pickup Details
   pickupStationId String?
-  pickupStation   PickupStation? @relation(fields: [pickupStationId], references: [id])
+  pickupStation   PickupStation? @relation(fields: [pickupStationId], references: [id], onDelete: Cascade)
   pickupAddressId String?
-  pickupAddress   Address?       @relation(fields: [pickupAddressId], references: [id])
+  pickupAddress   Address?       @relation(fields: [pickupAddressId], references: [id], onDelete: Cascade)
 
   preferredHandoverDate DateTime?
 
@@ -790,7 +790,7 @@ model PickupStation {
   name String
 
   addressLocaleCode String
-  addressLocale     AddressLocale @relation(fields: [addressLocaleCode], references: [code])
+  addressLocale     AddressLocale @relation(fields: [addressLocaleCode], references: [code], onDelete: Cascade)
 
   country    String  @default("KE") // ISO 3166-1 alpha-2 code (KE, US, etc.)
   postalCode String?
@@ -873,7 +873,7 @@ model Invoice {
   invoiceNumber String @unique
 
   claimId String @unique // 1-to-1 relationship retained!
-  claim   Claim  @relation(fields: [claimId], references: [id])
+  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
   // Use Decimal for money!
   serviceFee   Decimal @db.Decimal(10, 2)
@@ -909,10 +909,10 @@ model Transaction {
   transactionNumber String @unique
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   // The amount for this specific installment/attempt
   amount   Decimal @db.Decimal(10, 2)

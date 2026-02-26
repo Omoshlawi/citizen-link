@@ -7,7 +7,7 @@ import {
 } from '../common/query-builder';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import { InvoiceService } from '../invoice/invoice.service';
-import { ClaimStatus, MatchStatus } from '../../generated/prisma/enums';
+import { ClaimStatus } from '../../generated/prisma/enums';
 
 @Injectable()
 export class ClaimStatusTransitionService {
@@ -17,6 +17,50 @@ export class ClaimStatusTransitionService {
     private readonly invoiceService: InvoiceService,
   ) {}
 
+  private async isCurrentClaimLatestClaim(
+    claimId: string,
+    throwError: boolean = true,
+  ) {
+    const claim = await this.prismaService.claim.findUnique({
+      where: {
+        id: claimId,
+      },
+      select: {
+        match: {
+          select: {
+            claims: {
+              select: {
+                id: true,
+                claimNumber: true,
+                createdAt: true,
+                userId: true,
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!claim) throw new BadRequestException('Claim not found');
+    const isLatest = claim.match.claims[0].id === claimId;
+    if (!isLatest && throwError)
+      throw new BadRequestException(
+        "Invalid claim, can't perfom action on old claim",
+      );
+    return isLatest;
+  }
+
+  /**
+   * Reject a claim
+   * @param claimId claim id
+   * @param rejectDto reason and comment
+   * @param user user session
+   * @param query custom representation query
+   * @param underReview if claim is under review
+   * @returns rejected claim
+   */
   async reject(
     claimId: string,
     rejectDto: StatusTransitionReasonsDto,
@@ -24,6 +68,7 @@ export class ClaimStatusTransitionService {
     query: CustomRepresentationQueryDto,
     underReview: boolean = false,
   ) {
+    await this.isCurrentClaimLatestClaim(claimId);
     const canReject = await this.prismaService.claim.findUnique({
       where: {
         id: claimId,
@@ -31,11 +76,7 @@ export class ClaimStatusTransitionService {
           in: [
             ...(underReview
               ? [ClaimStatus.UNDER_REVIEW]
-              : [
-                  ClaimStatus.PENDING,
-                  ClaimStatus.VERIFIED,
-                  ClaimStatus.DISPUTED,
-                ]),
+              : [ClaimStatus.PENDING, ClaimStatus.VERIFIED]),
           ],
         },
       },
@@ -47,66 +88,51 @@ export class ClaimStatusTransitionService {
       throw new BadRequestException(
         `Can only reject ${underReview ? 'under review' : 'pending, verified or disputed'} claims`,
       );
-    // Transition status to rejected and update match status to rejected
+    // validate rejection reason
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        id: rejectDto.reason,
+        entityType: 'Claim',
+        fromStatus: canReject.status,
+        toStatus: ClaimStatus.REJECTED,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
+    // Transition status to rejected
     return await this.prismaService.$transaction(async (tx) => {
-      // Update claim status to rejected and match status to rejected
+      // Update claim status to rejected
       const claim = await tx.claim.update({
         where: { id: claimId },
         data: {
           status: ClaimStatus.REJECTED,
-          match: {
-            update: {
-              where: { id: canReject.matchId },
-              data: {
-                status: MatchStatus.REJECTED,
-              },
-            },
-          },
         },
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
       });
-      // Find Match rejected reason
-      const claimRejectedReason = await tx.transitionReason.findUnique({
-        where: {
-          entityType_fromStatus_toStatus_code: {
-            entityType: 'Match',
-            fromStatus: canReject.match.status,
-            toStatus: 'REJECTED',
-            code: 'CLAIM_REJECTED',
-          },
-          auto: true,
-        },
-      });
-      // Throw Bad request if reason dont exist
-      if (!claimRejectedReason)
-        throw new BadRequestException('Claim rejected reason not found');
       // Create transition history
-      await tx.statusTransition.createMany({
-        data: [
-          {
-            entityType: 'Claim',
-            entityId: claimId,
-            fromStatus: canReject.status,
-            toStatus: 'REJECTED',
-            changedById: user?.id,
-            comment: rejectDto.comment,
-            reasonId: rejectDto.reason,
-          },
-          {
-            entityType: 'Match',
-            entityId: canReject.matchId,
-            fromStatus: canReject.match.status,
-            toStatus: 'REJECTED',
-            changedById: user?.id,
-            comment: rejectDto.comment,
-            reasonId: claimRejectedReason.id,
-          },
-        ],
+      await tx.statusTransition.create({
+        data: {
+          entityType: 'Claim',
+          entityId: claimId,
+          fromStatus: canReject.status,
+          toStatus: 'REJECTED',
+          changedById: user?.id,
+          comment: rejectDto.comment,
+          reasonId: rejectDto.reason,
+        },
       });
       return claim;
     });
   }
 
+  /**
+   * Verify a claim
+   * @param claimId claim id
+   * @param verifyDto reason and comment
+   * @param user user session
+   * @param query custom representation query
+   * @param underReview if claim is under review
+   * @returns verified claim
+   */
   async verify(
     claimId: string,
     verifyDto: StatusTransitionReasonsDto,
@@ -114,6 +140,7 @@ export class ClaimStatusTransitionService {
     query: CustomRepresentationQueryDto,
     underReview: boolean = false,
   ) {
+    await this.isCurrentClaimLatestClaim(claimId);
     const canVerify = await this.prismaService.claim.findUnique({
       where: {
         id: claimId,
@@ -121,11 +148,7 @@ export class ClaimStatusTransitionService {
           in: [
             ...(underReview
               ? [ClaimStatus.UNDER_REVIEW]
-              : [
-                  ClaimStatus.PENDING,
-                  ClaimStatus.REJECTED,
-                  ClaimStatus.DISPUTED,
-                ]),
+              : [ClaimStatus.PENDING, ClaimStatus.REJECTED]),
           ],
         },
       },
@@ -148,25 +171,24 @@ export class ClaimStatusTransitionService {
     });
     if (!canVerify)
       throw new BadRequestException(
-        'Can only verify pending, rejected or disputed claims',
+        `Can only verify ${underReview ? 'under review' : 'pending, rejected or disputed'} claims`,
       );
+    // validate verification reason
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        id: verifyDto.reason,
+        entityType: 'Claim',
+        fromStatus: canVerify.status,
+        toStatus: ClaimStatus.VERIFIED,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
     // Verify claim and transition match status to claimed if not claimed
     return await this.prismaService.$transaction(async (tx) => {
       const claim = await tx.claim.update({
         where: { id: claimId },
         data: {
           status: ClaimStatus.VERIFIED,
-          match:
-            canVerify.match.status !== MatchStatus.CLAIMED
-              ? {
-                  update: {
-                    where: { id: canVerify.matchId },
-                    data: {
-                      status: MatchStatus.CLAIMED,
-                    },
-                  },
-                }
-              : undefined,
         },
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
       });
@@ -182,35 +204,6 @@ export class ClaimStatusTransitionService {
           reasonId: verifyDto.reason,
         },
       });
-      // Create transition history for match if status is not claimed
-      if (canVerify.match.status !== MatchStatus.CLAIMED) {
-        // Get claim verified reason
-        const claimVerifiedReason = await tx.transitionReason.findUnique({
-          where: {
-            entityType_fromStatus_toStatus_code: {
-              entityType: 'Match',
-              fromStatus: canVerify.match.status,
-              toStatus: MatchStatus.CLAIMED,
-              code: 'CLAIM_VERIFIED',
-            },
-            auto: true,
-          },
-        });
-        // Throw Bad request if reason dont exist
-        if (!claimVerifiedReason)
-          throw new BadRequestException('Claim verified reason not found');
-        await tx.statusTransition.create({
-          data: {
-            entityType: 'Match',
-            entityId: canVerify.matchId,
-            fromStatus: canVerify.match.status,
-            toStatus: MatchStatus.CLAIMED,
-            changedById: user?.id,
-            comment: verifyDto.comment,
-            reasonId: claimVerifiedReason.id,
-          },
-        });
-      }
       // Create invoice for the claim if dont already exist
       const invoice = await tx.invoice.findUnique({
         where: { claimId },
@@ -238,10 +231,16 @@ export class ClaimStatusTransitionService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     query: CustomRepresentationQueryDto,
   ) {
+    await this.isCurrentClaimLatestClaim(claimId);
     const canCancel = await this.prismaService.claim.findUnique({
       where: {
         id: claimId,
-        status: { in: [ClaimStatus.PENDING, ClaimStatus.DISPUTED] },
+        status: {
+          in: [
+            ClaimStatus.PENDING,
+            ClaimStatus.DISPUTED, // Withdraw dispute
+          ],
+        },
         userId: user?.id,
       },
       include: {
@@ -252,59 +251,36 @@ export class ClaimStatusTransitionService {
       throw new BadRequestException(
         'Can only cancel your pending or disputed claims',
       );
+
+    // validate cancellation reason
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        id: cancelDto.reason,
+        entityType: 'Claim',
+        fromStatus: canCancel.status,
+        toStatus: ClaimStatus.CANCELLED,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
     return await this.prismaService.$transaction(async (tx) => {
       const claim = await tx.claim.update({
         where: { id: claimId },
         data: {
           status: ClaimStatus.CANCELLED,
-          match: {
-            update: {
-              where: { id: canCancel.matchId },
-              data: {
-                status: MatchStatus.PENDING,
-              },
-            },
-          },
         },
         // ...this.representationService.buildCustomRepresentationQuery(query?.v),
       });
-      // Get user cancelled claim reason
-      const userCancelledClaimReason = await tx.transitionReason.findUnique({
-        where: {
-          entityType_fromStatus_toStatus_code: {
-            entityType: 'Match',
-            fromStatus: canCancel.match.status,
-            toStatus: MatchStatus.PENDING,
-            code: 'CLAIMANT_CANCELLED_CLAIM',
-          },
-          auto: true,
-        },
-      });
-      // Throw Bad request if reason dont exist
-      if (!userCancelledClaimReason)
-        throw new BadRequestException('User cancelled claim reason not found');
       // Create transition history for claim
-      await tx.statusTransition.createMany({
-        data: [
-          {
-            entityType: 'Claim',
-            entityId: claimId,
-            fromStatus: canCancel.status,
-            toStatus: ClaimStatus.CANCELLED,
-            changedById: user?.id,
-            comment: cancelDto.comment,
-            reasonId: cancelDto.reason,
-          },
-          {
-            entityType: 'Match',
-            entityId: canCancel.matchId,
-            fromStatus: canCancel.match.status,
-            toStatus: MatchStatus.PENDING,
-            changedById: user?.id,
-            comment: cancelDto.comment,
-            reasonId: userCancelledClaimReason.id,
-          },
-        ],
+      await tx.statusTransition.create({
+        data: {
+          entityType: 'Claim',
+          entityId: claimId,
+          fromStatus: canCancel.status,
+          toStatus: ClaimStatus.CANCELLED,
+          changedById: user?.id,
+          comment: cancelDto.comment,
+          reasonId: cancelDto.reason,
+        },
       });
 
       return claim;
@@ -318,6 +294,7 @@ export class ClaimStatusTransitionService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     query: CustomRepresentationQueryDto,
   ) {
+    await this.isCurrentClaimLatestClaim(claimId);
     const canDispute = await this.prismaService.claim.findUnique({
       where: {
         id: claimId,
@@ -330,6 +307,16 @@ export class ClaimStatusTransitionService {
     });
     if (!canDispute)
       throw new BadRequestException('Can only dispute your rejected claims');
+    // validate dispute reason
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        id: disputeDto.reason,
+        entityType: 'Claim',
+        fromStatus: canDispute.status,
+        toStatus: ClaimStatus.DISPUTED,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
     return await this.prismaService.$transaction(async (tx) => {
       const claim = await tx.claim.update({
         where: { id: claimId },
@@ -338,7 +325,6 @@ export class ClaimStatusTransitionService {
         },
         // ...this.representationService.buildCustomRepresentationQuery(query?.v),
       });
-      //  TODO: Validate the reason
       // Create transition history for claim
       await tx.statusTransition.create({
         data: {
@@ -362,6 +348,7 @@ export class ClaimStatusTransitionService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     query: CustomRepresentationQueryDto,
   ) {
+    await this.isCurrentClaimLatestClaim(claimId);
     const canReviewDispute = await this.prismaService.claim.findUnique({
       where: {
         id: claimId,
@@ -373,6 +360,16 @@ export class ClaimStatusTransitionService {
     });
     if (!canReviewDispute)
       throw new BadRequestException('Can only review disputed claims');
+    // validate review dispute reason
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        id: reviewDisputeDto.reason,
+        entityType: 'Claim',
+        fromStatus: canReviewDispute.status,
+        toStatus: ClaimStatus.UNDER_REVIEW,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
     return await this.prismaService.$transaction(async (tx) => {
       const claim = await tx.claim.update({
         where: { id: claimId },

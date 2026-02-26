@@ -6,6 +6,7 @@ import {
 } from '../common/query-builder';
 import { UserSession } from '../auth/auth.types';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
+import { MatchStatus } from 'generated/prisma/enums';
 
 @Injectable()
 export class MatchingStatusTransitionService {
@@ -14,6 +15,14 @@ export class MatchingStatusTransitionService {
     private readonly representationService: CustomRepresentationService,
   ) {}
 
+  /**
+   * Reject your pending matches giving reason why
+   * @param matchId
+   * @param rejectDto
+   * @param user
+   * @param query
+   * @returns
+   */
   async reject(
     matchId: string,
     rejectDto: StatusTransitionReasonsDto,
@@ -24,7 +33,7 @@ export class MatchingStatusTransitionService {
     const canReject = await this.prismaService.match.findUnique({
       where: {
         id: matchId,
-        status: { in: ['PENDING'] },
+        status: { in: [MatchStatus.PENDING] },
         lostDocumentCase: {
           case: {
             userId: user.id,
@@ -34,12 +43,22 @@ export class MatchingStatusTransitionService {
     });
     if (!canReject)
       throw new BadRequestException('Can only reject your pending matches');
+    // Validate reason
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        id: rejectDto.reason,
+        entityType: 'Match',
+        fromStatus: canReject.status,
+        toStatus: MatchStatus.REJECTED,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
     return await this.prismaService.$transaction(async (tx) => {
       // Update match status to rejected and update claim status to pending
       const match = tx.match.update({
         where: { id: matchId },
         data: {
-          status: 'REJECTED',
+          status: MatchStatus.REJECTED,
         },
         //   ...this.representationService.buildCustomRepresentationQuery(query?.v),
       });
@@ -49,7 +68,7 @@ export class MatchingStatusTransitionService {
           entityType: 'Match',
           entityId: matchId,
           fromStatus: canReject.status,
-          toStatus: 'REJECTED',
+          toStatus: MatchStatus.REJECTED,
           changedById: user?.id,
           comment: rejectDto.comment,
           reasonId: rejectDto.reason,

@@ -21,37 +21,10 @@
     "entityType": "Match",
     "fromStatus": "PENDING",
     "toStatus": "CLAIMED",
-    "code": "USER_CLAIMED",
+    "code": "CLAIM_CREATED",
     "auto": true,
-    "label": "User claimed",
-    "description": "Applied automaticaaly to a match when asociated claim is created."
-  },
-  {
-    "entityType": "Match",
-    "fromStatus": "CLAIMED",
-    "toStatus": "PENDING",
-    "code": "CLAIMANT_CANCELLED_CLAIM",
-    "auto": true,
-    "label": "Claimant cancelled claim",
-    "description": "Applied automatically to a match when asociated claim is canclled by user"
-  },
-  {
-    "entityType": "Match",
-    "fromStatus": "CLAIMED",
-    "toStatus": "REJECTED",
-    "code": "CLAIM_REJECTED",
-    "auto": true,
-    "label": "Claim Rejected",
-    "description": "Applied automatically to a match when asociated claim is rejected by admin"
-  },
-  {
-    "entityType": "Match",
-    "fromStatus": "REJECTED",
-    "toStatus": "CLAIMED",
-    "code": "CLAIM_VERIFIED",
-    "auto": true,
-    "label": "Claim Verified",
-    "description": "Applied automatically to a match when asociated claim is verified by admin"
+    "label": "Claim created",
+    "description": "Applied automatically to a match when associated claim is created."
   },
   {
     "entityType": "Claim",
@@ -109,15 +82,6 @@
   },
   {
     "entityType": "Claim",
-    "fromStatus": "DISPUTED",
-    "toStatus": "REJECTED",
-    "code": "POLICY_VIOLATION",
-    "auto": false,
-    "label": "Policy violation",
-    "description": "Claim violates defined policy or operational guidelines."
-  },
-  {
-    "entityType": "Claim",
     "fromStatus": "PENDING",
     "toStatus": "REJECTED",
     "code": "FRAUD_SUSPECTED",
@@ -128,15 +92,6 @@
   {
     "entityType": "Claim",
     "fromStatus": "VERIFIED",
-    "toStatus": "REJECTED",
-    "code": "FRAUD_SUSPECTED",
-    "auto": false,
-    "label": "Fraud suspected",
-    "description": "Suspicion of fraudulent activity during review."
-  },
-  {
-    "entityType": "Claim",
-    "fromStatus": "DISPUTED",
     "toStatus": "REJECTED",
     "code": "FRAUD_SUSPECTED",
     "auto": false,
@@ -161,15 +116,7 @@
     "label": "Fraud confirmed",
     "description": "Fraud was confirmed after investigation."
   },
-  {
-    "entityType": "Claim",
-    "fromStatus": "DISPUTED",
-    "toStatus": "REJECTED",
-    "code": "FRAUD_CONFIRMED",
-    "auto": false,
-    "label": "Fraud confirmed",
-    "description": "Fraud was confirmed after investigation."
-  },
+
   {
     "entityType": "Claim",
     "fromStatus": "PENDING",
@@ -212,7 +159,7 @@
     "toStatus": "CANCELLED",
     "code": "CLAIMANT_WITHDREW_DISPUTE",
     "auto": true,
-    "label": "Claimant withdrew dispute",
+    "label": "I withdraw dispute",
     "description": "Claimant submitted claim with invalid attachment or information."
   },
   {
@@ -313,6 +260,15 @@
     "auto": false,
     "label": "Policy violation",
     "description": "Claim violates operational or regulatory policy."
+  },
+  {
+    "entityType": "Claim",
+    "fromStatus": "UNDER_REVIEW",
+    "toStatus": "REJECTED",
+    "code": "FRAUD_SUSPECTED",
+    "auto": false,
+    "label": "Fraud suspected",
+    "description": "Suspicion of fraudulent activity during review."
   },
   {
     "entityType": "*",

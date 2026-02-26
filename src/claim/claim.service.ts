@@ -23,6 +23,7 @@ import { ClaimStatusTransitionService } from './claim.transitions.service';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
+import { MatchStatus } from '../../generated/prisma/enums';
 
 @Injectable()
 export class ClaimService {
@@ -193,16 +194,46 @@ export class ClaimService {
             })),
           },
         },
-        match: {
-          update: {
-            where: { id: match.id },
-            data: {
-              status: 'CLAIMED',
-            },
-          },
-        },
       },
     });
+
+    // Transition match to claimed if not already claimed
+    if (match.status !== MatchStatus.CLAIMED) {
+      await this.prismaService.$transaction(async (tx) => {
+        await tx.match.update({
+          where: { id: match.id },
+          data: {
+            status: MatchStatus.CLAIMED,
+          },
+        });
+        const reason = await tx.transitionReason.findUnique({
+          where: {
+            entityType_fromStatus_toStatus_code: {
+              entityType: 'Match',
+              fromStatus: match.status,
+              toStatus: MatchStatus.CLAIMED,
+              code: 'CLAIM_CREATED',
+            },
+            auto: true,
+          },
+        });
+        if (!reason)
+          throw new BadRequestException(
+            `Match transition reason from ${match.status} to ${MatchStatus.CLAIMED} not found`,
+          );
+        await tx.statusTransition.create({
+          data: {
+            entityType: 'Match',
+            entityId: match.id,
+            fromStatus: match.status,
+            toStatus: MatchStatus.CLAIMED,
+            changedById: user.id,
+            comment: 'Claim created',
+            reasonId: reason.id,
+          },
+        });
+      });
+    }
 
     // Return created claim
     return await this.findOne(claim.id, query, user);
