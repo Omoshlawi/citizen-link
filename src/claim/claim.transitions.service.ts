@@ -141,6 +141,7 @@ export class ClaimStatusTransitionService {
     underReview: boolean = false,
   ) {
     await this.isCurrentClaimLatestClaim(claimId);
+    // TODO: dECIDE WEATHER THE ONE WHO TRANSITIONED TO UNDER REVIEW IS ONE TO APPROVE/REJECT
     const canVerify = await this.prismaService.claim.findUnique({
       where: {
         id: claimId,

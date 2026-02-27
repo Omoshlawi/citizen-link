@@ -160,7 +160,7 @@ export class ClaimController {
     return this.claimService.dispute(id, disputeDto, user, query);
   }
 
-  @Post(':id/review-dispute')
+  @Post(':id/review')
   @ApiOperation({ summary: 'Review rejected claim dispute' })
   @ApiOkResponse({ type: GetClaimResponseDto })
   @ApiErrorsResponse({ badRequest: true })
