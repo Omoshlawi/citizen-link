@@ -2,19 +2,36 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { EntityPrefix } from 'src/human-id/human-id.constants';
-import { AIInteractionType } from '../../generated/prisma/enums';
+import {
+  AIExtractionInteractionType,
+  AIInteractionType,
+} from '../../generated/prisma/enums';
 import { OcrService } from '../ai/ocr.service';
 import { UserSession } from '../auth/auth.types';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
-import { SecurityQuestionsDto } from '../extraction/extraction.dto';
-import { ProgressEvent } from '../extraction/extraction.interface';
+import {
+  SecurityQuestionsDto,
+  TextExtractionOutputDto,
+} from '../extraction/extraction.dto';
+import {
+  AsyncError,
+  ExtractionAiProgressEvent,
+  ExtractionProgressEvent,
+} from '../extraction/extraction.interface';
 import { ExtractionService } from '../extraction/extraction.service';
 import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateFoundDocumentCaseDto } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
-import { AIExtraction } from '../../generated/prisma/client';
+import {
+  AIExtraction,
+  AIInteraction,
+  AIExtractionInteraction,
+} from '../../generated/prisma/client';
+import { VisionService } from 'src/vision/vision.service';
+import { VisionExtractionOutputDto } from '../vision/vision.dto';
+import { parseDate } from '../app.utils';
 
 @Injectable()
 export class DocumentCasesCreateService {
@@ -27,6 +44,7 @@ export class DocumentCasesCreateService {
     private readonly extractionService: ExtractionService,
     private readonly documentCasesQueryService: DocumentCasesQueryService,
     private readonly humanIdService: HumanIdService,
+    private readonly visionService: VisionService,
   ) {}
 
   private async filesExists(
@@ -85,10 +103,11 @@ export class DocumentCasesCreateService {
   private async runAiExtraction(
     extractionId: string,
     images: string[],
-    userId: string,
-    skipSecurityQuestions = false,
-    onPublishProgressEvent?: (data: ProgressEvent) => void,
+    user: UserSession['user'],
+    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
   ) {
+    this.logger.debug('Running AI extraction for extractionId', extractionId);
+    // Image validation ---
     onPublishProgressEvent?.({
       key: 'IMAGE_VALIDATION',
       state: { isLoading: true },
@@ -110,7 +129,7 @@ export class DocumentCasesCreateService {
         data: 'Image validation succesfull',
       },
     });
-    const _extractionTasks = await Promise.all(
+    const inputImages = await Promise.all(
       images.map(async (image) => {
         const buffer = await this.s3Service.downloadFile(image, 'tmp');
         const metadata = await this.s3Service.getFileMetadata(image, 'tmp');
@@ -119,14 +138,145 @@ export class DocumentCasesCreateService {
         return { buffer, mimeType };
       }),
     );
+    // Vision extraction
+    onPublishProgressEvent?.({
+      key: 'VISION_EXTRACTION',
+      state: { isLoading: true },
+    });
+    const visionOutput =
+      await this.visionService.extractTextFromImage(inputImages);
+    await this.checkIfInteractionEncounteredError(
+      extractionId,
+      visionOutput,
+      'VISION_EXTRACTION',
+      onPublishProgressEvent,
+    );
 
-    return {
-      extraction: {} as AIExtraction,
-      securityQuestions: undefined,
-      imageAnalysis: undefined,
-      documentpayload: undefined,
-      additionalFields: undefined,
-    };
+    // Text extraction
+    onPublishProgressEvent?.({
+      key: 'TEXT_EXTRACTION',
+      state: { isLoading: true },
+    });
+    const textExtractionOutput =
+      await this.extractionService.extractDocumentData(
+        visionOutput.parsedResponse as unknown as VisionExtractionOutputDto,
+        user,
+      );
+    await this.checkIfInteractionEncounteredError(
+      extractionId,
+      textExtractionOutput,
+      'TEXT_EXTRACTION',
+      onPublishProgressEvent,
+    );
+
+    const extractionResult =
+      textExtractionOutput.parsedResponse as unknown as TextExtractionOutputDto;
+
+    return await this.prismaService.aIExtraction.update({
+      where: { id: extractionId },
+      data: {
+        // Quality summary — rolled up here, not recomputed elsewhere
+        ocrConfidence: extractionResult.quality.ocrConfidence,
+        extractionConfidence: extractionResult.quality.extractionConfidence,
+        documentTypeCode: extractionResult.documentType.code,
+        warnings: extractionResult.quality.warnings,
+        success: true,
+        aiextractionInteractions: {
+          createMany: {
+            skipDuplicates: true,
+            data: [
+              {
+                extractionType: AIExtractionInteractionType.VISION_EXTRACTION,
+                aiInteractionId: visionOutput.id,
+                confidence: extractionResult.quality.ocrConfidence,
+              },
+              {
+                extractionType: AIExtractionInteractionType.TEXT_EXTRACTION,
+                aiInteractionId: textExtractionOutput.id,
+                confidence: extractionResult.quality.extractionConfidence,
+              },
+            ],
+          },
+        },
+      },
+      include: {
+        aiextractionInteractions: {
+          include: {
+            aiInteraction: true,
+          },
+        },
+      },
+    });
+  }
+
+  async checkIfInteractionEncounteredError(
+    extractionId: string,
+    interaction: AIInteraction,
+    event: ExtractionAiProgressEvent['key'],
+    onPublishProgressEvent?: (data: ExtractionAiProgressEvent) => void,
+  ) {
+    if (!interaction.parseError && !interaction.callError) {
+      // ─── Happy path ──────────────────────────────────
+      this.logger.debug(`AI extraction successful on ${event}`);
+      onPublishProgressEvent?.({
+        key: event,
+        state: { isLoading: false, data: interaction },
+      });
+      return;
+    }
+    const errorPayload: AsyncError =
+      (interaction.parseError as unknown as AsyncError) ??
+      ({
+        message: interaction.callError,
+      } as AsyncError);
+
+    // ─── Error path ────────────────────────────────────
+    this.logger.error(
+      `AI extraction encountered an error on ${event}`,
+      JSON.stringify(errorPayload),
+    );
+
+    onPublishProgressEvent?.({
+      key: event,
+      state: { isLoading: false, error: errorPayload },
+    });
+
+    // Only TEXT_EXTRACTION carries quality fields we can roll up
+    const extractionResult =
+      event === 'TEXT_EXTRACTION'
+        ? (interaction.parsedResponse as unknown as TextExtractionOutputDto)
+        : null;
+
+    // ─── Create the failed interaction record ──────────
+    await this.prismaService.aIExtractionInteraction.create({
+      data: {
+        extractionType:
+          event === 'VISION_EXTRACTION'
+            ? AIExtractionInteractionType.VISION_EXTRACTION
+            : AIExtractionInteractionType.TEXT_EXTRACTION,
+        errorMessage: JSON.stringify(errorPayload),
+        success: false,
+        aiExtractionId: extractionId,
+        aiInteractionId: interaction.id,
+        // confidence omitted — step failed, no reliable value
+      },
+    });
+
+    await this.prismaService.aIExtraction.update({
+      where: { id: extractionId },
+      data: {
+        success: false,
+        // Only populate quality fields if text extraction had partial results
+        ...(extractionResult && {
+          ocrConfidence: extractionResult.quality?.ocrConfidence,
+          extractionConfidence: extractionResult.quality?.extractionConfidence,
+          documentTypeCode: extractionResult.documentType?.code,
+          warnings: extractionResult.quality?.warnings ?? [],
+        }),
+      },
+    });
+
+    throw new BadRequestException(errorPayload);
   }
 
   async reportFoundDocumentCase(
@@ -134,22 +284,28 @@ export class DocumentCasesCreateService {
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
-    onPublishProgressEvent?: (data: ProgressEvent) => void,
+    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
   ) {
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
-    const {
-      extraction,
-      securityQuestions,
-      imageAnalysis,
-      documentpayload,
-      additionalFields,
-    } = await this.runAiExtraction(
+    const extraction = await this.runAiExtraction(
       extractionId,
       images,
-      user.id,
-      false,
+      user,
       onPublishProgressEvent,
     );
+    const documentData = extraction.aiextractionInteractions.find(
+      (interaction) =>
+        interaction.extractionType ===
+        AIExtractionInteractionType.TEXT_EXTRACTION,
+    )?.aiInteraction?.parsedResponse as unknown as TextExtractionOutputDto;
+    const documentType = await this.prismaService.documentType.findUnique({
+      where: {
+        code: documentData.documentType.code,
+      },
+    });
+    if (!documentType) {
+      throw new BadRequestException('Document type not found');
+    }
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         ...caseData,
@@ -159,6 +315,56 @@ export class DocumentCasesCreateService {
         extractionId: extraction.id,
         eventDate: dayjs(eventDate).toDate(),
         userId: user.id,
+        foundDocumentCase: {
+          create: {},
+        },
+        document: {
+          create: {
+            fullName: documentData.person.fullName,
+            documentNumber: documentData.document.number,
+            typeId: documentType.id,
+            gender: documentData.person.gender,
+            expiryDate: parseDate(documentData.document.expiryDate),
+            issuanceDate: parseDate(documentData.document.issueDate),
+            dateOfBirth: parseDate(documentData.person.dateOfBirth),
+            addressRaw: documentData.address.raw,
+            addressComponents: documentData.address.components,
+            addressCountry: documentData.address.country,
+            placeOfBirth: documentData.person.placeOfBirth,
+            placeOfIssue: documentData.document.placeOfIssue,
+            issuer: documentData.document.issuer,
+            serialNumber: documentData.document.serialNumber,
+            batchNumber: documentData.document.batchNumber,
+            fingerprintPresent: documentData.biometrics.fingerprintPresent,
+            signaturePresent: documentData.biometrics.signaturePresent,
+            photoPresent: documentData.biometrics.photoPresent,
+            givenNames: documentData.person.givenNames,
+            surname: documentData.person.surname,
+            isExpired: documentData.document.expiryDate
+              ? dayjs(documentData.document.expiryDate).isBefore(dayjs())
+              : false,
+            images: images?.length
+              ? {
+                  createMany: {
+                    data: images.map((image) => ({
+                      url: image,
+                    })),
+                  },
+                }
+              : undefined,
+            additionalFields: documentData.additionalFields?.length
+              ? {
+                  createMany: {
+                    skipDuplicates: true,
+                    data: documentData.additionalFields.map((field) => ({
+                      fieldName: field.fieldName,
+                      fieldValue: field.fieldValue,
+                    })),
+                  },
+                }
+              : undefined,
+          },
+        },
       },
       include: {
         document: true,
@@ -177,17 +383,28 @@ export class DocumentCasesCreateService {
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
-    onPublishProgressEvent?: (data: ProgressEvent) => void,
+    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
   ) {
     const { eventDate, images, ...caseData } = createDocumentCaseDto;
-    const { extraction, imageAnalysis, documentpayload, additionalFields } =
-      await this.runAiExtraction(
-        extractionId,
-        images,
-        user.id,
-        true,
-        onPublishProgressEvent,
-      );
+    const extraction = await this.runAiExtraction(
+      extractionId,
+      images,
+      user,
+      onPublishProgressEvent,
+    );
+    const documentData = extraction.aiextractionInteractions.find(
+      (interaction) =>
+        interaction.extractionType ===
+        AIExtractionInteractionType.TEXT_EXTRACTION,
+    )?.aiInteraction?.parsedResponse as unknown as TextExtractionOutputDto;
+    const documentType = await this.prismaService.documentType.findUnique({
+      where: {
+        code: documentData.documentType.code,
+      },
+    });
+    if (!documentType) {
+      throw new BadRequestException('Document type not found');
+    }
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         ...caseData,
@@ -200,6 +417,53 @@ export class DocumentCasesCreateService {
           create: {},
         },
         userId: user.id,
+        document: {
+          create: {
+            fullName: documentData.person.fullName,
+            documentNumber: documentData.document.number,
+            typeId: documentType.id,
+            gender: documentData.person.gender,
+            expiryDate: parseDate(documentData.document.expiryDate),
+            issuanceDate: parseDate(documentData.document.issueDate),
+            dateOfBirth: parseDate(documentData.person.dateOfBirth),
+            addressRaw: documentData.address.raw,
+            addressComponents: documentData.address.components,
+            addressCountry: documentData.address.country,
+            placeOfBirth: documentData.person.placeOfBirth,
+            placeOfIssue: documentData.document.placeOfIssue,
+            issuer: documentData.document.issuer,
+            serialNumber: documentData.document.serialNumber,
+            batchNumber: documentData.document.batchNumber,
+            fingerprintPresent: documentData.biometrics.fingerprintPresent,
+            signaturePresent: documentData.biometrics.signaturePresent,
+            photoPresent: documentData.biometrics.photoPresent,
+            givenNames: documentData.person.givenNames,
+            surname: documentData.person.surname,
+            isExpired: documentData.document.expiryDate
+              ? dayjs(documentData.document.expiryDate).isBefore(dayjs())
+              : false,
+            images: images?.length
+              ? {
+                  createMany: {
+                    data: images.map((image) => ({
+                      url: image,
+                    })),
+                  },
+                }
+              : undefined,
+            additionalFields: documentData.additionalFields?.length
+              ? {
+                  createMany: {
+                    skipDuplicates: true,
+                    data: documentData.additionalFields.map((field) => ({
+                      fieldName: field.fieldName,
+                      fieldValue: field.fieldValue,
+                    })),
+                  },
+                }
+              : undefined,
+          },
+        },
       },
       include: {
         document: true,

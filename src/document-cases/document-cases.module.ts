@@ -10,6 +10,7 @@ import { DocumentCasesQueryService } from './document-cases.query.service';
 import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
 import { AiModule } from '../ai/ai.module';
 import { AiConfig } from '../ai/ai.config';
+import { VisionModule } from '../vision/vision.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AiConfig } from '../ai/ai.config';
     }),
     CaseStatusTransitionsModule,
     CaseStatusTransitionsModule,
+    VisionModule,
     ExtractionModule,
     MatchingModule,
   ],

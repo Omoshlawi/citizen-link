@@ -55,6 +55,6 @@ export class VisionController {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Session() { user }: UserSession,
   ) {
-    return this.visionService.extract(files);
+    return this.visionService.testExtraction(files);
   }
 }

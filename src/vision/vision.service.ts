@@ -29,8 +29,6 @@ export class VisionService {
         temperature: this.TEMPERATURE,
         max_completion_tokens: this.MAX_TOKEN,
         top_p: this.TOP_T,
-        systemPrompt:
-          'You are a pure OCR engine. You only read. You never interpret.',
         schema: VisionExtractionOutputSchema,
         transformResponse(response) {
           // compute averageConfidence deterministically — more reliable than model output
@@ -71,7 +69,7 @@ export class VisionService {
     );
   }
 
-  async extract(documents: Express.Multer.File[]) {
+  async testExtraction(documents: Express.Multer.File[]) {
     const prompt =
       await this.promptService.getVisionExtractionPrompt('structured');
     const parts = [

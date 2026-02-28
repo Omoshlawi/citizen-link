@@ -1,24 +1,30 @@
 import { UserSession } from '../auth/auth.types';
 import { AIInteraction } from '../../generated/prisma/client';
 
-export interface AsyncState<TData = any, TError extends Error = Error> {
+export interface AsyncError {
+  message: string;
+  error?: any;
+}
+
+export interface AsyncState<
+  TData = any,
+  TError extends AsyncError = AsyncError,
+> {
   isLoading: boolean;
   error?: TError;
   data?: TData;
 }
-interface _ProgressEvent {
-  key:
-    | 'IMAGE_ANALYSIS'
-    | 'DATA_EXTRACTION'
-    | 'CONFIDENCE_SCORE'
-    | 'SECURITY_QUESTIONS';
+export interface ExtractionAiProgressEvent {
+  key: 'VISION_EXTRACTION' | 'TEXT_EXTRACTION';
   state: AsyncState<AIInteraction>;
 }
 
-export type ProgressEvent = ImageValidationEvent | _ProgressEvent;
-export type ExtractionStep = ProgressEvent['key'];
+export type ExtractionProgressEvent =
+  | ExtractionValidationEvent
+  | ExtractionAiProgressEvent;
+export type ExtractionStep = ExtractionProgressEvent['key'];
 export type ExtractionOptions = {
-  onPublishProgressEvent?: (data: ProgressEvent) => void;
+  onPublishProgressEvent?: (data: ExtractionProgressEvent) => void;
   skipSecurityQuestion?: boolean;
 };
 export type ImageExtractionInput = {
@@ -30,7 +36,7 @@ export type ImageExtractionInput = {
 
 export type ExtractInformationInput = ImageExtractionInput;
 
-export interface ImageValidationEvent {
-  key: 'IMAGE_VALIDATION';
+export interface ExtractionValidationEvent {
+  key: 'IMAGE_VALIDATION' | 'DOCUMENT_TYPE_VALIDATION';
   state: AsyncState<string>;
 }

@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-
 import { HttpException, Logger, UseGuards } from '@nestjs/common';
 import {
   Ack,
@@ -23,7 +19,7 @@ import { UserSession } from '../auth/auth.types';
 import { WsCreateFoundDocumentCaseDto } from './document-cases.dto';
 import { ExtractionService } from '../extraction/extraction.service';
 import { DocumentCasesService } from './document-cases.service';
-import { ProgressEvent } from '../extraction/extraction.interface';
+import { ExtractionProgressEvent } from '../extraction/extraction.interface';
 
 @WebSocketGateway({ namespace: 'extraction' })
 @UseGuards(WsAuthGuard)
@@ -40,7 +36,10 @@ export class DocumentCaseGateway {
     return this.namespace.emit(event, ...args);
   }
 
-  private publishProgressEvent(extrationId: string, payload: ProgressEvent) {
+  private publishProgressEvent(
+    extrationId: string,
+    payload: ExtractionProgressEvent,
+  ) {
     return this.publishEvent(`stream_progress:${extrationId}`, payload);
   }
 

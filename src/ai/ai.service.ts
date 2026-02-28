@@ -259,7 +259,7 @@ export class AiService implements OnModuleInit {
           interactionType,
           entityType,
           tokenUsage: aiResponse?.usageMetadata as any,
-          success: true,
+          callSuccess: true,
           userId,
         },
       });
@@ -274,8 +274,8 @@ export class AiService implements OnModuleInit {
           interactionType,
           entityType,
           tokenUsage: aiResponse?.usageMetadata as any,
-          errorMessage: error?.message ?? 'Unknown error',
-          success: false,
+          callError: error?.message ?? 'Unknown error',
+          callSuccess: false,
           userId,
         },
       });
@@ -309,7 +309,7 @@ export class AiService implements OnModuleInit {
     const parsedResults = await this.parseAndValidate(
       interaction.response,
       schema,
-      (error: unknown) => error,
+      (error: Error) => error,
       transformResponse,
     );
 
@@ -318,9 +318,9 @@ export class AiService implements OnModuleInit {
         where: { id: interaction.id },
         data: {
           parseError: JSON.parse(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-            (parsedResults as any).error ?? JSON.stringify({}),
+            parsedResults.error?.message ?? JSON.stringify({}),
           ),
+          parseSuccess: false,
         },
       });
     }
@@ -329,6 +329,7 @@ export class AiService implements OnModuleInit {
       where: { id: interaction.id },
       data: {
         parsedResponse: parsedResults.data,
+        parseSuccess: true,
       },
     });
   }

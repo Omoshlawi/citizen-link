@@ -15,6 +15,6 @@ export class ExtractionController {
     description: 'Extract data from ocr scans using AI',
   })
   async extractText(@Body() visionOutputDto: VisionExtractionOutputDto) {
-    return this.extractionService.extract(visionOutputDto);
+    return this.extractionService.testExtraction(visionOutputDto);
   }
 }

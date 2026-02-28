@@ -456,10 +456,11 @@ model AIInteraction {
   entityId   String?
 
   // Request/Response
-  prompt         String @db.Text
-  response       String @db.Text
+  prompt         String   @db.Text
+  response       String   @db.Text
+  parseSuccess   Boolean? //For structured output data - did response parse + validate correctly
+  parseError     Json? // validation / schema error detail
   parsedResponse Json?
-  parseError     Json?
 
   // Performance & Cost Tracking
   tokenUsage     Json? // { "input": 1500, "output": 800, "total": 2300 }
@@ -467,9 +468,9 @@ model AIInteraction {
   estimatedCost  Float? // Cost in USD (calculated from token usage)
 
   // Status
-  success      Boolean @default(true)
-  errorMessage String? @db.Text
-  retryCount   Int     @default(0)
+  callSuccess Boolean @default(true) // did the LLM respond at all
+  callError   String? @db.Text // network / API / timeout error
+  retryCount  Int     @default(0)
 
   createdAt              DateTime                  @default(now())
   extractionInteractions AIExtractionInteraction[]
@@ -482,7 +483,8 @@ model AIInteraction {
   @@index([interactionType])
   @@index([entityType, entityId])
   @@index([createdAt])
-  @@index([success])
+  @@index([callSuccess])
+  @@index([parseSuccess])
   @@map("ai_interactions")
 }
 
@@ -499,6 +501,18 @@ enum AIInteractionType {
 model AIExtraction {
   id String @id @default(uuid())
 
+  // ─── Extraction-level quality summary ──────────────
+  // Rolled up from both vision + text interactions
+  // Avoids joining through AIExtractionInteraction → AIInteraction to get these
+  ocrConfidence        Float?
+  extractionConfidence Float?
+  documentTypeCode     String? // what was identified
+  warnings             Json? // merged warnings from both steps
+  fallbackTriggered    Boolean @default(false) // was multimodal rescue invoked?
+
+  // Status 
+  success      Boolean @default(true)
+
   createdAt DateTime @default(now())
 
   aiextractionInteractions AIExtractionInteraction[]
@@ -508,22 +522,26 @@ model AIExtraction {
 }
 
 model AIExtractionInteraction {
-  id              String        @id @default(uuid())
+  id              String                      @id @default(uuid())
+  extractionType  AIExtractionInteractionType
   // Related ai Interaction
   aiInteractionId String
-  aiInteraction   AIInteraction @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
+  aiInteraction   AIInteraction               @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
 
   // Related ai extraction
   aiExtractionId String
   aiExtraction   AIExtraction @relation(fields: [aiExtractionId], references: [id], onDelete: Cascade)
 
-  extractionData Json? // Parsed extracted fields 
-
-  // Interaction and prompt might pass but parsing/validating ai response might fail hance status fields
+  // ─── Step-level result ─────────────────────────────
+  // Captures pass/fail per step independently e.g while json passing or validating response json
+  // Vision can succeed while text extraction fails — this tracks that granularly
   success      Boolean @default(true)
   errorMessage String? @db.Text
 
-  extractionType AIExtractionInteractionType
+  // ─── Step-level quality ────────────────────────────
+  // Vision step → ocrConfidence
+  // Text step   → extractionConfidence
+  confidence Float?
 
   createdAt DateTime @default(now())
 
@@ -596,7 +614,6 @@ model FoundDocumentCase {
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
   pointAwarded     Int                     @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
-  securityQuestion Json?                   @default("[]")
   matches          Match[]
   claims           Claim[]
   pickupStation    PickupStation?          @relation(fields: [pickupStationId], references: [id])

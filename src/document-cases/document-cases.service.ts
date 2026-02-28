@@ -17,7 +17,7 @@ import {
   CustomRepresentationService,
   DeleteQueryDto,
 } from '../common/query-builder';
-import { ProgressEvent } from '../extraction/extraction.interface';
+import { ExtractionProgressEvent } from '../extraction/extraction.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { DocumentCasesCreateService } from './document-cases.create.service';
 import {
@@ -122,7 +122,7 @@ export class DocumentCasesService {
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
-    onPublishProgressEvent?: (data: ProgressEvent) => void,
+    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
   ) {
     return this.documentCasesCreateService.reportFoundDocumentCase(
       extractionId,
@@ -138,7 +138,7 @@ export class DocumentCasesService {
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
-    onPublishProgressEvent?: (data: ProgressEvent) => void,
+    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
   ) {
     return this.documentCasesCreateService.reportLostDocumentCaseScanned(
       extractionId,
