@@ -120,7 +120,7 @@ export class MatchFoundDocumentService {
               d.id as "documentId",
               d."caseId",
               d."typeId",
-              d."ownerName",
+              d."fullName",
               d."documentNumber",
               d."serialNumber",
               d."dateOfBirth",

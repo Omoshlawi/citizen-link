@@ -29,8 +29,11 @@ export interface Part {
 
 export type GenerateContentConfig = Pick<
   OpenAI.Chat.Completions.ChatCompletionCreateParams,
-  'temperature' | 'max_completion_tokens'
->;
+  'temperature' | 'max_completion_tokens' | 'top_p'
+> & {
+  systemPrompt?: string; // Injected as role: "system" — guides model behavior without being part of user content
+  model?: string; // Optional model override
+};
 
 export interface GenerateContentResponse {
   text?: string;

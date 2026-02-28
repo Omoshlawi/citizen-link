@@ -44,6 +44,11 @@ export class MatchingVerifierService {
     const matchResult = await this.aiService.callAIAndStore(
       prompt,
       [],
+      {
+        temperature: 0.1,
+        max_completion_tokens: 2048,
+        // response_format: zodResponseFormat(DataExtractionSchema, 'dataExtractionDto'),
+      },
       AIInteractionType.DOCUMENT_MATCHING,
       'Match',
       userId,

@@ -1,5 +1,6 @@
 [
   {
+    "code": "PASSPORT",
     "name": "Passport",
     "category": "IDENTITY",
     "description": "International travel document issued by government authorities. Critical for international travel and identification abroad.",
@@ -17,6 +18,7 @@
     }
   },
   {
+    "code": "NATIONAL_ID",
     "name": "National ID",
     "category": "IDENTITY",
     "description": "Government-issued identification card proving citizenship and identity. Essential for voting, banking, and official transactions.",
@@ -34,6 +36,7 @@
     }
   },
   {
+    "code": "BIRTH_CERT",
     "name": "Birth Certificate",
     "category": "IDENTITY",
     "description": "Official document certifying the details of a person's birth. Required for obtaining other identification documents and legal purposes.",
@@ -51,7 +54,8 @@
     }
   },
   {
-    "name": "School ID",
+    "code": "STUDENT_ID",
+    "name": "Student ID",
     "category": "ACADEMIC",
     "description": "Student identification card issued by educational institutions. Used for campus access, library services, and student discounts.",
     "icon": "school",
@@ -68,6 +72,7 @@
     }
   },
   {
+    "code": "DRIVING_LICENCE",
     "name": "Driving Licence",
     "category": "VEHICLE",
     "description": "Official authorization to operate motor vehicles. Required for legal driving and often used as identification.",
@@ -85,6 +90,7 @@
     }
   },
   {
+    "code": "WORK_ID",
     "name": "Work ID",
     "category": "PROFESSIONAL",
     "description": "Employee identification card issued by employer. Used for building access, time tracking, and employee benefits.",
@@ -102,6 +108,7 @@
     }
   },
   {
+    "code": "PROFESSIONAL_LICENSE",
     "name": "Professional License",
     "category": "PROFESSIONAL",
     "description": "License to practice a profession (e.g., medical, legal, engineering). Required for legal practice in regulated fields.",
@@ -119,6 +126,7 @@
     }
   },
   {
+    "code": "MARRIAGE_CERT",
     "name": "Marriage Certificate",
     "category": "LEGAL",
     "description": "Official document certifying a marriage. Required for name changes, spousal benefits, and legal purposes.",
@@ -136,6 +144,7 @@
     }
   },
   {
+    "code": "ALIEN_REGISTRATION_CARD",
     "name": "Alien Registration Card",
     "category": "IDENTITY",
     "description": "Identification card for non-citizens legally residing in a country. Essential for work authorization and legal status.",
@@ -153,6 +162,7 @@
     }
   },
   {
+    "code": "SOCIAL_SECURITY_CARD",
     "name": "Social Security Card",
     "category": "IDENTITY",
     "description": "Government-issued card with Social Security Number. Required for employment, tax purposes, and government benefits.",
@@ -170,6 +180,7 @@
     }
   },
   {
+    "code": "HEALTH_INSURANCE_CARD",
     "name": "Health Insurance Card",
     "category": "MEDICAL",
     "description": "Insurance card providing proof of health coverage. Required for medical services and prescription medications.",

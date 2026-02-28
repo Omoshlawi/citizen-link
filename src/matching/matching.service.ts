@@ -167,7 +167,7 @@ export class MatchingService {
                     foundDocumentCase: {
                       case: {
                         document: {
-                          ownerName: {
+                          fullName: {
                             contains: query.search,
                             mode: Prisma.QueryMode.insensitive,
                           },
@@ -191,7 +191,7 @@ export class MatchingService {
                     lostDocumentCase: {
                       case: {
                         document: {
-                          ownerName: {
+                          fullName: {
                             contains: query.search,
                             mode: Prisma.QueryMode.insensitive,
                           },

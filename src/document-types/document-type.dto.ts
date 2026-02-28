@@ -5,9 +5,25 @@ import { DocumentCategory, DocumentType } from '../../generated/prisma/browser';
 import { ApiProperty } from '@nestjs/swagger';
 import { Decimal } from '@prisma/client/runtime/client';
 
+export enum DocumentTypeCode {
+  NATIONAL_ID = 'NATIONAL_ID',
+  PASSPORT = 'PASSPORT',
+  BIRTH_CERT = 'BIRTH_CERT',
+  ALIEN_REGISTRATION_CARD = 'ALIEN_REGISTRATION_CARD',
+  SOCIAL_SECURITY_CARD = 'SOCIAL_SECURITY_CARD',
+  MARRIAGE_CERT = 'MARRIAGE_CERT',
+  DRIVING_LICENCE = 'DRIVING_LICENCE',
+  PROFESSIONAL_LICENSE = 'PROFESSIONAL_LICENSE',
+  WORK_ID = 'WORK_ID',
+  STUDENT_ID = 'STUDENT_ID',
+  HEALTH_INSURANCE_CARD = 'HEALTH_INSURANCE_CARD',
+  UNKNOWN = 'UNKNOWN',
+}
+
 export const QueryDocumentTypeSchema = z.object({
   ...QueryBuilderSchema.shape,
   search: z.string().optional(),
+  code: z.enum(DocumentTypeCode).optional(),
   category: z
     .enum([
       'IDENTITY',
@@ -41,6 +57,7 @@ export const DocumentTypeSchema = z.object({
     'LEGAL',
     'OTHER',
   ]),
+  code: z.enum(DocumentTypeCode),
   description: z.string().nullable().optional(),
   icon: z.string().min(1, 'Icon required').optional(),
   loyaltyPoints: z.coerce.number(),
@@ -62,6 +79,8 @@ export class QueryDocumentTypeDto extends createZodDto(
 ) {}
 
 export class GetDocumentTypeResponseDto implements DocumentType {
+  @ApiProperty({ enum: DocumentTypeCode })
+  code: DocumentTypeCode;
   @ApiProperty()
   serviceFee: Decimal;
   @ApiProperty()

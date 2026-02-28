@@ -236,7 +236,7 @@ CREATE TABLE "documents" (
     "dateOfBirth" TIMESTAMP(3),
     "placeOfBirth" TEXT,
     "gender" TEXT,
-    "ownerName" TEXT,
+    "fullName" TEXT,
     "issuer" TEXT,
     "typeId" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,

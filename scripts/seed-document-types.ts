@@ -8,6 +8,7 @@ import { DocumentCategory } from '../generated/prisma/client';
 declare const __dirname: string;
 
 interface DocumentType {
+  code: string;
   name: string;
   category: DocumentCategory | string;
   description: string;
@@ -48,8 +49,9 @@ async function seedDocumentTypes(): Promise<void> {
         : docType.verificationStrategy;
 
     await prisma.documentType.upsert({
-      where: { name: docType.name },
+      where: { code: docType.code },
       update: {
+        name: docType.name,
         category: category,
         description: docType.description,
         icon: docType.icon,
@@ -65,6 +67,7 @@ async function seedDocumentTypes(): Promise<void> {
         totalAmount: docType.serviceFee + docType.finderReward,
       },
       create: {
+        code: docType.code,
         name: docType.name,
         category: category,
         description: docType.description,

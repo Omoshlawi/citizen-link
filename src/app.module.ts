@@ -7,31 +7,30 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { AddressHierarchyModule } from './address-hierarchy/address-hierarchy.module';
 import { AddressLocalesModule } from './address-locales/address-locales.module';
 import { AddressModule } from './address/address.module';
-import { AiConfig } from './ai/ai.config';
-import { AiModule } from './ai/ai.module';
 import { AppController } from './app.controller';
 import { ZodValidationExceptionFilter } from './app.exceptionfilter';
 import { AppService } from './app.service';
 import { RequireSystemPermissionsGuard } from './auth/auth.guards';
 import { AuthModule } from './auth/auth.module';
 import { CaseDocumentsModule } from './case-documents/case-documents.module';
+import { ChatBotModule } from './chat-bot/chat-bot.module';
+import { ClaimModule } from './claim/claim.module';
 import { QueryBuilderModule } from './common/query-builder';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
 import { DocumentImagesModule } from './document-images/document-images.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
 import { ExtractionModule } from './extraction/extraction.module';
+import { HumanIdConfig } from './human-id/human-id.config';
+import { HumanIdModule } from './human-id/human-id.module';
+import { InvoiceModule } from './invoice/invoice.module';
 import { MatchingModule } from './matching/matching.module';
+import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
 import { PrismaConfig } from './prisma/prisma.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { S3Module } from './s3/s3.module';
-import { ChatBotModule } from './chat-bot/chat-bot.module';
-import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
-import { ClaimModule } from './claim/claim.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
-import { HumanIdModule } from './human-id/human-id.module';
-import { HumanIdConfig } from './human-id/human-id.config';
-import { InvoiceModule } from './invoice/invoice.module';
+import { VisionModule } from './vision/vision.module';
 
 @Module({
   imports: [
@@ -56,17 +55,7 @@ import { InvoiceModule } from './invoice/invoice.module';
     CaseDocumentsModule,
     DocumentCasesModule,
     S3Module,
-    AiModule.registerAsync({
-      global: true,
-      useFactory: (config: AiConfig) => {
-        return {
-          apiKey: config.openaiApiKey,
-          baseURL: config.aiBaseUrl,
-          model: config.aiModel || 'gpt-4o', // Default to GPT-4o, can be overridden via env var
-        };
-      },
-      inject: [AiConfig],
-    }),
+
     DocumentImagesModule,
     ExtractionModule,
     MatchingModule,
@@ -84,6 +73,7 @@ import { InvoiceModule } from './invoice/invoice.module';
       inject: [HumanIdConfig],
     }),
     InvoiceModule,
+    VisionModule,
   ],
   controllers: [AppController],
   providers: [

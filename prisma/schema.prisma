@@ -325,6 +325,7 @@ enum DocumentCategory {
 
 model DocumentType {
   id                      String           @id @default(uuid())
+  code                    String           @unique // e.g., "NATIONAL_ID", "PASSPORT", "DRIVING_LICENCE"
   name                    String           @unique // e.g., "National ID", "Passport", "Driver's License"
   category                DocumentCategory
   description             String?
@@ -361,26 +362,45 @@ model Document {
   batchNumber    String? // Batch number if available
 
   // Owner Personal Details (as they appear on document)
+  fullName     String?
+  surname      String? // extracted surname — for name search/matching
+  givenNames   String[]  @default([]) // extracted given names — for matching
   dateOfBirth  DateTime? // Owner's date of birth
   placeOfBirth String? // Owner's place of birth
   gender       String? // Owner's gender
-  ownerName    String?
 
+  // Document info
   issuer       String?
-  // Document Type Information
-  typeId       String
-  type         DocumentType                @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  caseId       String                      @unique
-  case         DocumentCase                @relation(fields: [caseId], onDelete: Cascade, references: [id])
-  issuanceDate DateTime?
   placeOfIssue String?
+  issuanceDate DateTime?
   expiryDate   DateTime?
-  note         String? // Additional notes
-  embedding    Unsupported("vector(768)")?
+  isExpired    Boolean   @default(false) // computed on save — avoids date math on every query
+  note         String?
 
-  createdAt        DateTime        @default(now())
+  // Addrees info
+  addressRaw        String? // full address as seen on document
+  addressCountry    String? // ISO 3166-1 alpha-2
+  addressComponents Json? // AddressComponent[] — country-agnostic
+
+  // Biomentric flags
+  photoPresent       Boolean @default(false)
+  fingerprintPresent Boolean @default(false)
+  signaturePresent   Boolean @default(false)
+
+  // Relations
+  typeId String
+  type   DocumentType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  caseId String       @unique
+  case   DocumentCase @relation(fields: [caseId], onDelete: Cascade, references: [id])
+
   images           DocumentImage[]
   additionalFields DocumentField[]
+
+  // Vector embeddings
+  embedding Unsupported("vector(768)")?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // was missing — important for tracking re-extractions
 
   @@map("documents")
 }
@@ -436,8 +456,10 @@ model AIInteraction {
   entityId   String?
 
   // Request/Response
-  prompt   String @db.Text
-  response String @db.Text
+  prompt         String @db.Text
+  response       String @db.Text
+  parsedResponse Json?
+  parseError     Json?
 
   // Performance & Cost Tracking
   tokenUsage     Json? // { "input": 1500, "output": 800, "total": 2300 }
@@ -465,15 +487,13 @@ model AIInteraction {
 }
 
 enum AIInteractionType {
-  DATA_EXTRACTION // Extracting data from found document images
-  CONFIDENCE_SCORE // Calculating confidence score for extracted data
+  VISION_EXTRACTION // Extracting text from images
+  TEXT_EXTRACTION // Extracting data from text
   DOCUMENT_MATCHING // Finding matches between lost and found
   CLAIM_VERIFICATION // Verifying user's security answers
-  IMAGE_ANALYSIS // Analyzing document image quality/authenticity
   SECURITY_QUESTIONS_GEN // Generating security questions
   DISPUTE_ANALYSIS // Analyzing disputes
   USER_QUERY_RESPONSE // Responding to user questions/chat
-  ALTERNATIVE_MATCHES // Finding alternative matches when user rejects
 }
 
 model AIExtraction {
@@ -511,10 +531,8 @@ model AIExtractionInteraction {
 }
 
 enum AIExtractionInteractionType {
-  DATA_EXTRACTION
-  CONFIDENCE_SCORE
-  IMAGE_ANALYSIS
-  SECURITY_QUESTIONS
+  VISION_EXTRACTION
+  TEXT_EXTRACTION
 }
 
 model DocumentCase {

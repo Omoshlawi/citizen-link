@@ -54,15 +54,15 @@ export class EmbeddingService {
     const parts: string[] = [];
 
     // Add context-rich description first (most important information first)
-    if (document.ownerName) {
+    if (document.fullName) {
       parts.push(
-        `This is a ${document.type.name} document belonging to ${document.ownerName}`,
+        `This is a ${document.type.name} document belonging to ${document.fullName}`,
       );
     }
 
     // Add structured identity information
-    if (document.ownerName) {
-      parts.push(`Full name: ${document.ownerName}`);
+    if (document.fullName) {
+      parts.push(`Full name: ${document.fullName}`);
     }
 
     if (document.dateOfBirth) {

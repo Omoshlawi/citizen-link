@@ -32,7 +32,7 @@ SCHEMA FOR OUTPUT (return a single JSON object matching this shape):
   "documentNumber": string,
   "batchNumber": string,
   "issuer": string, // (the institution/authority)
-  "ownerName": string,
+  "fullName": string,
   "dateOfBirth": string,
   "placeOfBirth": string,
   "placeOfIssue": string,
@@ -54,7 +54,7 @@ EXAMPLES OF GOOD OUTPUT:
 1. For a clear passport photo:
 {
   "documentNumber": "A12345678",
-  "ownerName": "JOHN DOE",
+  "fullName": "JOHN DOE",
   "dateOfBirth": "1990-01-01",
   "nationality": "Countryland",
   "typeId": "<type id for passport (uuid)>",
@@ -68,7 +68,7 @@ EXAMPLES OF GOOD OUTPUT:
 2. For a license image with both front and back:
 {
   "documentNumber": "D1234567",
-  "ownerName": "JANE DOE",
+  "fullName": "JANE DOE",
   "dateOfBirth": "1985-02-15",
   "typeId": "<type id for driver's license (uuid)>",
   "issuer": "STATE OF EXAMPLE",

@@ -6,7 +6,7 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
 import { AIInteractionType } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AI_DATA_EXTRACT_CONFIG, AI_OPTIONS_TOKEN } from './ai.contants';
+import { AI_OPTIONS_TOKEN } from './ai.contants';
 import {
   AIOptions,
   GenerateContentConfig,
@@ -15,6 +15,7 @@ import {
   Part,
 } from './ai.types';
 import { safeParseJson } from '../app.utils';
+import { Results } from 'src/common/common.interfaces';
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -58,9 +59,35 @@ export class AiService implements OnModuleInit {
       .replace(/\s*```$/, '');
   }
 
-  async generateContentStream(
+  buildMessages(
     contents: Part[],
     config: GenerateContentConfig,
+  ): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+
+    // Inject system prompt if provided
+    if (config.systemPrompt) {
+      messages.push({
+        role: 'system',
+        content: config.systemPrompt,
+      });
+    }
+
+    messages.push({
+      role: 'user',
+      content: contents.map((part) => {
+        if (part.text) return { type: 'text', text: part.text };
+        if (part.image?.url)
+          return { type: 'image_url', image_url: { url: part.image.url } };
+        return { type: 'text', text: '' };
+      }),
+    });
+
+    return messages;
+  }
+  async generateContentFromStream(
+    contents: Part[],
+    { systemPrompt, ...config }: GenerateContentConfig,
   ): Promise<GenerateContentResponse> {
     let responseText: string = '';
     let usageMetadata: GenerateContentResponse['usageMetadata'] | undefined;
@@ -68,26 +95,12 @@ export class AiService implements OnModuleInit {
 
     try {
       // Convert Part[] to OpenAI message format
-      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        {
-          role: 'user',
-          content: contents.map((part) => {
-            if (part.text) {
-              return { type: 'text', text: part.text };
-            }
-            if (part.image?.url) {
-              return {
-                type: 'image_url',
-                image_url: { url: part.image.url },
-              };
-            }
-            return { type: 'text', text: '' };
-          }),
-        },
-      ];
-
+      const messages = this.buildMessages(contents, {
+        ...config,
+        systemPrompt,
+      });
       const stream = await this.openai.chat.completions.create({
-        model: this._options.model,
+        model: config.model || this._options.model,
         messages,
         ...config,
         stream: true,
@@ -125,35 +138,21 @@ export class AiService implements OnModuleInit {
 
   async generateParsedContent<T>(
     contents: Part[],
-    config: GenerateContentConfig & { response_schema: z.ZodSchema<T> },
+    {
+      systemPrompt,
+      ...config
+    }: GenerateContentConfig & {
+      response_schema: z.ZodSchema<T>;
+    },
   ): Promise<GenerateParsedContentResponse<T>> {
     try {
       // Convert Part[] to OpenAI message format
-      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        {
-          role: 'system',
-          content:
-            'You are a helpful assistant that can extract data from images and text.',
-        },
-        {
-          role: 'user',
-          content: contents.map((part) => {
-            if (part.text) {
-              return { type: 'text', text: part.text };
-            }
-            if (part.image?.url) {
-              return {
-                type: 'image_url',
-                image_url: { url: part.image.url },
-              };
-            }
-            return { type: 'text', text: '' };
-          }),
-        },
-      ];
-
+      const messages = this.buildMessages(contents, {
+        ...config,
+        systemPrompt,
+      });
       const response = await this.openai.chat.completions.parse({
-        model: this._options.model,
+        model: config.model || this._options.model,
         messages,
         ...config,
         response_format: zodResponseFormat(
@@ -183,30 +182,16 @@ export class AiService implements OnModuleInit {
   }
   async generateContent(
     contents: Part[],
-    config: GenerateContentConfig,
+    { systemPrompt, ...config }: GenerateContentConfig,
   ): Promise<GenerateContentResponse> {
     try {
       // Convert Part[] to OpenAI message format
-      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        {
-          role: 'user',
-          content: contents.map((part) => {
-            if (part.text) {
-              return { type: 'text', text: part.text };
-            }
-            if (part.image?.url) {
-              return {
-                type: 'image_url',
-                image_url: { url: part.image.url },
-              };
-            }
-            return { type: 'text', text: '' };
-          }),
-        },
-      ];
-
+      const messages = this.buildMessages(contents, {
+        ...config,
+        systemPrompt,
+      });
       const response = await this.openai.chat.completions.create({
-        model: this._options.model,
+        model: config.model || this._options.model,
         messages,
         ...config,
         response_format: undefined,
@@ -239,6 +224,7 @@ export class AiService implements OnModuleInit {
   async callAIAndStore(
     prompt: string,
     files: Array<{ buffer: Buffer; mimeType: string }> | undefined,
+    { streamed, ...config }: GenerateContentConfig & { streamed?: boolean },
     interactionType: AIInteractionType,
     entityType: string,
     userId?: string,
@@ -256,15 +242,19 @@ export class AiService implements OnModuleInit {
           : []),
       ];
 
-      aiResponse = await this.generateContent(parts, AI_DATA_EXTRACT_CONFIG);
+      if (streamed) {
+        aiResponse = await this.generateContentFromStream(parts, config);
+      } else {
+        aiResponse = await this.generateContent(parts, config);
+      }
       responseText = aiResponse.text?.trim() ?? '';
-      this.logger.log(`AI Response: ${responseText}`);
+      this.logger.debug(`AI Response: ${responseText}`);
 
       return await this.prismaService.aIInteraction.create({
         data: {
           prompt: prompt.substring(0, 10000), // Truncate for storage
           response: responseText,
-          aiModel: this.options.model,
+          aiModel: config.model || this.options.model,
           modelVersion: aiResponse?.modelVersion,
           interactionType,
           entityType,
@@ -279,7 +269,7 @@ export class AiService implements OnModuleInit {
         data: {
           prompt: prompt.substring(0, 10000),
           response: responseText,
-          aiModel: this.options.model,
+          aiModel: config.model || this.options.model,
           modelVersion: aiResponse?.modelVersion,
           interactionType,
           entityType,
@@ -292,16 +282,69 @@ export class AiService implements OnModuleInit {
     }
   }
 
+  async callAIAndStoreParsed<T extends Record<string, any>>(
+    prompt: string,
+    files: Array<{ buffer: Buffer; mimeType: string }> | undefined,
+    {
+      schema,
+      transformResponse,
+      ...config
+    }: GenerateContentConfig & {
+      streamed?: boolean;
+      schema: z.ZodType<T>;
+      transformResponse?: (response: T) => T;
+    },
+    interactionType: AIInteractionType,
+    entityType: string,
+    userId?: string,
+  ) {
+    const interaction = await this.callAIAndStore(
+      prompt,
+      files,
+      config,
+      interactionType,
+      entityType,
+      userId,
+    );
+    const parsedResults = await this.parseAndValidate(
+      interaction.response,
+      schema,
+      (error: unknown) => error,
+      transformResponse,
+    );
+
+    if (!parsedResults.success) {
+      return await this.prismaService.aIInteraction.update({
+        where: { id: interaction.id },
+        data: {
+          parseError: JSON.parse(
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            (parsedResults as any).error ?? JSON.stringify({}),
+          ),
+        },
+      });
+    }
+
+    return await this.prismaService.aIInteraction.update({
+      where: { id: interaction.id },
+      data: {
+        parsedResponse: parsedResults.data,
+      },
+    });
+  }
+
   /**
    * Parse AI response and validate against schema
    */
-  async parseAndValidate<T, E>(
+  async parseAndValidate<T extends Record<string, any>, E>(
     response: string,
     schema: z.ZodType<T>,
-    onError: (error: unknown) => Promise<E>,
-  ): Promise<T | E> {
+    onError: (error: unknown) => E | Promise<E>,
+    transformResponse?: (response: T) => T,
+  ): Promise<Results<T, E>> {
     try {
       // Clean and parse JSON
+      const transformer = transformResponse ?? ((response: T) => response);
       const cleanedResponse = this.cleanResponseText(response);
       const parsedResult = safeParseJson<Record<string, any>>(cleanedResponse, {
         transformNullToUndefined: true,
@@ -317,7 +360,9 @@ export class AiService implements OnModuleInit {
       }
 
       // Validate against schema
-      const validation = await schema.safeParseAsync(parsedResult.data);
+      const validation = await schema.safeParseAsync(
+        transformer(parsedResult.data as T),
+      );
 
       if (!validation.success) {
         throw new Error(
@@ -328,9 +373,9 @@ export class AiService implements OnModuleInit {
         );
       }
 
-      return validation.data;
+      return { success: true, data: validation.data };
     } catch (error: unknown) {
-      return await onError?.(error);
+      return { success: false, error: await onError?.(error) };
     }
   }
 }

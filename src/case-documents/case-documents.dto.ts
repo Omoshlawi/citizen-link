@@ -3,6 +3,7 @@ import { QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
 import { ApiProperty } from '@nestjs/swagger';
 import { Document, DocumentField } from '../../generated/prisma/client';
+import { JsonValue } from '@prisma/client/runtime/client';
 
 export const QueryCaseDocumentSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -11,7 +12,7 @@ export const QueryCaseDocumentSchema = z.object({
   serialNumber: z.string().optional(),
   batchNumber: z.string().optional(),
   issuer: z.string().optional(),
-  ownerName: z.string().optional(),
+  fullName: z.string().optional(),
   dateOfBirth: z.iso.date().optional(),
   placeOfBirth: z.string().optional(),
   placeOfIssue: z.string().optional(),
@@ -39,7 +40,7 @@ export const CaseDocumentSchema = z.object({
   documentNumber: z.string().optional(), // Generic document number (ID number, passport number, etc.)
   batchNumber: z.string().optional(), // Batch number if available
   issuer: z.string().optional(),
-  ownerName: z.string().min(1, 'Owner name required'),
+  fullName: z.string().min(1, 'Owner name required'),
   dateOfBirth: z.iso.date().optional(), // Owner's date of birth
   placeOfBirth: z.string().optional(), // Owner's place of birth
   placeOfIssue: z.string().optional(),
@@ -81,6 +82,30 @@ export class DocumentFieldDto implements DocumentField {
 
 export class GetCaseDocumentResponseDto implements Document {
   @ApiProperty()
+  id: string;
+  @ApiProperty()
+  createdAt: Date;
+  @ApiProperty()
+  updatedAt: Date;
+  @ApiProperty()
+  givenNames: string[];
+  @ApiProperty()
+  surname: string | null;
+  @ApiProperty()
+  photoPresent: boolean;
+  @ApiProperty()
+  fingerprintPresent: boolean;
+  @ApiProperty()
+  signaturePresent: boolean;
+  @ApiProperty()
+  isExpired: boolean;
+  @ApiProperty()
+  addressRaw: string | null;
+  @ApiProperty()
+  addressCountry: string | null;
+  @ApiProperty()
+  addressComponents: JsonValue;
+  @ApiProperty()
   aiExtractionPrompt: string | null;
   @ApiProperty()
   aiExtractedData: any;
@@ -97,7 +122,7 @@ export class GetCaseDocumentResponseDto implements Document {
   @ApiProperty()
   issuer: string | null;
   @ApiProperty()
-  ownerName: string;
+  fullName: string;
   @ApiProperty()
   dateOfBirth: Date | null;
   @ApiProperty()
@@ -115,11 +140,7 @@ export class GetCaseDocumentResponseDto implements Document {
   @ApiProperty()
   expiryDate: Date | null;
   @ApiProperty()
-  id: string;
-  @ApiProperty()
   reportId: string;
-  @ApiProperty()
-  createdAt: Date;
   @ApiProperty()
   voided: boolean;
   @ApiProperty({ isArray: true, type: DocumentFieldDto })

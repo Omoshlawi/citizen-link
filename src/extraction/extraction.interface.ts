@@ -1,3 +1,4 @@
+import { UserSession } from '../auth/auth.types';
 import { AIInteraction } from '../../generated/prisma/client';
 
 export interface AsyncState<TData = any, TError extends Error = Error> {
@@ -23,7 +24,7 @@ export type ExtractionOptions = {
 export type ImageExtractionInput = {
   extractionId: string;
   files: Array<{ buffer: Buffer; mimeType: string }>;
-  userId?: string;
+  user?: UserSession['user'];
   options?: ExtractionOptions;
 };
 

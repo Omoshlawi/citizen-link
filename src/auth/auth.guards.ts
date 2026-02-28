@@ -28,6 +28,14 @@ export class RequireSystemPermissionsGuard implements CanActivate {
       return true;
     }
     const request = context.switchToHttp().getRequest<Request>();
+    const session = await this.authService.api.getSession({
+      headers: fromNodeHeaders(request.headers),
+    });
+    if (!session?.user) {
+      throw new ForbiddenException(
+        'You do not have permission to access this resource',
+      );
+    }
     const { success } = await this.authService.api.userHasPermission({
       headers: fromNodeHeaders(request.headers),
       body: {

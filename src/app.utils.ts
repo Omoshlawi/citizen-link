@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { UserSession } from './auth/auth.types';
 import dayjs from 'dayjs';
+import { Results } from './common/common.interfaces';
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -73,26 +74,14 @@ export function nullToUndefined<T>(input: T): T {
   return input;
 }
 
-// Safe pars JSON
-
-type SafeParseJsonSuccess<T> = {
-  success: true;
-  data: T;
-};
-type SafeParseJsonError = {
-  success: false;
-  error: Error;
-};
-
-type SafeParseJsonResult<T> = SafeParseJsonSuccess<T> | SafeParseJsonError;
 type SafeParseJsonOptions = {
   transformNullToUndefined?: boolean;
 };
 
-export const safeParseJson = <T>(
+export const safeParseJson = <T, E = Error>(
   json: string,
   options: SafeParseJsonOptions = { transformNullToUndefined: false },
-): SafeParseJsonResult<T> => {
+): Results<T, E> => {
   try {
     const data = JSON.parse(json);
     if (options.transformNullToUndefined) {
@@ -100,7 +89,7 @@ export const safeParseJson = <T>(
     }
     return { success: true, data };
   } catch (error) {
-    return { success: false, error: error as Error };
+    return { success: false, error: error as E };
   }
 };
 

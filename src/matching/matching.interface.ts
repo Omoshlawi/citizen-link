@@ -20,7 +20,7 @@ export interface CandidateMatch {
   documentId: string;
   caseId: string;
   typeId: string;
-  ownerName: string | null;
+  fullName: string | null;
   documentNumber: string | null;
   serialNumber: string | null;
   dateOfBirth: Date | null;

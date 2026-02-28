@@ -22,7 +22,7 @@ export const QueryDocumentCaseSchema = z
     caseNumber: z.string().optional(),
     documentType: z.uuid().optional(),
     caseType: z.enum(['FOUND', 'LOST']).optional(),
-    ownerName: z.string().optional(),
+    fullName: z.string().optional(),
     eventDateFrom: z.iso.date().optional(),
     eventDateTo: z.iso.date().optional(),
     dateReportedFrom: z.iso.date().optional(),

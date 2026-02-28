@@ -39,7 +39,7 @@ export class DocumentCasesQueryService {
               typeId: query.documentType,
               serialNumber: query.documentNumber,
               issuer: { contains: query.documentIssuer },
-              ownerName: { contains: query.ownerName },
+              fullName: { contains: query.fullName },
               expiryDate: {
                 gte: query.docuemtExpiryDateFrom
                   ? dayjs(query.docuemtExpiryDateFrom).toDate()
@@ -97,7 +97,7 @@ export class DocumentCasesQueryService {
                   },
                   {
                     document: {
-                      ownerName: {
+                      fullName: {
                         contains: query?.search,
                         mode: 'insensitive',
                       },

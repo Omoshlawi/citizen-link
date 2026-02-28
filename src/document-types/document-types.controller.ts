@@ -25,6 +25,7 @@ import {
 } from './document-type.dto';
 import { DocumentTypesService } from './document-types.service';
 import { RequireSystemPermission } from '../auth/auth.decorators';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 
 @Controller('documents/types')
 export class DocumentTypesController {
@@ -45,6 +46,7 @@ export class DocumentTypesController {
   @ApiOperation({ summary: 'Query Document Type' })
   @ApiOkResponse({ type: QueryDocumentTypeResponseDto })
   @ApiErrorsResponse()
+  @AllowAnonymous()
   findAll(
     @Query() query: QueryDocumentTypeDto,
     @OriginalUrl() originalUrl: string,
@@ -56,6 +58,7 @@ export class DocumentTypesController {
   @ApiOperation({ summary: 'Get Document Type' })
   @ApiOkResponse({ type: GetDocumentTypeResponseDto })
   @ApiErrorsResponse()
+  @AllowAnonymous()
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: CustomRepresentationQueryDto,

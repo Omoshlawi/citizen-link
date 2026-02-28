@@ -6,11 +6,8 @@ import {
   Document,
   DocumentField,
 } from '../../generated/prisma/client';
-import {
-  DataExtractionSchema,
-  SecurityQuestionsDto,
-} from '../extraction/extraction.dto';
 import z from 'zod';
+import { VisionExtractionOutputSchema } from '../vision/vision.dto';
 
 @Injectable()
 export class PromptsService {
@@ -23,15 +20,6 @@ export class PromptsService {
       documentTypes,
     });
   }
-  getSecurityQuestionsPrompt(
-    documentType: DocumentType,
-    extractedData: z.infer<typeof DataExtractionSchema>,
-  ) {
-    return this.templatesService.render('prompts', 'secutity-questions', {
-      documentType,
-      extractedData,
-    });
-  }
 
   getImageAnalysisPrompt(
     supportedDocumentTypes: Array<
@@ -40,14 +28,6 @@ export class PromptsService {
   ) {
     return this.templatesService.render('prompts', 'image-quality-analysis', {
       supportedDocumentTypes,
-    });
-  }
-
-  getConfidenceScorePrompt(
-    extractedData: z.infer<typeof DataExtractionSchema>,
-  ) {
-    return this.templatesService.render('prompts', 'field-confidence-scoring', {
-      extractedData,
     });
   }
 
@@ -89,13 +69,23 @@ export class PromptsService {
     });
   }
 
-  getClaimVerificationPrompt(
-    securityQuestions: SecurityQuestionsDto['questions'],
-    userResponse: Array<{ question: string; response: string }>,
+  getVisionExtractionPrompt(
+    output: 'structured' | 'unstructured' = 'structured',
   ) {
-    return this.templatesService.render('prompts', 'claim-verification', {
-      userResponse,
-      securityQuestions,
+    return this.templatesService.render(
+      'prompts',
+      `vision-extraction-${output}`,
+      {},
+    );
+  }
+
+  getTextExtractionPrompt(
+    visionOutput: z.infer<typeof VisionExtractionOutputSchema>,
+    documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
+  ) {
+    return this.templatesService.render('prompts', 'text-extraction', {
+      visionOutput: JSON.stringify(visionOutput, null, 2),
+      documentTypes,
     });
   }
 }

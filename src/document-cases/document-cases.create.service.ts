@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { EntityPrefix } from 'src/human-id/human-id.constants';
@@ -5,11 +6,7 @@ import { AIInteractionType } from '../../generated/prisma/enums';
 import { OcrService } from '../ai/ocr.service';
 import { UserSession } from '../auth/auth.types';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
-import {
-  DataExtractionDto,
-  ImageAnalysisDto,
-  SecurityQuestionsDto,
-} from '../extraction/extraction.dto';
+import { SecurityQuestionsDto } from '../extraction/extraction.dto';
 import { ProgressEvent } from '../extraction/extraction.interface';
 import { ExtractionService } from '../extraction/extraction.service';
 import { HumanIdService } from '../human-id/human-id.service';
@@ -17,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateFoundDocumentCaseDto } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
+import { AIExtraction } from '../../generated/prisma/client';
 
 @Injectable()
 export class DocumentCasesCreateService {
@@ -121,38 +119,13 @@ export class DocumentCasesCreateService {
         return { buffer, mimeType };
       }),
     );
-    const extraction = await this.extractionService.extractInformation({
-      extractionId,
-      files: _extractionTasks,
-      userId,
-      options: {
-        onPublishProgressEvent,
-        skipSecurityQuestion: skipSecurityQuestions,
-      },
-    });
-    const { additionalFields, ...documentpayload } =
-      extraction.aiextractionInteractions.find(
-        (interaction) =>
-          interaction.aiInteraction.interactionType ===
-          AIInteractionType.DATA_EXTRACTION,
-      )?.extractionData as unknown as DataExtractionDto;
-    const imageAnalysis = extraction.aiextractionInteractions.find(
-      (interaction) =>
-        interaction.aiInteraction.interactionType ===
-        AIInteractionType.IMAGE_ANALYSIS,
-    )?.extractionData as unknown as ImageAnalysisDto;
-    const securityQuestions = extraction.aiextractionInteractions.find(
-      (interaction) =>
-        interaction.aiInteraction.interactionType ===
-        AIInteractionType.SECURITY_QUESTIONS_GEN,
-    )?.extractionData as unknown as SecurityQuestionsDto;
 
     return {
-      extraction,
-      securityQuestions,
-      imageAnalysis,
-      documentpayload,
-      additionalFields,
+      extraction: {} as AIExtraction,
+      securityQuestions: undefined,
+      imageAnalysis: undefined,
+      documentpayload: undefined,
+      additionalFields: undefined,
     };
   }
 
@@ -185,52 +158,7 @@ export class DocumentCasesCreateService {
         }),
         extractionId: extraction.id,
         eventDate: dayjs(eventDate).toDate(),
-        foundDocumentCase: {
-          create: {
-            securityQuestion: securityQuestions.questions,
-          },
-        },
         userId: user.id,
-        document: {
-          create: {
-            ...documentpayload,
-            expiryDate: documentpayload.expiryDate
-              ? dayjs(documentpayload.expiryDate).toDate()
-              : undefined,
-            issuanceDate: documentpayload.issuanceDate
-              ? dayjs(documentpayload.issuanceDate).toDate()
-              : undefined,
-            dateOfBirth: documentpayload.dateOfBirth
-              ? dayjs(documentpayload.dateOfBirth).toDate()
-              : undefined,
-            images: images?.length
-              ? {
-                  createMany: {
-                    data: images.map((image, i) => ({
-                      url: image,
-                      metadata: {
-                        // ocrText: extractionTasks[i]
-                        imageAnalysis: imageAnalysis.images.find(
-                          (imageAnalysis) => imageAnalysis.index === i,
-                        ),
-                      },
-                    })),
-                  },
-                }
-              : undefined,
-            additionalFields: additionalFields?.length
-              ? {
-                  createMany: {
-                    skipDuplicates: true,
-                    data: additionalFields.map((field) => ({
-                      fieldName: field.fieldName,
-                      fieldValue: field.fieldValue,
-                    })),
-                  },
-                }
-              : undefined,
-          },
-        },
       },
       include: {
         document: true,
@@ -272,46 +200,6 @@ export class DocumentCasesCreateService {
           create: {},
         },
         userId: user.id,
-        document: {
-          create: {
-            ...documentpayload,
-            expiryDate: documentpayload.expiryDate
-              ? dayjs(documentpayload.expiryDate).toDate()
-              : undefined,
-            issuanceDate: documentpayload.issuanceDate
-              ? dayjs(documentpayload.issuanceDate).toDate()
-              : undefined,
-            dateOfBirth: documentpayload.dateOfBirth
-              ? dayjs(documentpayload.dateOfBirth).toDate()
-              : undefined,
-            images: images?.length
-              ? {
-                  createMany: {
-                    data: images.map((image, i) => ({
-                      url: image,
-                      metadata: {
-                        // ocrText: extractionTasks[i]
-                        imageAnalysis: imageAnalysis.images.find(
-                          (imageAnalysis) => imageAnalysis.index === i,
-                        ),
-                      },
-                    })),
-                  },
-                }
-              : undefined,
-            additionalFields: additionalFields?.length
-              ? {
-                  createMany: {
-                    skipDuplicates: true,
-                    data: additionalFields.map((field) => ({
-                      fieldName: field.fieldName,
-                      fieldValue: field.fieldValue,
-                    })),
-                  },
-                }
-              : undefined,
-          },
-        },
       },
       include: {
         document: true,

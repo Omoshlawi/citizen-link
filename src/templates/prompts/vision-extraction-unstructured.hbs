@@ -1,0 +1,51 @@
+You are a document OCR engine. Read everything visible in this document image.
+
+Your response has two sections:
+
+---TEXT---
+Transcribe ALL visible text exactly as it appears.
+- Preserve original casing
+- Preserve line breaks and spacing as closely as possible
+- Preserve punctuation exactly
+- Do NOT correct spelling
+- Do NOT skip any text, even if it seems unimportant
+- If text is partially visible or unclear, transcribe what you can and mark it with [UNCLEAR]
+- If a section is completely unreadable mark it as [UNREADABLE]
+
+---ELEMENTS---
+List every non-text element you can see.
+- One element per line
+- Format: ELEMENT_TYPE: description
+- Element types: PHOTO, STAMP, SIGNATURE, FINGERPRINT, WATERMARK, LOGO, BARCODE, QR_CODE, SEAL
+- Be specific in your description e.g:
+    PHOTO: portrait photo of a person, top-right corner
+    STAMP: circular red stamp, bottom-left corner
+    FINGERPRINT: right thumb fingerprint, center-right
+    SIGNATURE: handwritten signature, bottom center
+- If no non-text elements are visible, write: NONE
+```
+
+---
+
+## Example output from `lightocr2:ib`
+```
+---TEXT---
+REPUBLIC OF KENYA
+NATIONAL IDENTITY CARD
+
+ID NUMBER 34567890
+FULL NAMES JOHN KAMAU MWANGI
+DATE OF BIRTH 12/08/1990
+GENDER MALE
+DISTRICT OF BIRTH KIAMBU
+PLACE OF ISSUE NAIROBI
+DATE OF ISSUE 15/03/2015
+
+SERIAL NO. KE/2015/123456
+
+---ELEMENTS---
+PHOTO: portrait photo of a person, top-right corner
+FINGERPRINT: right thumb fingerprint, center-right
+SIGNATURE: handwritten signature, bottom center
+STAMP: circular government stamp, bottom-right corner
+WATERMARK: faint coat of arms watermark, center page
