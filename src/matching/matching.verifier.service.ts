@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { PromptsService } from 'src/prompts/prompts.service';
 import {
   AIInteraction,
   AIInteractionType,
@@ -8,9 +9,8 @@ import {
   DocumentType,
 } from '../../generated/prisma/client';
 import { AiService } from '../ai/ai.service';
-import { safeParseJson } from '../app.utils';
+import { AsyncError } from '../extraction/extraction.interface';
 import { MatchResultDto, MatchResultSchema } from './matching.dto';
-import { PromptsService } from 'src/prompts/prompts.service';
 @Injectable()
 export class MatchingVerifierService {
   private readonly logger = new Logger(MatchingVerifierService.name);
@@ -41,58 +41,28 @@ export class MatchingVerifierService {
       foundCase,
       lostCase,
     );
-    const matchResult = await this.aiService.callAIAndStore(
+    const matchResult = await this.aiService.callAIAndStoreParsed(
       prompt,
       [],
       {
         temperature: 0.1,
         max_completion_tokens: 2048,
-        // response_format: zodResponseFormat(DataExtractionSchema, 'dataExtractionDto'),
+        schema: MatchResultSchema,
       },
       AIInteractionType.DOCUMENT_MATCHING,
       'Match',
       userId,
     );
 
-    if (!matchResult.success) {
-      this.logger.error(`Failed to verify match: ${matchResult.errorMessage}`);
-      throw new BadRequestException(
-        `Failed to verify match: ${matchResult.errorMessage}`,
-      );
+    if (!matchResult.callError || !matchResult.parseError) {
+      const error = (matchResult.parseError as unknown as AsyncError) ?? {
+        message: matchResult.callError,
+      };
+      this.logger.error(`Failed to verify match: ${JSON.stringify(error)}`);
+      throw new BadRequestException(`Failed to verify match: ${error.message}`);
     }
 
-    const cleanedResponse = this.aiService.cleanResponseText(
-      matchResult.response,
-    );
-
-    const matchResultParsed = safeParseJson<{
-      confidence: number;
-      reasons: string[];
-    }>(cleanedResponse, { transformNullToUndefined: true });
-
-    if (!matchResultParsed.success) {
-      this.logger.error(
-        `Failed to parse match result: ${matchResultParsed.error.message}`,
-      );
-      throw new BadRequestException(
-        `Failed to parse match result: ${matchResultParsed.error.message}`,
-      );
-    }
-
-    const matchValidation = await MatchResultSchema.safeParseAsync(
-      matchResultParsed.data,
-    );
-
-    if (!matchValidation.success) {
-      this.logger.error(
-        `Failed to validate match result: ${matchValidation.error.message}`,
-      );
-      throw new BadRequestException(
-        `Failed to validate match result: ${matchValidation.error.message}`,
-      );
-    }
-
-    const matchData = matchValidation.data;
+    const matchData = matchResult.parsedResponse as unknown as MatchResultDto;
     this.logger.log(`Match result: ${JSON.stringify(matchData, null, 2)}`);
 
     return { matchData, aiInteraction: matchResult };

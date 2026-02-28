@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { pick } from 'lodash';
 import {
@@ -136,9 +135,6 @@ export class MatchingService {
       },
       foundDocumentCase: {
         ...d.foundDocumentCase,
-        securityQuestion: (
-          (d.foundDocumentCase.securityQuestion as Array<any>) ?? []
-        ).map((q) => pick(q, 'question')),
       },
     };
   }

@@ -134,6 +134,7 @@ export class ClaimService {
   async create(
     {
       attachments,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       securityQuestions,
       pickupStationId,
       addressId,
@@ -167,12 +168,7 @@ export class ClaimService {
         preferredHandoverDate: parseDate(createClaimDto.preferredHandoverDate),
       },
     });
-    // Verify security questions
-    await this._verify(
-      claim.id,
-      match.foundDocumentCase.securityQuestion as any,
-      securityQuestions,
-    );
+
     // Move files
     const keys = await Promise.all(
       attachments.map(async (attachment) => {
