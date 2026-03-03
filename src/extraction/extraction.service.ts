@@ -1,4 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { DocumentTypeCode } from 'src/document-types/document-type.dto';
+import z from 'zod';
 import { AIExtractionInteractionType } from '../../generated/prisma/enums';
 import { AiService } from '../ai/ai.service';
 import { safeParseJson } from '../app.utils';
@@ -86,6 +88,13 @@ export class ExtractionService {
         max_completion_tokens: this.MAX_TOKEN,
         top_p: this.TOP_T,
         schema: TextExtractionOutputSchema,
+        transformResponse: (response) => {
+          const typeCode = response.documentType.code;
+          if (!z.enum(DocumentTypeCode).safeParse(typeCode).success) {
+            response.documentType.code = DocumentTypeCode.UNKNOWN;
+          }
+          return response;
+        },
       },
       AIExtractionInteractionType.TEXT_EXTRACTION,
       'Extraction',

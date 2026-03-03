@@ -149,11 +149,27 @@ export class DocumentCasesService {
     );
   }
 
+  private getName(givenNames?: string, surname?: string) {
+    const givenName =
+      givenNames?.split(' ').filter((name) => name.trim()) ?? [];
+    const surName = surname?.trim() ?? '';
+    const fullName = `${givenName.join(' ')} ${surName}`.trim();
+    return {
+      fullName: fullName ? fullName : null,
+      givenName,
+      surName: surName ? surName : null,
+    };
+  }
+
   async reportLostDocumentCase(
     createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
+    const { fullName, givenName, surName } = this.getName(
+      createLostDocumentCaseDto.givenNames,
+      createLostDocumentCaseDto.surname,
+    );
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         userId: user.id,
@@ -165,7 +181,15 @@ export class DocumentCasesService {
         document: {
           create: {
             documentNumber: createLostDocumentCaseDto.documentNumber,
-            fullName: createLostDocumentCaseDto.fullName,
+            fullName,
+            givenNames: givenName,
+            surname: surName,
+            isExpired: createLostDocumentCaseDto.expiryDate
+              ? dayjs(createLostDocumentCaseDto.expiryDate).isBefore(dayjs())
+              : undefined,
+            fingerprintPresent: createLostDocumentCaseDto.fingerprintPresent,
+            photoPresent: createLostDocumentCaseDto.photoPresent,
+            signaturePresent: createLostDocumentCaseDto.signaturePresent,
             typeId: createLostDocumentCaseDto.typeId,
             batchNumber: createLostDocumentCaseDto.batchNumber,
             serialNumber: createLostDocumentCaseDto.serialNumber,
@@ -183,6 +207,9 @@ export class DocumentCasesService {
             placeOfIssue: createLostDocumentCaseDto.placeOfIssue,
             gender: createLostDocumentCaseDto.gender,
             note: createLostDocumentCaseDto.note,
+            addressRaw: createLostDocumentCaseDto.addressRaw,
+            addressCountry: createLostDocumentCaseDto.addressCountry,
+            addressComponents: createLostDocumentCaseDto.addressComponents,
             additionalFields: createLostDocumentCaseDto.additionalFields?.length
               ? {
                   createMany: {

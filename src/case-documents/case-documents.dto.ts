@@ -4,6 +4,10 @@ import z from 'zod';
 import { ApiProperty } from '@nestjs/swagger';
 import { Document, DocumentField } from '../../generated/prisma/client';
 import { JsonValue } from '@prisma/client/runtime/client';
+import {
+  AddressComponentDto,
+  AddressComponentSchema,
+} from '../extraction/extraction.dto';
 
 export const QueryCaseDocumentSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -12,7 +16,7 @@ export const QueryCaseDocumentSchema = z.object({
   serialNumber: z.string().optional(),
   batchNumber: z.string().optional(),
   issuer: z.string().optional(),
-  fullName: z.string().optional(),
+  name: z.string().optional(),
   dateOfBirth: z.iso.date().optional(),
   placeOfBirth: z.string().optional(),
   placeOfIssue: z.string().optional(),
@@ -40,7 +44,8 @@ export const CaseDocumentSchema = z.object({
   documentNumber: z.string().optional(), // Generic document number (ID number, passport number, etc.)
   batchNumber: z.string().optional(), // Batch number if available
   issuer: z.string().optional(),
-  fullName: z.string().min(1, 'Owner name required'),
+  surname: z.string().min(1, 'Surname required').optional(),
+  givenNames: z.string().min(1, 'GivenNames required').optional(),
   dateOfBirth: z.iso.date().optional(), // Owner's date of birth
   placeOfBirth: z.string().optional(), // Owner's place of birth
   placeOfIssue: z.string().optional(),
@@ -53,6 +58,12 @@ export const CaseDocumentSchema = z.object({
   additionalFields: CaseDocumentFieldSchema.omit({ documentId: true })
     .array()
     .optional(),
+  photoPresent: z.boolean().optional(),
+  fingerprintPresent: z.boolean().optional(),
+  signaturePresent: z.boolean().optional(),
+  addressRaw: z.string().optional(),
+  addressCountry: z.string().optional(),
+  addressComponents: AddressComponentSchema.array().optional(),
 });
 
 export class CreateCaseDocumentDto extends createZodDto(CaseDocumentSchema) {}
@@ -87,9 +98,9 @@ export class GetCaseDocumentResponseDto implements Document {
   createdAt: Date;
   @ApiProperty()
   updatedAt: Date;
-  @ApiProperty()
+  @ApiProperty({ isArray: true, type: 'string' })
   givenNames: string[];
-  @ApiProperty()
+  @ApiProperty({ type: 'string', required: false, nullable: true })
   surname: string | null;
   @ApiProperty()
   photoPresent: boolean;
@@ -99,11 +110,16 @@ export class GetCaseDocumentResponseDto implements Document {
   signaturePresent: boolean;
   @ApiProperty()
   isExpired: boolean;
-  @ApiProperty()
+  @ApiProperty({ type: 'string', required: false, nullable: true })
   addressRaw: string | null;
-  @ApiProperty()
+  @ApiProperty({ type: 'string', required: false, nullable: true })
   addressCountry: string | null;
-  @ApiProperty()
+  @ApiProperty({
+    type: AddressComponentDto,
+    required: false,
+    nullable: true,
+    isArray: true,
+  })
   addressComponents: JsonValue;
   @ApiProperty()
   aiExtractionPrompt: string | null;

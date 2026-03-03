@@ -63,6 +63,18 @@ export class CaseDocumentsService {
     }
   }
 
+  private getName(givenNames?: string, surname?: string) {
+    const givenName =
+      givenNames?.split(' ').filter((name) => name.trim()) ?? [];
+    const surName = surname?.trim() ?? '';
+    const fullName = `${givenName.join(' ')} ${surName}`.trim();
+    return {
+      fullName: fullName ? fullName : null,
+      givenName,
+      surName: surName ? surName : null,
+    };
+  }
+
   async update(
     documentId: string,
     updateCaseDocumentDto: UpdateCaseDocumentDto,
@@ -70,10 +82,13 @@ export class CaseDocumentsService {
     caseId: string,
   ) {
     const { additionalFields, ...data } = updateCaseDocumentDto;
+    const { fullName, givenName, surName } = this.getName(
+      data?.givenNames,
+      data?.surname,
+    );
     const doc = await this.prismaService.document.update({
       where: { id: documentId, caseId },
       data: {
-        ...data,
         dateOfBirth: data?.dateOfBirth
           ? dayjs(data?.dateOfBirth).toDate()
           : undefined,
@@ -89,6 +104,27 @@ export class CaseDocumentsService {
               createMany: { data: additionalFields },
             }
           : undefined,
+        isExpired: data?.expiryDate
+          ? dayjs(data?.expiryDate).isBefore(dayjs())
+          : undefined,
+        fingerprintPresent: data?.fingerprintPresent,
+        photoPresent: data?.photoPresent,
+        signaturePresent: data?.signaturePresent,
+        fullName,
+        givenNames: givenName,
+        surname: surName,
+        typeId: data?.typeId,
+        batchNumber: data?.batchNumber,
+        serialNumber: data?.serialNumber,
+        issuer: data?.issuer,
+        placeOfBirth: data?.placeOfBirth,
+        placeOfIssue: data?.placeOfIssue,
+        gender: data?.gender,
+        note: data?.note,
+        addressRaw: data?.addressRaw,
+        addressCountry: data?.addressCountry,
+        addressComponents: data?.addressComponents,
+        documentNumber: data?.documentNumber,
       },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });

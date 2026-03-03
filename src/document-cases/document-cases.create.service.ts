@@ -2,17 +2,14 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { EntityPrefix } from 'src/human-id/human-id.constants';
-import {
-  AIExtractionInteractionType,
-  AIInteractionType,
-} from '../../generated/prisma/enums';
+import { VisionService } from 'src/vision/vision.service';
+import { AIInteraction } from '../../generated/prisma/client';
+import { AIExtractionInteractionType } from '../../generated/prisma/enums';
 import { OcrService } from '../ai/ocr.service';
+import { parseDate } from '../app.utils';
 import { UserSession } from '../auth/auth.types';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
-import {
-  SecurityQuestionsDto,
-  TextExtractionOutputDto,
-} from '../extraction/extraction.dto';
+import { TextExtractionOutputDto } from '../extraction/extraction.dto';
 import {
   AsyncError,
   ExtractionAiProgressEvent,
@@ -22,16 +19,9 @@ import { ExtractionService } from '../extraction/extraction.service';
 import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
+import { VisionExtractionOutputDto } from '../vision/vision.dto';
 import { CreateFoundDocumentCaseDto } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
-import {
-  AIExtraction,
-  AIInteraction,
-  AIExtractionInteraction,
-} from '../../generated/prisma/client';
-import { VisionService } from 'src/vision/vision.service';
-import { VisionExtractionOutputDto } from '../vision/vision.dto';
-import { parseDate } from '../app.utils';
 
 @Injectable()
 export class DocumentCasesCreateService {
@@ -171,6 +161,32 @@ export class DocumentCasesCreateService {
 
     const extractionResult =
       textExtractionOutput.parsedResponse as unknown as TextExtractionOutputDto;
+
+    // Validate types
+    onPublishProgressEvent?.({
+      key: 'DOCUMENT_TYPE_VALIDATION',
+      state: { isLoading: true },
+    });
+    const documentType = await this.prismaService.documentType.findUnique({
+      where: { code: extractionResult.documentType.code },
+    });
+    if (!documentType) {
+      onPublishProgressEvent?.({
+        key: 'DOCUMENT_TYPE_VALIDATION',
+        state: {
+          isLoading: false,
+          error: { message: 'Document type not found' },
+        },
+      });
+      throw new BadRequestException('Document type not found');
+    }
+    onPublishProgressEvent?.({
+      key: 'DOCUMENT_TYPE_VALIDATION',
+      state: {
+        isLoading: false,
+        data: 'Document type validation succesfull',
+      },
+    });
 
     return await this.prismaService.aIExtraction.update({
       where: { id: extractionId },

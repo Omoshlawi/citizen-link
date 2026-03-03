@@ -4,12 +4,12 @@ import { z } from 'zod';
 
 // --- Reusable primitives ---
 
-const AddressComponentSchema = z.object({
+export const AddressComponentSchema = z.object({
   type: z.string().min(1), // e.g. "county", "state", "province", "zip", "postcode", "city", "street", "ward"
   value: z.string().min(1),
 });
 
-const AdditionalFieldSchema = z.object({
+export const AdditionalFieldSchema = z.object({
   fieldName: z.string().min(1),
   fieldValue: z.string(),
 });
@@ -140,7 +140,7 @@ export const TextExtractionOutputSchema = z.object({
 // --- Inferred types from schema (single source of truth) ---
 
 export type ExtractionWarning = z.infer<typeof ExtractionWarningSchema>;
-export type AddressComponent = z.infer<typeof AddressComponentSchema>;
+export class AddressComponentDto extends createZodDto(AddressComponentSchema) {}
 export type AdditionalField = z.infer<typeof AdditionalFieldSchema>;
 export class TextExtractionOutputDto extends createZodDto(
   TextExtractionOutputSchema,
