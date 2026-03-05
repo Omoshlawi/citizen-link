@@ -17,46 +17,29 @@ import {
 } from '../common/query-builder';
 import {
   QueryMatchesDto,
-  QueryMatechesForFoundCaseDto,
-  QueryMatechesForLostCaseDto,
+  QueryMatchesForFoundCaseDto,
+  QueryMatchesForLostCaseDto,
 } from './matching.dto';
-import { MatchFoundDocumentService } from './matching.found.service';
-import { FindMatchesOptions, VerifyMatchesOptions } from './matching.interface';
-import { MatchLostDocumentService } from './matching.lost.service';
-import { MatchingStatisticsService } from './matching.statistics.service';
 import { UserSession } from 'src/auth/auth.types';
 import { isSuperUser } from 'src/app.utils';
 import { MatchingStatusTransitionService } from './matching.transitions.service';
 import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
+import { MatchingVectorSearchService } from './matching.vector-search';
 
 @Injectable()
 export class MatchingService {
   private readonly logger = new Logger(MatchingService.name);
   private readonly defaultRep =
-    'custom:select(id,matchNumber,matchScore,status,createdAt,updatedAt,aiAnalysis,foundDocumentCase:select(securityQuestion,case:select(userId,document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))))';
+    'custom:select(id,matchNumber,status,createdAt,updatedAt,aiVerificationResult,foundDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))))';
 
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly matchFoundDocumentService: MatchFoundDocumentService,
-    private readonly matchLostDocumentService: MatchLostDocumentService,
-    private readonly matchingStatistics: MatchingStatisticsService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
     private readonly matchTransitionsService: MatchingStatusTransitionService,
+    private readonly matchingVectorSearchService: MatchingVectorSearchService,
   ) {}
-
-  getMatchStatistics(
-    documentId: string,
-    isLostDocument: boolean,
-    options: { similarityThreshold?: number } = {},
-  ) {
-    return this.matchingStatistics.getMatchStatistics(
-      documentId,
-      isLostDocument,
-      options,
-    );
-  }
 
   reject(
     matchId: string,
@@ -67,60 +50,27 @@ export class MatchingService {
     return this.matchTransitionsService.reject(matchId, rejectDto, user, query);
   }
 
-  findMatchesForLostDocument(
-    lostDocumentId: string,
-    options: FindMatchesOptions = {},
-  ) {
-    return this.matchFoundDocumentService.findMatches(lostDocumentId, options);
-  }
-  findMatchesForFoundDocument(
-    foundDocumentId: string,
-    options: FindMatchesOptions = {},
-  ) {
-    return this.matchLostDocumentService.findMatches(foundDocumentId, options);
-  }
-
-  findMatchesForFoundDocumentAndVerify(
-    foundDocumentId: string,
-    userId: string,
-    options: FindMatchesOptions & VerifyMatchesOptions = {},
-  ) {
-    return this.matchLostDocumentService.findMatchesAndVerify(
-      foundDocumentId,
-      userId,
-      options,
-    );
-  }
-  findMatchesForLostDocumentAndVerify(
-    lostDocumentId: string,
-    userId: string,
-    options: FindMatchesOptions & VerifyMatchesOptions = {},
-  ) {
-    return this.matchFoundDocumentService.findMatchesAndVerify(
-      lostDocumentId,
-      userId,
-      options,
-    );
-  }
-
-  queryMatchesForLostDocumentCase(query: QueryMatechesForLostCaseDto) {
-    return this.matchFoundDocumentService.queryMatchesForLostDocumentCase(
+  queryMatchesForLostDocumentCase(query: QueryMatchesForLostCaseDto) {
+    return this.matchingVectorSearchService.findSimilarFoundDocumentCasesForLostDocumentCase(
       query,
     );
   }
-  queryMatchesForFoundDocumentCase(query: QueryMatechesForFoundCaseDto) {
-    return this.matchLostDocumentService.queryMatchesForFoundDocumentCase(
+  queryMatchesForFoundDocumentCase(query: QueryMatchesForFoundCaseDto) {
+    return this.matchingVectorSearchService.findSimilarLostDocumentCasesForFoundDocumentCase(
       query,
     );
   }
 
   private mapMatch(d: Match & { foundDocumentCase: FoundDocumentCase }) {
-    const aiAnalysis = (d.aiAnalysis ?? {}) as Record<string, any>;
+    const aiVerificationResult = (d.aiVerificationResult ?? {}) as Record<
+      string,
+      any
+    >;
     return {
       ...pick(d, [
         'id',
         'matchNumber',
-        'matchScore',
+        'aiScore',
         'status',
         // 'foundDocumentCase',
         'lostDocumentCase',
@@ -128,9 +78,13 @@ export class MatchingService {
         'updatedAt',
       ]),
       aiAnalysis: {
-        ...pick(aiAnalysis, ['overallScore', 'confidence', 'recommendation']),
+        ...pick(aiVerificationResult, [
+          'overallScore',
+          'confidence',
+          'recommendation',
+        ]),
         fieldAnalysis: (
-          aiAnalysis.fieldAnalysis as Array<Record<string, any>>
+          aiVerificationResult.fieldAnalysis as Array<Record<string, any>>
         ).filter((f) => f.match && f.confidence),
       },
       foundDocumentCase: {
@@ -152,9 +106,7 @@ export class MatchingService {
         AND: [
           {
             voided: query?.includeVoided ? undefined : false,
-            lostDocumentCaseId: query?.lostDocumentCaseId,
-            foundDocumentCaseId: query?.foundDocumentCaseId,
-            matchScore: { gte: query.minMatchScore, lte: query.maxMatchScore },
+            aiScore: { gte: query.minMatchScore, lte: query.maxMatchScore },
           },
           {
             OR: query.search
@@ -261,6 +213,42 @@ export class MatchingService {
                     lostDocumentCase: {
                       case: {
                         userId: user.id,
+                      },
+                    },
+                  },
+                ]
+              : undefined,
+          },
+          {
+            OR: query.lostDocumentCase
+              ? [
+                  {
+                    lostDocumentCase: {
+                      id: query.lostDocumentCase,
+                    },
+                  },
+                  {
+                    lostDocumentCase: {
+                      case: {
+                        caseNumber: query.lostDocumentCase,
+                      },
+                    },
+                  },
+                ]
+              : undefined,
+          },
+          {
+            OR: query.foundDocumentCase
+              ? [
+                  {
+                    foundDocumentCase: {
+                      id: query.foundDocumentCase,
+                    },
+                  },
+                  {
+                    foundDocumentCase: {
+                      case: {
+                        caseNumber: query.foundDocumentCase,
                       },
                     },
                   },

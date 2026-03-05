@@ -64,24 +64,24 @@ export class DocumentCasesWorkflowService {
 
     // Index document after submission
     if (documentCase.document?.id) {
-      await this.embeddingService.indexDocument(documentCase.document.id);
-      // For lost cass run match algorithm on submission
-      if (documentCase.lostDocumentCase) {
-        const matches =
-          await this.matchingService.findMatchesForLostDocumentAndVerify(
-            documentCase.document.id,
-            userId,
-            {
-              limit: 20,
-              similarityThreshold: 0.5,
-              minVerificationScore: 0.6,
-            },
-          );
-        this.logger.debug(
-          `Found ${matches.length} matches for document ${documentCase.document.id}`,
-          matches,
-        );
-      }
+      // await this.embeddingService.indexDocument(documentCase.document.id);
+      // // For lost cass run match algorithm on submission
+      // if (documentCase.lostDocumentCase) {
+      //   const matches =
+      //     await this.matchingService.findMatchesForLostDocumentAndVerify(
+      //       documentCase.document.id,
+      //       userId,
+      //       {
+      //         limit: 20,
+      //         similarityThreshold: 0.5,
+      //         minVerificationScore: 0.6,
+      //       },
+      //     );
+      //   this.logger.debug(
+      //     `Found ${matches.length} matches for document ${documentCase.document.id}`,
+      //     matches,
+      //   );
+      // }
     }
 
     return statustransition;
@@ -119,21 +119,21 @@ export class DocumentCasesWorkflowService {
 
     // Index document on veriication and run match algorithm
     if (documentCase.document?.id) {
-      await this.embeddingService.indexDocument(documentCase.document.id);
-      const matches =
-        await this.matchingService.findMatchesForFoundDocumentAndVerify(
-          documentCase.document.id,
-          userId,
-          {
-            limit: 20,
-            similarityThreshold: 0.5,
-            minVerificationScore: 0.6,
-          },
-        );
-      this.logger.debug(
-        `Found ${matches.length} matches for document ${documentCase.document.id}`,
-        matches,
-      );
+      // await this.embeddingService.indexDocument(documentCase.document.id);
+      // const matches =
+      //   await this.matchingService.findMatchesForFoundDocumentAndVerify(
+      //     documentCase.document.id,
+      //     userId,
+      //     {
+      //       limit: 20,
+      //       similarityThreshold: 0.5,
+      //       minVerificationScore: 0.6,
+      //     },
+      //   );
+      // this.logger.debug(
+      //   `Found ${matches.length} matches for document ${documentCase.document.id}`,
+      //   matches,
+      // );
     }
     return statusTransition;
   }

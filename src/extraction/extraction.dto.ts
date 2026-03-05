@@ -139,9 +139,7 @@ export const TextExtractionOutputSchema = z.object({
 
 // --- Inferred types from schema (single source of truth) ---
 
-export type ExtractionWarning = z.infer<typeof ExtractionWarningSchema>;
 export class AddressComponentDto extends createZodDto(AddressComponentSchema) {}
-export type AdditionalField = z.infer<typeof AdditionalFieldSchema>;
 export class TextExtractionOutputDto extends createZodDto(
   TextExtractionOutputSchema,
 ) {}

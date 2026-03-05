@@ -13,8 +13,8 @@ import {
   GetMatchResponseDto,
   QueryMatchesDto,
   QueryMatchesResponseDto,
-  QueryMatechesForFoundCaseDto,
-  QueryMatechesForLostCaseDto,
+  QueryMatchesForFoundCaseDto,
+  QueryMatchesForLostCaseDto,
 } from './matching.dto';
 import { ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
@@ -37,7 +37,7 @@ export class MatchingController {
   @ApiOperation({ summary: 'Query Matches for lost document case' })
   @ApiOkResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse()
-  queryMatchesForLostDocumentCase(@Query() query: QueryMatechesForLostCaseDto) {
+  queryMatchesForLostDocumentCase(@Query() query: QueryMatchesForLostCaseDto) {
     return this.matchingService.queryMatchesForLostDocumentCase(query);
   }
   @Get('found')
@@ -46,7 +46,7 @@ export class MatchingController {
   @ApiOkResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse()
   queryMatchesForFoundDocumentCase(
-    @Query() query: QueryMatechesForFoundCaseDto,
+    @Query() query: QueryMatchesForFoundCaseDto,
   ) {
     return this.matchingService.queryMatchesForFoundDocumentCase(query);
   }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { EntityPrefix } from 'src/human-id/human-id.constants';
@@ -14,6 +13,8 @@ import {
   AsyncError,
   ExtractionAiProgressEvent,
   ExtractionProgressEvent,
+  TextExtractionOutput,
+  VisionExtractionOutput,
 } from '../extraction/extraction.interface';
 import { ExtractionService } from '../extraction/extraction.service';
 import { HumanIdService } from '../human-id/human-id.service';
@@ -227,7 +228,10 @@ export class DocumentCasesCreateService {
 
   async checkIfInteractionEncounteredError(
     extractionId: string,
-    interaction: AIInteraction,
+    interaction: Omit<AIInteraction, 'parsedResponse' | 'parseError'> & {
+      parsedResponse: TextExtractionOutput | VisionExtractionOutput | null;
+      parseError: AsyncError | null;
+    },
     event: ExtractionAiProgressEvent['key'],
     onPublishProgressEvent?: (data: ExtractionAiProgressEvent) => void,
   ) {

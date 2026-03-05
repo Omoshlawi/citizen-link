@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class EmbeddingService {
   private readonly logger = new Logger(EmbeddingService.name);
+
   constructor(
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
@@ -21,29 +22,23 @@ export class EmbeddingService {
     text: string,
     useCase: 'search' | 'document' = 'document',
   ): Observable<Array<number>> {
-    const url = `/api/embeddings`;
-
-    // Use task-specific prefixes for better accuracy
     const prefix =
       useCase === 'search' ? 'search_query: ' : 'search_document: ';
 
-    const response = this.httpService.post<{
-      embedding: Array<number>;
-    }>(url, {
-      model: 'nomic-embed-text', // or consider 'mxbai-embed-large' for better quality
-      prompt: prefix + text,
-    });
-
-    return response.pipe(
-      map((res) => res.data.embedding),
-      catchError((error) => {
-        this.logger.error('Error generating embedding', error);
-        throw error;
-      }),
-    );
+    return this.httpService
+      .post<{ embedding: Array<number> }>(`/api/embeddings`, {
+        model: 'nomic-embed-text',
+        prompt: prefix + text,
+      })
+      .pipe(
+        map((res) => res.data.embedding),
+        catchError((error) => {
+          this.logger.error('Error generating embedding', error);
+          throw error;
+        }),
+      );
   }
 
-  // Create a searchable text representation of a document
   createDocumentText(
     document: Document & {
       additionalFields: Array<DocumentField>;
@@ -53,97 +48,91 @@ export class EmbeddingService {
   ): string {
     const parts: string[] = [];
 
-    // Add context-rich description first (most important information first)
-    if (document.fullName) {
+    // ─── Identity context first ─────────────────────────
+    if (document.fullName && document.type?.name) {
       parts.push(
         `This is a ${document.type.name} document belonging to ${document.fullName}`,
       );
     }
 
-    // Add structured identity information
-    if (document.fullName) {
-      parts.push(`Full name: ${document.fullName}`);
-    }
+    if (document.fullName) parts.push(`Full name: ${document.fullName}`);
+    if (document.surname) parts.push(`Surname: ${document.surname}`);
 
+    if (document.givenNames?.length) {
+      parts.push(`Given names: ${document.givenNames.join(' ')}`);
+    }
     if (document.dateOfBirth) {
-      const dob = document.dateOfBirth.toISOString().split('T')[0];
-      parts.push(`Date of birth: ${dob}`);
+      parts.push(
+        `Date of birth: ${document.dateOfBirth.toISOString().split('T')[0]}`,
+      );
     }
 
-    if (document.gender) {
-      parts.push(`Gender: ${document.gender}`);
-    }
-
-    if (document.placeOfBirth) {
+    if (document.gender) parts.push(`Gender: ${document.gender}`);
+    if (document.placeOfBirth)
       parts.push(`Place of birth: ${document.placeOfBirth}`);
-    }
 
-    // Document identification
-    if (document.documentNumber) {
+    // ─── Document identifiers ───────────────────────────────────
+    if (document.type.name) parts.push(`Document type: ${document.type.name}`);
+    if (document.type.code) parts.push(`Document code: ${document.type.code}`);
+    if (document.documentNumber)
       parts.push(`Document number: ${document.documentNumber}`);
-    }
-
-    if (document.serialNumber) {
+    if (document.serialNumber)
       parts.push(`Serial number: ${document.serialNumber}`);
-    }
-
-    // Issuance information
-    if (document.issuer) {
-      parts.push(`Issued by: ${document.issuer}`);
-    }
-
-    if (document.placeOfIssue) {
+    if (document.issuer) parts.push(`Issued by: ${document.issuer}`);
+    if (document.placeOfIssue)
       parts.push(`Place of issue: ${document.placeOfIssue}`);
+
+    // ─── Address — important for lost/found matching ────────────
+    if (document.addressRaw) {
+      parts.push(`Address: ${document.addressRaw}`);
     }
 
-    // Additional fields with better formatting
+    if (Array.isArray(document.addressComponents)) {
+      const components = (
+        document.addressComponents as Array<{ type: string; value: string }>
+      )
+        .map((c) => `${c.type}: ${c.value}`)
+        .join(', ');
+      if (components) parts.push(`Address details: ${components}`);
+    }
+
+    // ─── Additional fields ──────────────────────────────────────
     if (document.additionalFields?.length) {
       document.additionalFields.forEach((f) => {
         parts.push(`${f.fieldName}: ${f.fieldValue}`);
       });
     }
 
-    // Tags - very important for semantic search
-    if (document.case.tags && (document.case.tags as Array<string>).length) {
-      const tags = (document.case.tags as Array<string>).join(', ');
-      parts.push(`Related keywords and categories: ${tags}`);
+    // ─── Case tags ──────────────────────────────────────────────
+    const tags = Array.isArray(document.case?.tags)
+      ? (document.case.tags as Array<string>).filter(Boolean)
+      : [];
+
+    if (tags.length) {
+      parts.push(`Related keywords and categories: ${tags.join(', ')}`);
     }
 
-    // Join with periods for better sentence structure
-    return parts.join('. ') + '.';
+    return parts.filter(Boolean).join('. ') + '.';
   }
 
-  /**
-   * Index a document by generating and storing its embedding
-   */
   async indexDocument(documentId: string): Promise<void> {
     try {
       const document = await this.prisma.document.findUnique({
         where: { id: documentId },
-        include: {
-          type: true,
-          additionalFields: true,
-          case: true,
-        },
+        include: { type: true, additionalFields: true, case: true },
       });
 
-      if (!document) {
-        throw new Error('Document not found');
-      }
+      if (!document) throw new Error(`Document not found: ${documentId}`);
 
-      // Create searchable text
       const searchText = this.createDocumentText(document);
       this.logger.debug(`Indexing document ${documentId}: ${searchText}`);
 
-      // Generate embedding
       const embedding = await lastValueFrom(
         this.generateEmbedding(searchText, 'document'),
       );
 
-      // Convert embedding array to PostgreSQL vector format
-      const vectorString = `[${embedding.join(',  ')}]`;
+      const vectorString = `[${embedding.join(',')}]`;
 
-      // Store embedding using raw SQL
       await this.prisma.$executeRawUnsafe(
         `UPDATE "documents" SET embedding = $1::vector WHERE id = $2`,
         vectorString,
@@ -157,24 +146,40 @@ export class EmbeddingService {
     }
   }
 
-  /**
-   * Batch index multiple documents
-   */
-  async batchIndexDocuments(documentIds: string[]): Promise<void> {
+  async batchIndexDocuments(
+    documentIds: string[],
+    concurrency = 5, // process 5 at a time — safe for Ollama local instance
+  ): Promise<{ succeeded: string[]; failed: string[] }> {
     this.logger.log(`Batch indexing ${documentIds.length} documents`);
 
-    for (const documentId of documentIds) {
-      try {
-        await this.indexDocument(documentId);
-      } catch (error) {
-        this.logger.error(
-          `Failed to index document ${documentId} in batch`,
-          error,
-        );
-        // Continue with other documents
-      }
+    const succeeded: string[] = [];
+    const failed: string[] = [];
+
+    // Process in chunks instead of one-by-one
+    for (let i = 0; i < documentIds.length; i += concurrency) {
+      const chunk = documentIds.slice(i, i + concurrency);
+
+      const results = await Promise.allSettled(
+        chunk.map((id) => this.indexDocument(id)),
+      );
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          succeeded.push(chunk[index]);
+        } else {
+          this.logger.error(
+            `Failed to index document ${chunk[index]}`,
+            result.reason,
+          );
+          failed.push(chunk[index]);
+        }
+      });
     }
 
-    this.logger.log('Batch indexing completed');
+    this.logger.log(
+      `Batch indexing complete — succeeded: ${succeeded.length}, failed: ${failed.length}`,
+    );
+
+    return { succeeded, failed };
   }
 }

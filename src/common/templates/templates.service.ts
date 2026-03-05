@@ -24,6 +24,9 @@ export class TemplatesService implements OnModuleInit {
       'safe',
       (value: unknown) => value ?? 'Not provided',
     );
+    Handlebars.registerHelper('bool', (value: unknown) =>
+      value === true ? 'Yes' : value === false ? 'No' : 'Not provided',
+    );
   }
 
   async render(

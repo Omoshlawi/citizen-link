@@ -1,15 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MatchingService } from './matching.service';
-import { MatchFoundDocumentService } from './matching.found.service';
-import { MatchLostDocumentService } from './matching.lost.service';
-import { MatchingVerifierService } from './matching.verifier.service';
 import { MatchingController } from './matching.controller';
-import { MatchingStatisticsService } from './matching.statistics.service';
 import { PromptsModule } from '../prompts/prompts.module';
 import { MatchingStatusTransitionService } from './matching.transitions.service';
 import { AiModule } from '../ai/ai.module';
 import { AiConfig } from '../ai/ai.config';
-
+import { AiVerificationLayer } from './layers/ai-verification.layer';
+import { ExactMatchLayer, VectorSearchLayer } from './layers';
+import { MatchingQueryService } from './matching.query';
+import { MatchingVectorSearchService } from './matching.vector-search';
 @Module({
   imports: [
     PromptsModule,
@@ -25,12 +24,13 @@ import { AiConfig } from '../ai/ai.config';
     }),
   ],
   providers: [
+    MatchingQueryService,
     MatchingService,
-    MatchFoundDocumentService,
-    MatchLostDocumentService,
-    MatchingVerifierService,
-    MatchingStatisticsService,
     MatchingStatusTransitionService,
+    MatchingVectorSearchService,
+    VectorSearchLayer, // layer 1
+    ExactMatchLayer, // layer 2
+    AiVerificationLayer, // layer 3
   ],
   exports: [MatchingService],
   controllers: [MatchingController],

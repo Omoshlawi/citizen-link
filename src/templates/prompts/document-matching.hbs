@@ -94,7 +94,8 @@ This answers: "How certain are you about your recommendation?"
 
 ### FOUND DOCUMENT:
 - **Document Type**: {{safe found.document.type.name}}
-- **Owner Name**: {{safe found.document.fullName}}
+- **Full Name**: {{safe found.document.fullName}}
+- **Surname**: {{safe found.document.surname}}
 - **Document Number**: {{safe found.document.documentNumber}}
 - **Date of Birth**: {{safe found.document.dateOfBirth}}
 - **Gender**: {{safe found.document.gender}}
@@ -105,11 +106,22 @@ This answers: "How certain are you about your recommendation?"
 - **Date of Expiry**: {{safe found.document.expiryDate}}
 - **Serial Number**: {{safe found.document.serialNumber}}
 - **Batch Number**: {{safe found.document.batchNumber}}
+- **Address Raw**: {{safe found.document.addressRaw}}
+- **Address Country**: {{safe found.document.addressCountry}}
 - **Keywords/Tags**: {{safe foundTags}}
+- **Fingerprint present**: {{bool found.document.fingerprintPresent}}
+- **Signature present**: {{bool found.document.signaturePresent}}
+- **Photo present**: {{bool found.document.photoPresent}}
 {{#if found.document.additionalFields.length}}
 - **Additional Fields**:
 {{#each found.document.additionalFields}}
   - {{fieldName}}: {{fieldValue}}
+{{/each}}
+{{/if}}
+{{#if found.document.addressComponents.length}}
+- **Address Components**:
+{{#each found.document.addressComponents}}
+  - {{type}}: {{value}}
 {{/each}}
 {{/if}}
 
@@ -126,11 +138,22 @@ This answers: "How certain are you about your recommendation?"
 - **Date of Expiry**: {{safe lost.document.expiryDate}}
 - **Serial Number**: {{safe lost.document.serialNumber}}
 - **Batch Number**: {{safe lost.document.batchNumber}}
+- **Address Raw**: {{safe lost.document.addressRaw}}
+- **Address Country**: {{safe lost.document.addressCountry}}
 - **Keywords/Tags**: {{safe lostTags}}
+- **Fingerprint present**: {{safe lost.document.fingerprintPresent}}
+- **Signature present**: {{safe lost.document.signaturePresent}}
+- **Photo present**: {{safe lost.document.photoPresent}}
 {{#if lost.document.additionalFields.length}}
 - **Additional Fields**:
 {{#each lost.document.additionalFields}}
   - {{fieldName}}: {{fieldValue}}
+{{/each}}
+{{/if}}
+{{#if lost.document.addressComponents.length}}
+- **Address Components**:
+{{#each lost.document.addressComponents}}
+  - {{type}}: {{value}}
 {{/each}}
 {{/if}}
 

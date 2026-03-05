@@ -1,22 +1,67 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../common/query-builder';
-import z from 'zod';
-import { Match, MatchStatus } from 'generated/prisma/client';
+import { z } from 'zod';
+import { Match, MatchStatus, MatchTrigger } from 'generated/prisma/client';
 import { JsonValue } from '@prisma/client/runtime/client';
 import { ApiProperty } from '@nestjs/swagger';
+import { MatchVerdict } from '../../generated/prisma/client';
 
-export const MatchStatusSchema = z.enum([
-  'PENDING',
-  'ACCEPTED',
-  'REJECTED',
-  'COMPLETED',
-  'DISPUTED',
-]);
+export const SecurityQuestionSchema = z.object({
+  question: z.string().min(1),
+  answer: z.string().min(1),
+});
+
+export const SecurityQuestionsSchema = z
+  .array(SecurityQuestionSchema)
+  .min(1)
+  .max(4);
+
+export type SecurityQuestion = z.infer<typeof SecurityQuestionSchema>;
+export type SecurityQuestions = z.infer<typeof SecurityQuestionsSchema>;
+export class SecurityQuestionsDto extends createZodDto(
+  SecurityQuestionsSchema,
+) {}
+export class SecurityQuestionDto extends createZodDto(SecurityQuestionSchema) {}
+
+export const MatchVerdictSchema = z.enum(MatchVerdict);
+
+export const FieldAnalysisSchema = z.object({
+  field: z.string(),
+  triggerValue: z.string().nullable(),
+  candidateValue: z.string().nullable(),
+  match: z.enum(['YES', 'PARTIAL', 'NO', 'MISSING']),
+  note: z.string().nullable(),
+});
+
+export const AiMatchVerificationSchema = z.object({
+  verdict: MatchVerdictSchema,
+  // confidence and overallScore removed — computed deterministically after parsing
+
+  reasoning: z.string(),
+  // 2-4 sentences: verdict first → key evidence → what was uncertain
+
+  fieldAnalysis: z.array(FieldAnalysisSchema),
+  // Every critical field must appear — missing = MISSING not omitted
+
+  redFlags: z.array(z.string()).default([]),
+  // Hard stop issues — conflicting critical fields
+
+  ocrSuspicions: z.array(z.string()).default([]),
+  // Fields where OCR error is suspected
+});
+
+export const MatchStatusSchema = z.enum(MatchStatus);
 
 export const QueryMatchesSchema = z.object({
   ...QueryBuilderSchema.shape,
-  lostDocumentCaseId: z.uuid().optional(),
-  foundDocumentCaseId: z.uuid().optional(),
+  lostDocumentCase: z
+    .string()
+    .optional()
+    .describe('Case Uuid or Number of lost document'),
+  foundDocumentCase: z
+    .string()
+    .optional()
+    .describe('Case Uuid or Number of found document'),
   status: MatchStatusSchema.optional(),
   minMatchScore: z.coerce.number().min(0).max(100).optional(),
   maxMatchScore: z.coerce.number().min(0).max(100).optional(),
@@ -52,11 +97,11 @@ export const QueryMatchesForCaseSchema = QueryMatchesSchema.omit({
 });
 
 export const QueryMatechesForLostCaseSchema = QueryMatchesForCaseSchema.omit({
-  foundDocumentCaseId: true,
-}).required({ lostDocumentCaseId: true });
+  foundDocumentCase: true,
+}).required({ lostDocumentCase: true });
 export const QueryMatechesForFoundCaseSchema = QueryMatchesForCaseSchema.omit({
-  lostDocumentCaseId: true,
-}).required({ foundDocumentCaseId: true });
+  lostDocumentCase: true,
+}).required({ foundDocumentCase: true });
 
 export const MatchResultSchema = z.object({
   overallScore: z.number().min(0).max(100),
@@ -122,14 +167,30 @@ export class UpdateMatchStatusDto extends createZodDto(
 export class CompleteMatchDto extends createZodDto(CompleteMatchSchema) {}
 
 export class AdminVerifyMatchDto extends createZodDto(AdminVerifyMatchSchema) {}
-export class QueryMatechesForLostCaseDto extends createZodDto(
+export class QueryMatchesForLostCaseDto extends createZodDto(
   QueryMatechesForLostCaseSchema,
 ) {}
-export class QueryMatechesForFoundCaseDto extends createZodDto(
+export class QueryMatchesForFoundCaseDto extends createZodDto(
   QueryMatechesForFoundCaseSchema,
 ) {}
 
 export class GetMatchResponseDto implements Match {
+  @ApiProperty()
+  layer2FieldScores: JsonValue;
+  @ApiProperty()
+  aiVerificationResult: JsonValue;
+  @ApiProperty({ enum: MatchVerdict })
+  verdict: MatchVerdict;
+  @ApiProperty({ enum: MatchTrigger })
+  triggeredBy: MatchTrigger;
+  @ApiProperty()
+  vectorScore: number;
+  @ApiProperty()
+  exactScore: number;
+  @ApiProperty()
+  aiScore: number;
+  @ApiProperty()
+  finalScore: number;
   @ApiProperty()
   id: string;
   @ApiProperty()
@@ -144,8 +205,6 @@ export class GetMatchResponseDto implements Match {
   matchNumber: string;
   @ApiProperty()
   aiInteractionId: string;
-  @ApiProperty({ type: MatchResultDto })
-  aiAnalysis: JsonValue;
   @ApiProperty()
   createdAt: Date;
   @ApiProperty()

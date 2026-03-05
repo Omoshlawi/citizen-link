@@ -511,7 +511,7 @@ model AIExtraction {
   fallbackTriggered    Boolean @default(false) // was multimodal rescue invoked?
 
   // Status 
-  success      Boolean @default(true)
+  success Boolean @default(true)
 
   createdAt DateTime @default(now())
 
@@ -610,14 +610,14 @@ model FoundDocumentCase {
   caseId String       @unique
   case   DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
-  status           FoundDocumentCaseStatus @default(DRAFT)
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  pointAwarded     Int                     @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
-  matches          Match[]
-  claims           Claim[]
-  pickupStation    PickupStation?          @relation(fields: [pickupStationId], references: [id])
-  pickupStationId  String?
+  status          FoundDocumentCaseStatus @default(DRAFT)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  pointAwarded    Int                     @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
+  matches         Match[]
+  claims          Claim[]
+  pickupStation   PickupStation?          @relation(fields: [pickupStationId], references: [id])
+  pickupStationId String?
 
   @@map("found_document_cases")
 }
@@ -690,8 +690,10 @@ enum ActorType {
 // Match model for potential matches between lost and found reports
 
 model Match {
-  id          String @id @default(uuid())
-  matchNumber String @unique
+  id          String       @id @default(uuid())
+  matchNumber String       @unique
+  triggeredBy MatchTrigger // what event caused this match attempt
+  verdict     MatchVerdict // what was the final verdict
 
   aiInteractionId String        @unique
   aiInteraction   AIInteraction @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
@@ -702,21 +704,42 @@ model Match {
   foundDocumentCase   FoundDocumentCase @relation(fields: [foundDocumentCaseId], references: [id], onDelete: Cascade)
 
   // AI Matching Results
-  matchScore Float // 0-100, AI-determined confidence
+  vectorScore Float // Layer 1 — cosine similarity 0.0-1.0
+  exactScore  Float // Layer 2 — deterministic field match 0.0-1.0
+  aiScore     Float // Layer 3 — AI reasoning confidence 0.0-1.0
+  finalScore  Float // weighted combination of all three
 
-  // Consolidated AI Analysis (all matching metadata in one place)
-  aiAnalysis Json        @db.Json
-  // Complete structure: {
-  //   "reasoning": "Documents match based on identical ID numbers and names...",
-  //   "fieldComparison": {
-  //     "idNumber": { "match": true, "confidence": 0.99, "reasoning": "Exact match" },
-  //     "name": { "match": true, "confidence": 0.92, "reasoning": "Names reversed but semantically identical" }
-  //   },
-  //   "riskFactors": { "low_image_quality": false, "partial_match": false },
+  // Layer 2 output
+  layer2FieldScores Json @db.Json
+  // {
+  //   "weightedScore": 0.84,
+  //   "threshold":     0.40,
+  //   "fields": [
+  //     {
+  //       "field":          "documentNumber",
+  //       "triggerValue":   "34567890",
+  //       "candidateValue": "34S67890",
+  //       "matched":        true,
+  //       "score":          0.85,
+  //       "weight":         0.40,
+  //       "contribution":   0.34   // score * weight — shows impact per field
+  //     }
+  //   ]
+  // }  
+
+  // Layer 3 output
+  aiVerificationResult Json @db.Json
+  // {
+  //   "verdict":       "PROBABLE_MATCH",
+  //   "reasoning":     "PROBABLE_MATCH because...",
+  //   "fieldAnalysis": [...],
+  //   "redFlags":      [],
+  //   "ocrSuspicions": ["documentNumber: 34S67890 vs 34567890 — S/5 confusion"]
   // }
-  status     MatchStatus @default(PENDING)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+
+  status    MatchStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
   // Notification
   notifiedAt DateTime?
@@ -730,6 +753,20 @@ model Match {
   @@unique([lostDocumentCaseId, foundDocumentCaseId])
   @@index([status])
   @@map("matches")
+}
+
+enum MatchVerdict {
+  VERIFIED_MATCH // overwhelming evidence — same person, same document
+  PROBABLE_MATCH // strong evidence — minor discrepancies explainable by OCR
+  POSSIBLE_MATCH // partial evidence — needs human review
+  NO_MATCH // evidence conflicts — not the same document or person
+}
+
+enum MatchTrigger {
+  LOST_CASE_SUBMITTED // lost report moved from draft → submitted
+  FOUND_CASE_VERIFIED // admin verified physical document at pickup station
+  MANUAL // admin manually triggered a rematch
+  REINDEX // triggered after re-extraction updated the document
 }
 
 enum MatchStatus {

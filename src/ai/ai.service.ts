@@ -4,7 +4,10 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
-import { AIInteractionType } from '../../generated/prisma/client';
+import {
+  AIInteraction,
+  AIInteractionType,
+} from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
 import {
@@ -16,6 +19,7 @@ import {
 } from './ai.types';
 import { safeParseJson } from '../app.utils';
 import { Results } from 'src/common/common.interfaces';
+import { AsyncError } from 'src/extraction/extraction.interface';
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -297,7 +301,12 @@ export class AiService implements OnModuleInit {
     interactionType: AIInteractionType,
     entityType: string,
     userId?: string,
-  ) {
+  ): Promise<
+    Omit<AIInteraction, 'parsedResponse' | 'parseError'> & {
+      parsedResponse: T | null;
+      parseError: AsyncError | null;
+    }
+  > {
     const interaction = await this.callAIAndStore(
       prompt,
       files,
@@ -314,7 +323,7 @@ export class AiService implements OnModuleInit {
     );
 
     if (!parsedResults.success) {
-      return await this.prismaService.aIInteraction.update({
+      return (await this.prismaService.aIInteraction.update({
         where: { id: interaction.id },
         data: {
           parseError: JSON.parse(
@@ -322,16 +331,22 @@ export class AiService implements OnModuleInit {
           ),
           parseSuccess: false,
         },
-      });
+      })) as AIInteraction & {
+        parsedResponse: T | null;
+        parseError: AsyncError | null;
+      };
     }
 
-    return await this.prismaService.aIInteraction.update({
+    return (await this.prismaService.aIInteraction.update({
       where: { id: interaction.id },
       data: {
         parsedResponse: parsedResults.data,
         parseSuccess: true,
       },
-    });
+    })) as AIInteraction & {
+      parsedResponse: T | null;
+      parseError: AsyncError | null;
+    };
   }
 
   /**

@@ -8,6 +8,7 @@ import {
 } from '../../generated/prisma/client';
 import z from 'zod';
 import { VisionExtractionOutputSchema } from '../vision/vision.dto';
+import { MatchedField } from 'src/matching/matching.interface';
 
 @Injectable()
 export class PromptsService {
@@ -44,6 +45,7 @@ export class PromptsService {
         additionalFields: DocumentField[];
       };
     },
+    matchedFields: MatchedField[],
   ) {
     const foundTags = (foundCase.tags as Array<string>).length
       ? (foundCase.tags as Array<string>).join(', ')
@@ -51,7 +53,36 @@ export class PromptsService {
     const lostTags = (lostCase.tags as Array<string>).length
       ? (lostCase.tags as Array<string>).join(', ')
       : null;
-    return this.templatesService.render('prompts', 'document-matching', {
+    return this.templatesService.render('prompts', 'match-verification', {
+      found: foundCase,
+      lost: lostCase,
+      foundTags,
+      lostTags,
+      matchedFields,
+    });
+  }
+
+  getSecurityQuestionsPrompt(
+    foundCase: DocumentCase & {
+      document: Document & {
+        type: DocumentType;
+        additionalFields: DocumentField[];
+      };
+    },
+    lostCase: DocumentCase & {
+      document: Document & {
+        type: DocumentType;
+        additionalFields: DocumentField[];
+      };
+    },
+  ) {
+    const foundTags = (foundCase.tags as Array<string>).length
+      ? (foundCase.tags as Array<string>).join(', ')
+      : null;
+    const lostTags = (lostCase.tags as Array<string>).length
+      ? (lostCase.tags as Array<string>).join(', ')
+      : null;
+    return this.templatesService.render('prompts', 'security-questions', {
       found: foundCase,
       lost: lostCase,
       foundTags,
