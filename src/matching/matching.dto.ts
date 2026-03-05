@@ -96,11 +96,17 @@ export const QueryMatchesForCaseSchema = QueryMatchesSchema.omit({
   minMatchScore: z.coerce.number().min(0).max(1).optional(),
 });
 
-export const QueryMatechesForLostCaseSchema = QueryMatchesForCaseSchema.omit({
-  foundDocumentCase: true,
-}).required({ lostDocumentCase: true });
-export const QueryMatechesForFoundCaseSchema = QueryMatchesForCaseSchema.omit({
+export const QueryMatechesForLostCaseSchema = QueryMatchesForCaseSchema.pick({
   lostDocumentCase: true,
+  minMatchScore: true,
+  limit: true,
+  v: true,
+}).required({ lostDocumentCase: true });
+export const QueryMatechesForFoundCaseSchema = QueryMatchesForCaseSchema.pick({
+  foundDocumentCase: true,
+  minMatchScore: true,
+  limit: true,
+  v: true,
 }).required({ foundDocumentCase: true });
 
 export const MatchResultSchema = z.object({

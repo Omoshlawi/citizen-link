@@ -18,7 +18,7 @@ import {
 } from './matching.dto';
 import { ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
-import { GetDocumentCaseResponseDto } from '../document-cases/document-cases.dto';
+import { QuerySimilarDocumentCaseResponsesDto } from '../document-cases/document-cases.dto';
 import { RequireSystemPermission } from '../auth/auth.decorators';
 import {
   CustomRepresentationQueryDto,
@@ -35,7 +35,7 @@ export class MatchingController {
   @Get('lost')
   @RequireSystemPermission({ match: ['query-case-matches'] })
   @ApiOperation({ summary: 'Query Matches for lost document case' })
-  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiOkResponse({ type: QuerySimilarDocumentCaseResponsesDto })
   @ApiErrorsResponse()
   queryMatchesForLostDocumentCase(@Query() query: QueryMatchesForLostCaseDto) {
     return this.matchingService.queryMatchesForLostDocumentCase(query);
@@ -43,7 +43,7 @@ export class MatchingController {
   @Get('found')
   @RequireSystemPermission({ match: ['query-case-matches'] })
   @ApiOperation({ summary: 'Query Matches for found document case' })
-  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiOkResponse({ type: QuerySimilarDocumentCaseResponsesDto })
   @ApiErrorsResponse()
   queryMatchesForFoundDocumentCase(
     @Query() query: QueryMatchesForFoundCaseDto,

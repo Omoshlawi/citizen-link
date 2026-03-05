@@ -6,7 +6,7 @@ import {
   GetCaseDocumentResponseDto,
 } from '../case-documents/case-documents.dto';
 import { QueryAddressSchema } from '../address/address.dto';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, PickType } from '@nestjs/swagger';
 import {
   DocumentCase,
   FoundDocumentCase,
@@ -196,3 +196,8 @@ export class QueryDocumentCaseResponseDto {
   @ApiProperty({ type: 'string' })
   prev: string | null | undefined;
 }
+
+export class QuerySimilarDocumentCaseResponsesDto extends PickType(
+  QueryDocumentCaseResponseDto,
+  ['results'],
+) {}
