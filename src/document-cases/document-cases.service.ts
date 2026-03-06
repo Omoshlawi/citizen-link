@@ -241,24 +241,24 @@ export class DocumentCasesService {
   submitDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
     return this.documentCasesWorkflowService.submitDocumentCase(
       id,
       query,
-      userId,
+      user,
     );
   }
 
   verifyFoundDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
     return this.documentCasesWorkflowService.verifyFoundDocumentCase(
       id,
       query,
-      userId,
+      user,
     );
   }
 

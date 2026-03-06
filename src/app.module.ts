@@ -31,6 +31,7 @@ import { PromptsModule } from './prompts/prompts.module';
 import { S3Module } from './s3/s3.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
 import { VisionModule } from './vision/vision.module';
+import { MatchingConfig } from './matching/matching.config';
 
 @Module({
   imports: [
@@ -55,10 +56,32 @@ import { VisionModule } from './vision/vision.module';
     CaseDocumentsModule,
     DocumentCasesModule,
     S3Module,
-
     DocumentImagesModule,
     ExtractionModule,
-    MatchingModule,
+    MatchingModule.registerAsync({
+      useFactory: (config: MatchingConfig) => {
+        // Ensure weights add up to 1
+        const sum = config.weightVector + config.weightExact + config.weightAi;
+        if (sum !== 1) {
+          throw new Error('Weights must add up to 1');
+        }
+        return {
+          weights: {
+            vector: config.weightVector,
+            exact: config.weightExact,
+            ai: config.weightAi,
+          },
+          vectorSimilarityThreshold: config.vectorSimilarityThreshold,
+          topNCandidates: config.topNCandidates,
+          exactMatchThreshold: config.exactMatchThreshold,
+          aiMatchThreshold: config.aiMatchThreshold,
+          minimumFinalScore: config.minimumFinalScore,
+          autoConfirmThreshold: config.autoConfirmThreshold,
+          maxSecurityQuestions: config.maxSecurityQuestions,
+        };
+      },
+      inject: [MatchingConfig],
+    }),
     ChatBotModule,
     PickupStationsModule,
     ClaimModule,

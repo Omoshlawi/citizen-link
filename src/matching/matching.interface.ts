@@ -2,9 +2,13 @@ import { z } from 'zod';
 import {
   Document,
   DocumentCase,
+  DocumentField,
   DocumentType,
+  FoundDocumentCase,
+  LostDocumentCase,
 } from '../../generated/prisma/client';
 import { AiMatchVerificationSchema, FieldAnalysisSchema } from './matching.dto';
+import { Provider, Type } from '@nestjs/common';
 
 export interface FindMatchesOptions {
   similarityThreshold?: number;
@@ -71,16 +75,26 @@ export interface ExactMatchResult {
   matchedFields: MatchedField[];
 }
 
-export interface AiVerificationResult {
-  triggerDoc: ExactMatchResult['triggerDoc'];
-  candidateDoc: ExactMatchResult['candidateDoc'];
-  matchedFields: ExactMatchResult['matchedFields'];
-  exactScore: number;
+export interface AiVerificationResult extends ExactMatchResult {
   verification: AiMatchVerification;
   scores: ComputedMatchScores;
   aiInteractionId: string;
-  lostDocCase: DocumentCase & { document: Document & { type: DocumentType } };
-  foundDocCase: DocumentCase & { document: Document & { type: DocumentType } };
+  lostDocCase: DocumentCase & {
+    document: Document & {
+      type: DocumentType;
+      additionalFields: DocumentField[];
+    };
+    lostDocumentCase?: LostDocumentCase | null;
+    foundDocumentCase?: FoundDocumentCase | null;
+  };
+  foundDocCase: DocumentCase & {
+    document: Document & {
+      type: DocumentType;
+      additionalFields: DocumentField[];
+    };
+    lostDocumentCase?: LostDocumentCase | null;
+    foundDocumentCase?: FoundDocumentCase | null;
+  };
 }
 
 export interface VectorSearchParams {
@@ -91,3 +105,29 @@ export interface VectorSearchParams {
   similarityThreshold: number;
   topN: number;
 }
+
+export type MatchingOptions = {
+  weights: {
+    vector: number;
+    exact: number;
+    ai: number;
+  };
+  vectorSimilarityThreshold: number;
+  topNCandidates: number;
+  exactMatchThreshold: number;
+  aiMatchThreshold: number;
+  minimumFinalScore: number;
+  autoConfirmThreshold: number;
+  maxSecurityQuestions: number;
+};
+
+export type MatchingModuleAsyncOptions = {
+  global?: boolean;
+  useFactory?: (...args: any[]) => Promise<MatchingOptions> | MatchingOptions;
+  useClass?: Type<MatchingOptions>;
+  useExisting?: Type<MatchingOptions>;
+  useValue?: MatchingOptions;
+  inject?: Type<any>[];
+  imports?: Type<any>[];
+  providers?: Array<Provider>;
+};

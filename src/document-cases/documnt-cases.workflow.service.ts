@@ -8,12 +8,14 @@ import {
   ActorType,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
+  MatchTrigger,
 } from '../../generated/prisma/client';
 import { EmbeddingService } from '../ai/embeding.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
-import { MatchingService } from '../matching/matching.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
+import { MatchingLayeredService } from '../matching/matching.layered.service';
+import { UserSession } from '../auth/auth.types';
 @Injectable()
 export class DocumentCasesWorkflowService {
   private readonly logger = new Logger(DocumentCasesWorkflowService.name);
@@ -22,16 +24,16 @@ export class DocumentCasesWorkflowService {
     private readonly prismaService: PrismaService,
     private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
     private readonly embeddingService: EmbeddingService,
-    private readonly matchingService: MatchingService,
+    private readonly matchingLayeredService: MatchingLayeredService,
   ) {}
   async submitDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
     // First, verify it's a found case owned by the user
     const documentCase = await this.prismaService.documentCase.findUnique({
-      where: { id, userId },
+      where: { id, userId: user.id },
       include: {
         foundDocumentCase: true,
         lostDocumentCase: true,
@@ -58,30 +60,28 @@ export class DocumentCasesWorkflowService {
         id,
         'SUBMITTED',
         ActorType.USER,
-        userId,
+        user.id,
         query?.v,
       );
 
     // Index document after submission
     if (documentCase.document?.id) {
-      // await this.embeddingService.indexDocument(documentCase.document.id);
+      await this.embeddingService.indexDocument(documentCase.document.id);
       // // For lost cass run match algorithm on submission
-      // if (documentCase.lostDocumentCase) {
-      //   const matches =
-      //     await this.matchingService.findMatchesForLostDocumentAndVerify(
-      //       documentCase.document.id,
-      //       userId,
-      //       {
-      //         limit: 20,
-      //         similarityThreshold: 0.5,
-      //         minVerificationScore: 0.6,
-      //       },
-      //     );
-      //   this.logger.debug(
-      //     `Found ${matches.length} matches for document ${documentCase.document.id}`,
-      //     matches,
-      //   );
-      // }
+      if (documentCase.lostDocumentCase) {
+        void this.matchingLayeredService
+          .layeredMatching(
+            MatchTrigger.LOST_CASE_SUBMITTED,
+            documentCase.document.id,
+            user,
+          )
+          .then((matches) => {
+            this.logger.debug(
+              `Found ${matches.length} matches for case ${documentCase.caseNumber}`,
+              matches.map((m) => m.matchNumber).join(', '),
+            );
+          });
+      }
     }
 
     return statustransition;
@@ -90,9 +90,9 @@ export class DocumentCasesWorkflowService {
   async verifyFoundDocumentCase(
     id: string,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
-    this.logger.log(`Verifying found document case ${id} for user ${userId}`);
+    this.logger.log(`Verifying found document case ${id} for user ${user.id}`);
     const documentCase = await this.prismaService.documentCase.findUnique({
       where: { id },
       include: {
@@ -113,27 +113,25 @@ export class DocumentCasesWorkflowService {
         id,
         FoundDocumentCaseStatus.VERIFIED,
         ActorType.USER,
-        userId,
+        user.id,
         query?.v,
       );
 
     // Index document on veriication and run match algorithm
     if (documentCase.document?.id) {
-      // await this.embeddingService.indexDocument(documentCase.document.id);
-      // const matches =
-      //   await this.matchingService.findMatchesForFoundDocumentAndVerify(
-      //     documentCase.document.id,
-      //     userId,
-      //     {
-      //       limit: 20,
-      //       similarityThreshold: 0.5,
-      //       minVerificationScore: 0.6,
-      //     },
-      //   );
-      // this.logger.debug(
-      //   `Found ${matches.length} matches for document ${documentCase.document.id}`,
-      //   matches,
-      // );
+      await this.embeddingService.indexDocument(documentCase.document.id);
+      void this.matchingLayeredService
+        .layeredMatching(
+          MatchTrigger.FOUND_CASE_VERIFIED,
+          documentCase.document.id,
+          user,
+        )
+        .then((matches) => {
+          this.logger.debug(
+            `Found ${matches.length} matches for document ${documentCase.caseNumber}`,
+            matches.map((m) => m.matchNumber).join(', '),
+          );
+        });
     }
     return statusTransition;
   }

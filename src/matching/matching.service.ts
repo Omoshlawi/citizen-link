@@ -77,15 +77,11 @@ export class MatchingService {
         'createdAt',
         'updatedAt',
       ]),
-      aiAnalysis: {
-        ...pick(aiVerificationResult, [
-          'overallScore',
-          'confidence',
-          'recommendation',
-        ]),
+      aiVerificationResult: {
+        ...pick(aiVerificationResult, ['verdict', 'fieldAnalysis']),
         fieldAnalysis: (
           aiVerificationResult.fieldAnalysis as Array<Record<string, any>>
-        ).filter((f) => f.match && f.confidence),
+        ).map((f) => pick(f, ['field', 'match'])),
       },
       foundDocumentCase: {
         ...d.foundDocumentCase,
@@ -106,7 +102,6 @@ export class MatchingService {
         AND: [
           {
             voided: query?.includeVoided ? undefined : false,
-            aiScore: { gte: query.minMatchScore, lte: query.maxMatchScore },
           },
           {
             OR: query.search

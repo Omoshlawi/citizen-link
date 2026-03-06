@@ -1,4 +1,4 @@
-export const MATCHING_AI_OPTIONS_TOKEN = 'MATCHING_AI_OPTIONS_TOKEN';
+export const MATCHING_OPTIONS_TOKEN = 'MATCHING_OPTIONS_TOKEN';
 
 // OCR confusion pairs — used in fuzzy matching
 export const OCR_CONFUSION_PAIRS: [string, string][] = [

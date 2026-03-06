@@ -474,8 +474,9 @@ model AIInteraction {
 
   createdAt              DateTime                  @default(now())
   extractionInteractions AIExtractionInteraction[]
-  match                  Match?
   // aiverification         ClaimVerification?
+  matchVerification      Match?                    @relation("MatchAiInteraction")
+  matchSecurityQuestions Match?                    @relation("MatchSecurityQuestionsAiInteraction")
 
   // For analytics and cost tracking
   // Quick filtering of failed requests
@@ -695,8 +696,15 @@ model Match {
   triggeredBy MatchTrigger // what event caused this match attempt
   verdict     MatchVerdict // what was the final verdict
 
+  // Matching ai interaction
   aiInteractionId String        @unique
-  aiInteraction   AIInteraction @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
+  aiInteraction   AIInteraction @relation(name: "MatchAiInteraction", fields: [aiInteractionId], references: [id], onDelete: Cascade)
+
+  // Security questions ai interaction
+  securityQuestionsAiInteractionId String        @unique
+  securityQuestionsAiInteraction   AIInteraction @relation(name: "MatchSecurityQuestionsAiInteraction", fields: [securityQuestionsAiInteractionId], references: [id], onDelete: Cascade)
+
+  securityQuestions Json @default("[]")
 
   lostDocumentCaseId  String
   foundDocumentCaseId String
@@ -710,7 +718,7 @@ model Match {
   finalScore  Float // weighted combination of all three
 
   // Layer 2 output
-  layer2FieldScores Json @db.Json
+  layer2FieldScores Json
   // {
   //   "weightedScore": 0.84,
   //   "threshold":     0.40,
@@ -728,7 +736,7 @@ model Match {
   // }  
 
   // Layer 3 output
-  aiVerificationResult Json @db.Json
+  aiVerificationResult Json
   // {
   //   "verdict":       "PROBABLE_MATCH",
   //   "reasoning":     "PROBABLE_MATCH because...",

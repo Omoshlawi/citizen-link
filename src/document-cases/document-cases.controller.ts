@@ -83,7 +83,7 @@ export class DocumentCasesController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.submitDocumentCase(id, query, user.id);
+    return this.documentCasesService.submitDocumentCase(id, query, user);
   }
 
   @Get()
@@ -150,11 +150,7 @@ export class DocumentCasesController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.verifyFoundDocumentCase(
-      id,
-      query,
-      user.id,
-    );
+    return this.documentCasesService.verifyFoundDocumentCase(id, query, user);
   }
 
   @Post(':id/reject')

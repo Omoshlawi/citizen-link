@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MatchingQueryService } from './matching.query';
+import { MatchingQueryService } from './matching.query.service';
 import {
   QueryMatchesForFoundCaseDto,
   QueryMatchesForLostCaseDto,

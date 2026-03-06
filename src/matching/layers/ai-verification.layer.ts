@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -17,6 +18,7 @@ import {
   DocumentCase,
   DocumentField,
   DocumentType,
+  FoundDocumentCase,
 } from '../../../generated/prisma/client';
 import { MatchTrigger } from '../../../generated/prisma/enums';
 import { AiMatchVerificationSchema } from '../matching.dto';
@@ -26,17 +28,10 @@ import {
   ComputedMatchScores,
   ExactMatchResult,
   FindMatchesOptions,
+  MatchingOptions,
 } from '../matching.interface';
-
-// ─── Field weights — critical fields carry more weight ─
-const FIELD_WEIGHTS: Record<string, number> = {
-  documentNumber: 0.35,
-  dateOfBirth: 0.25,
-  surname: 0.2,
-  gender: 0.05,
-  documentType: 0.05,
-  default: 0.02, // any unlisted field
-};
+import { MATCHING_OPTIONS_TOKEN } from '../matching.constants';
+import { LostDocumentCase } from 'generated/prisma/browser';
 
 // ─── Match value → raw score ────────────────────────
 const MATCH_SCORES: Record<string, number> = {
@@ -54,6 +49,16 @@ const VERDICT_MULTIPLIER: Record<MatchVerdict, number> = {
   NO_MATCH: 0.0, // hard zero — never passes threshold
 };
 
+// ─── Field weights — critical fields carry more weight ─
+const FIELD_WEIGHTS: Record<string, number> = {
+  documentNumber: 0.35,
+  dateOfBirth: 0.25,
+  surname: 0.2,
+  gender: 0.05,
+  documentType: 0.05,
+  default: 0.02, // any unlisted field
+};
+
 @Injectable()
 export class AiVerificationLayer {
   private readonly logger = new Logger(AiVerificationLayer.name);
@@ -65,6 +70,8 @@ export class AiVerificationLayer {
     private readonly aiService: AiService,
     private readonly promptsService: PromptsService,
     private readonly prismaService: PrismaService,
+    @Inject(MATCHING_OPTIONS_TOKEN)
+    private readonly matchingOptions: MatchingOptions,
   ) {}
 
   async verify(
@@ -73,7 +80,8 @@ export class AiVerificationLayer {
     user: UserSession['user'],
     options?: FindMatchesOptions,
   ): Promise<AiVerificationResult[]> {
-    const threshold = options?.aiMatchThreshold ?? 0.75;
+    const threshold =
+      options?.aiMatchThreshold ?? this.matchingOptions.aiMatchThreshold;
 
     this.logger.debug(
       `Layer 3 — AI verification of ${exactResults.length} candidates | ` +
@@ -145,13 +153,20 @@ export class AiVerificationLayer {
         type: DocumentType;
         additionalFields: DocumentField[];
       };
+      lostDocumentCase?: LostDocumentCase | null;
+      foundDocumentCase?: FoundDocumentCase | null;
     }
   > {
     const document = await this.prismaService.document.findUnique({
       where: { id: documentId },
       include: {
         type: true,
-        case: true,
+        case: {
+          include: {
+            lostDocumentCase: true,
+            foundDocumentCase: true,
+          },
+        },
         additionalFields: true, // Added this to match your return type
       },
     });
@@ -282,7 +297,7 @@ export class AiVerificationLayer {
       )
         continue;
 
-      const weight = FIELD_WEIGHTS[field.field] ?? FIELD_WEIGHTS.default;
+      const weight = AiVerificationLayer.getFieldWeight(field.field);
 
       // Present in found, missing in lost — slight positive signal
       // Real owner may not have filled every field in the lost report
@@ -320,5 +335,8 @@ export class AiVerificationLayer {
     );
 
     return { overallScore, confidence, aiScore };
+  }
+  static getFieldWeight(field: string): number {
+    return FIELD_WEIGHTS[field] ?? FIELD_WEIGHTS.default;
   }
 }

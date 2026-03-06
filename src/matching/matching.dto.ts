@@ -27,10 +27,10 @@ export const MatchVerdictSchema = z.enum(MatchVerdict);
 
 export const FieldAnalysisSchema = z.object({
   field: z.string(),
-  triggerValue: z.string().nullable(),
-  candidateValue: z.string().nullable(),
+  triggerValue: z.string().nullable().optional(),
+  candidateValue: z.string().nullable().optional(),
   match: z.enum(['YES', 'PARTIAL', 'NO', 'MISSING']),
-  note: z.string().nullable(),
+  note: z.string().nullable().optional(),
 });
 
 export const AiMatchVerificationSchema = z.object({
@@ -109,33 +109,6 @@ export const QueryMatechesForFoundCaseSchema = QueryMatchesForCaseSchema.pick({
   v: true,
 }).required({ foundDocumentCase: true });
 
-export const MatchResultSchema = z.object({
-  overallScore: z.number().min(0).max(100),
-  confidence: z.enum(['HIGH', 'MEDIUM', 'LOW', 'NO_MATCH']),
-  recommendation: z.enum([
-    'SAME_PERSON',
-    'LIKELY_SAME',
-    'POSSIBLY_SAME',
-    'DIFFERENT_PERSON',
-  ]),
-  reasoning: z.string(),
-  fieldAnalysis: z
-    .object({
-      fieldName: z.string(),
-      match: z.boolean(),
-      confidence: z.number().min(0).max(100),
-      note: z.string().optional(),
-    })
-    .array(),
-  matchingFields: z.array(z.string()),
-  conflictingFields: z.array(z.string()),
-  redFlags: z.array(z.string()),
-  confidenceFactors: z.object({
-    strengths: z.array(z.string()),
-    weaknesses: z.array(z.string()),
-  }),
-});
-
 const UpdateMatchStatusSchema = z.object({
   status: MatchStatusSchema,
   notes: z.string().optional(),
@@ -162,8 +135,6 @@ export const RejectMatchSchema = z.object({
   comment: z.string().optional(),
 });
 
-export class MatchResultDto extends createZodDto(MatchResultSchema) {}
-
 export class QueryMatchesDto extends createZodDto(QueryMatchesSchema) {}
 
 export class UpdateMatchStatusDto extends createZodDto(
@@ -181,6 +152,10 @@ export class QueryMatchesForFoundCaseDto extends createZodDto(
 ) {}
 
 export class GetMatchResponseDto implements Match {
+  @ApiProperty()
+  securityQuestionsAiInteractionId: string;
+  @ApiProperty({ isArray: true, type: SecurityQuestionDto })
+  securityQuestions: JsonValue;
   @ApiProperty()
   layer2FieldScores: JsonValue;
   @ApiProperty()
@@ -244,4 +219,33 @@ export class QueryMatchesResponseDto {
 
   @ApiProperty()
   prev: string | null;
+}
+
+export class Layer2FieldDto {
+  @ApiProperty({ example: 'documentNumber' })
+  field: string;
+  @ApiProperty({ example: '34567890', nullable: true, required: false })
+  triggerValue?: string | null;
+  @ApiProperty({ example: '34S67890', nullable: true, required: false })
+  candidateValue?: string | null;
+  @ApiProperty({ example: true })
+  matched: boolean;
+  @ApiProperty({ example: 0.85 })
+  score: number;
+  @ApiProperty({ example: 0.4 })
+  weight: number;
+  @ApiProperty({
+    example: 0.34,
+    description: 'score * weight — shows impact per field',
+  })
+  contribution: number;
+}
+export class Layer2FildScoreDto {
+  @ApiProperty({ type: 'number', example: 0.85 })
+  weightedScore: number;
+
+  @ApiProperty({ type: 'number', example: 0.4 })
+  threshold: number;
+  @ApiProperty({ isArray: true, type: Layer2FieldDto })
+  fields: Layer2FieldDto[];
 }

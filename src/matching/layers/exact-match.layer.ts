@@ -1,13 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   CandidateMatch,
   ExactMatchResult,
   FindMatchesOptions,
   MatchedField,
+  MatchingOptions,
 } from '../matching.interface';
 import { Document, DocumentType } from '../../../generated/prisma/client';
 import {
   EXACT_FIELD_WEIGHTS,
+  MATCHING_OPTIONS_TOKEN,
   OCR_CONFUSION_PAIRS,
 } from '../matching.constants';
 
@@ -15,12 +17,18 @@ import {
 export class ExactMatchLayer {
   private readonly logger = new Logger(ExactMatchLayer.name);
 
+  constructor(
+    @Inject(MATCHING_OPTIONS_TOKEN)
+    private readonly matchingOptions: MatchingOptions,
+  ) {}
+
   score(
     triggerDoc: Document & { type: DocumentType },
     candidates: CandidateMatch[],
     options?: FindMatchesOptions,
   ): ExactMatchResult[] {
-    const threshold = options?.exactMatchThreshold ?? 0.4;
+    const threshold =
+      options?.exactMatchThreshold ?? this.matchingOptions.exactMatchThreshold;
 
     this.logger.debug(
       `Layer 2 — exact matching ${candidates.length} candidates | ` +

@@ -75,6 +75,7 @@ export class PromptsService {
         additionalFields: DocumentField[];
       };
     },
+    maxSecurityQuestions: number,
   ) {
     const foundTags = (foundCase.tags as Array<string>).length
       ? (foundCase.tags as Array<string>).join(', ')
@@ -87,6 +88,7 @@ export class PromptsService {
       lost: lostCase,
       foundTags,
       lostTags,
+      maxSecurityQuestions,
     });
   }
 
