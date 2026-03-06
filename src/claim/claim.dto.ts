@@ -15,7 +15,7 @@ export const ClaimSchema = z.object({
       response: z.string().nonempty(),
     })
     .array()
-    .min(4),
+    .default([]),
   attachments: z.string().nonempty().array().nonempty().max(2),
 });
 

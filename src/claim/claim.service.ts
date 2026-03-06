@@ -169,6 +169,12 @@ export class ClaimService {
       },
     });
 
+    // Verify security questions
+    await this._verify(
+      claim.id,
+      match.securityQuestions as any,
+      securityQuestions,
+    );
     // Move files
     const keys = await Promise.all(
       attachments.map(async (attachment) => {
