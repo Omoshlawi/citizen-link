@@ -29,7 +29,7 @@ export class MatchingModule {
             return {
               apiKey: config.openaiApiKey,
               baseURL: config.aiBaseUrl,
-              model: config.aiModel || 'gpt-4o', // Default to GPT-4o, can be overridden via env var
+              model: config.aiModel, // Default to GPT-4o, can be overridden via env var
             };
           },
           inject: [AiConfig],

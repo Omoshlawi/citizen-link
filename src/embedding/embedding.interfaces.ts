@@ -4,7 +4,7 @@ export type EmbeddingOptions = {
   model: string;
   baseUrl: string;
   apiKey: string;
-  isAda?: boolean;
+  isOpenAi?: boolean;
 };
 
 export type EmbeddingModuleAsyncOptions = {

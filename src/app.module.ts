@@ -105,7 +105,7 @@ import { EmbeddingConfig } from './embedding/embedding.config';
           model: config.model,
           baseUrl: config.baseUrl,
           apiKey: config.apiKey,
-          isAda: true,
+          isOpenAi: config.isOpenAi,
         };
       },
       inject: [EmbeddingConfig],

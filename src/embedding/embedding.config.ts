@@ -9,6 +9,13 @@ export class EmbeddingConfig {
     default: 'nomic-embed-text',
   })
   model: string;
+  @Value('EMBEDDING_IS_OPENAI', {
+    parse: z
+      .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+      .optional().parse,
+    default: false,
+  })
+  isOpenAi: boolean;
 
   @Value('EMBEDDING_BASE_URL', {
     parse: z.url().optional().parse,

@@ -38,7 +38,7 @@ export class EmbeddingService implements OnModuleInit {
    */
   private adaGenerate(text: string): Observable<Array<number>> {
     const payload: OpenAIEmbeddingRequest = {
-      model: 'text-embedding-ada-002',
+      model: this.embeddingOptions.model,
       input: text,
     };
     return this.httpService
@@ -84,8 +84,10 @@ export class EmbeddingService implements OnModuleInit {
   ): Observable<Array<number>> {
     const prefix =
       useCase === 'search' ? 'search_query: ' : 'search_document: ';
-    this.logger.log(`Generating ${useCase} embeddings for ${text}`);
-    if (this.embeddingOptions.isAda) return this.adaGenerate(text);
+    this.logger.log(
+      `[${this.embeddingOptions.model}]: Generating ${useCase} embeddings for ${text}`,
+    );
+    if (this.embeddingOptions.isOpenAi) return this.adaGenerate(text);
     else return this.nomicGenerate(prefix + text);
   }
 
@@ -183,7 +185,7 @@ export class EmbeddingService implements OnModuleInit {
 
       const vectorString = `[${embedding.join(',')}]`;
 
-      if (!this.embeddingOptions.isAda)
+      if (!this.embeddingOptions.isOpenAi)
         await this.prismaService.$executeRawUnsafe(
           `UPDATE "documents" SET embedding = $1::vector WHERE id = $2`,
           vectorString,
