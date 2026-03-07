@@ -18,8 +18,8 @@ import {
   Part,
 } from './ai.types';
 import { safeParseJson } from '../app.utils';
-import { Results } from 'src/common/common.interfaces';
-import { AsyncError } from 'src/extraction/extraction.interface';
+import { Results } from '../common/common.interfaces';
+import { AsyncError } from '../extraction/extraction.interface';
 
 @Injectable()
 export class AiService implements OnModuleInit {

@@ -18,7 +18,7 @@ import {
 } from '../common/query-builder';
 import { pick } from 'lodash';
 import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from 'src/app.utils';
+import { isSuperUser } from '../app.utils';
 
 @Injectable()
 export class InvoiceService {

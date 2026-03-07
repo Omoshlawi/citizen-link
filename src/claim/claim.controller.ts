@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Session } from '@thallesp/nestjs-better-auth';
-import { RequireSystemPermission } from 'src/auth/auth.decorators';
+import { RequireSystemPermission } from '../auth/auth.decorators';
 import { ApiErrorsResponse } from '../app.decorators';
 import { UserSession } from '../auth/auth.types';
 import {

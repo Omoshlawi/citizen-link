@@ -7,7 +7,7 @@ import {
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
-import { AiService } from 'src/ai/ai.service';
+import { AiService } from '../ai/ai.service';
 import { SecurityQuestionsSchema } from './matching.dto';
 import { UserSession } from '../auth/auth.types';
 import { MATCHING_OPTIONS_TOKEN } from './matching.constants';

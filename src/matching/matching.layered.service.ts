@@ -12,7 +12,7 @@ import { MatchingSecurityQuestionsService } from './matching.security-questions.
 import { MATCHING_OPTIONS_TOKEN } from './matching.constants';
 import { Layer2FildScoreDto } from './matching.dto';
 import { HumanIdService } from '../human-id/human-id.service';
-import { EntityPrefix } from 'src/human-id/human-id.constants';
+import { EntityPrefix } from '../human-id/human-id.constants';
 import { Match } from 'generated/prisma/client';
 
 @Injectable()

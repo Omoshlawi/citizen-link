@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { EntityPrefix } from 'src/human-id/human-id.constants';
-import { VisionService } from 'src/vision/vision.service';
+import { EntityPrefix } from '../human-id/human-id.constants';
+import { VisionService } from '../vision/vision.service';
 import { AIInteraction } from '../../generated/prisma/client';
 import { AIExtractionInteractionType } from '../../generated/prisma/enums';
 import { OcrService } from '../ai/ocr.service';

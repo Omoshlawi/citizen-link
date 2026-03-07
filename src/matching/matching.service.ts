@@ -20,10 +20,10 @@ import {
   QueryMatchesForFoundCaseDto,
   QueryMatchesForLostCaseDto,
 } from './matching.dto';
-import { UserSession } from 'src/auth/auth.types';
-import { isSuperUser } from 'src/app.utils';
+import { UserSession } from '../auth/auth.types';
+import { isSuperUser } from '../app.utils';
 import { MatchingStatusTransitionService } from './matching.transitions.service';
-import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import { MatchingVectorSearchService } from './matching.vector-search';
 
 @Injectable()

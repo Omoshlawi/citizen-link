@@ -27,7 +27,7 @@ import {
 } from '../common/query-builder';
 import { Session } from '@thallesp/nestjs-better-auth';
 import { UserSession } from '../auth/auth.types';
-import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 
 @Controller('matching')
 export class MatchingController {

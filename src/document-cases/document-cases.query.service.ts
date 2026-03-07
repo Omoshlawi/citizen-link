@@ -11,7 +11,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { QueryDocumentCaseDto } from './document-cases.dto';
 import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from 'src/app.utils';
+import { isSuperUser } from '../app.utils';
 
 @Injectable()
 export class DocumentCasesQueryService {

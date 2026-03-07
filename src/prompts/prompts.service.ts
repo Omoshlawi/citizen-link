@@ -8,7 +8,7 @@ import {
 } from '../../generated/prisma/client';
 import z from 'zod';
 import { VisionExtractionOutputSchema } from '../vision/vision.dto';
-import { MatchedField } from 'src/matching/matching.interface';
+import { MatchedField } from '../matching/matching.interface';
 
 @Injectable()
 export class PromptsService {

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PromptsModule } from 'src/prompts/prompts.module';
+import { PromptsModule } from '../prompts/prompts.module';
 import { AiConfig } from '../ai/ai.config';
 import { AiModule } from '../ai/ai.module';
 import { ExtractionController } from './extraction.controller';

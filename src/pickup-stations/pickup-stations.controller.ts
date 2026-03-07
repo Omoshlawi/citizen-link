@@ -30,7 +30,7 @@ import {
   QueryPickupStationResponseDto,
   UpdatePickupStationDto,
 } from './pickup-station.dto';
-import { RequireSystemPermission } from 'src/auth/auth.decorators';
+import { RequireSystemPermission } from '../auth/auth.decorators';
 @Controller('pickup-stations')
 export class PickupStationsController {
   constructor(private readonly pickupStationService: PickupStationsService) {}

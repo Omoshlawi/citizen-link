@@ -8,7 +8,7 @@ import {
   SequencesResponseDto,
 } from './human-id.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
-import { ApiErrorsResponse } from 'src/app.decorators';
+import { ApiErrorsResponse } from '../app.decorators';
 
 @Controller('human-id')
 export class HumanIdController {

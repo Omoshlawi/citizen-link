@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { VisionService } from './vision.service';
 import { AiModule } from '../ai/ai.module';
 import { AiConfig } from '../ai/ai.config';
-import { PromptsModule } from 'src/prompts/prompts.module';
+import { PromptsModule } from '../prompts/prompts.module';
 import { VisionController } from './vision.controller';
 
 @Module({

@@ -12,7 +12,7 @@ import { AiService } from '../../ai/ai.service';
 import { UserSession } from '../../auth/auth.types';
 import { PromptsService } from '../../prompts/prompts.service';
 
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import {
   Document,
   DocumentCase,

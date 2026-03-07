@@ -17,7 +17,7 @@ import {
 import { Address, AddressType } from '../../generated/prisma/browser';
 import dayjs from 'dayjs';
 import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from 'src/app.utils';
+import { isSuperUser } from '../app.utils';
 
 @Injectable()
 export class AddressService {

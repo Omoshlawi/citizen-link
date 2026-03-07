@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DocumentTypeCode } from 'src/document-types/document-type.dto';
+import { DocumentTypeCode } from '../document-types/document-type.dto';
 import z from 'zod';
 import { AIExtractionInteractionType } from '../../generated/prisma/enums';
 import { AiService } from '../ai/ai.service';

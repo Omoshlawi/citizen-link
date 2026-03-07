@@ -4,7 +4,7 @@ import { AiService } from '../ai/ai.service';
 import { UserSession } from '../auth/auth.types';
 import { PromptsService } from '../prompts/prompts.service';
 import { VisionExtractionOutputSchema } from './vision.dto';
-import { safeParseJson } from 'src/app.utils';
+import { safeParseJson } from '../app.utils';
 
 @Injectable()
 export class VisionService {
