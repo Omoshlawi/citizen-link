@@ -4,7 +4,7 @@ import { AI_OPTIONS_TOKEN } from './ai.contants';
 import { AiModuleOptions } from './ai.types';
 import { AiService } from './ai.service';
 import { EmbeddingModule } from '../embedding/embedding.module';
-import { EmbeddingConfig } from 'src/embedding/embedding.config';
+import { EmbeddingConfig } from '../embedding/embedding.config';
 
 @Module({})
 export class AiModule {

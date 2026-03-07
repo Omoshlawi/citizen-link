@@ -1,7 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { catchError, lastValueFrom, map, Observable } from 'rxjs';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   Document,
   DocumentCase,
@@ -36,7 +36,7 @@ export class EmbeddingService implements OnModuleInit {
    * @param text
    * @returns
    */
-  private adaGenerate(text: string): Observable<Array<number>> {
+  private openaiGenerate(text: string): Observable<Array<number>> {
     const payload: OpenAIEmbeddingRequest = {
       model: this.embeddingOptions.model,
       input: text,
@@ -87,7 +87,7 @@ export class EmbeddingService implements OnModuleInit {
     this.logger.log(
       `[${this.embeddingOptions.model}]: Generating ${useCase} embeddings for ${text}`,
     );
-    if (this.embeddingOptions.isOpenAi) return this.adaGenerate(text);
+    if (this.embeddingOptions.isOpenAi) return this.openaiGenerate(text);
     else return this.nomicGenerate(prefix + text);
   }
 
