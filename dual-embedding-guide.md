@@ -1,11 +1,11 @@
 # Dual Embedding Vector Support
 
-> Adding `text-embedding-ada-002-v2` (1536-dim) alongside `nomic-embed-text` (768-dim)
+> Adding `text-embedding-3-small` (1536-dim) alongside `nomic-embed-text` (768-dim)
 
 | Model                             | Dimensions | Column          |
 | --------------------------------- | ---------- | --------------- |
-| nomic-embed-text _(existing)_     | 768        | `embedding`     |
-| text-embedding-ada-002-v2 _(new)_ | 1536       | `embedding_ada` |
+| nomic-embed-text _(existing)_     | 768        | `embedding_768`     |
+| text-embedding-3-small _(new)_ | 1536       | `embedding_1536` |
 
 ---
 
@@ -14,15 +14,15 @@
 Create a migration file without running it immediately:
 
 ```bash
-pnpm db migrate dev --name add-ada-embedding --create-only
+pnpm db migrate dev --name add-1536-embedding --create-only
 ```
 
 Paste the following SQL into the generated empty migration file:
 
 ```sql
--- Add a 1536-dim column for OpenAI text-embedding-ada-002-v2
+-- Add a 1536-dim column for OpenAI text-embedding-3-small
 ALTER TABLE "documents"
-ADD COLUMN embedding_ada VECTOR(1536);
+ADD COLUMN embedding_1536 VECTOR(1536);
 ```
 
 > **Note:** The existing `embedding` column (768-dim) is untouched. Both columns live on the same table.
@@ -49,8 +49,8 @@ Or add it manually — both produce the same schema entry:
 // schema.prisma — documents model
 model documents {
   // ... existing fields ...
-  embedding      Unsupported("vector")?   // existing 768-dim
-  embedding_ada  Unsupported("vector")?   // new 1536-dim
+  embedding_768      Unsupported("vector")?   // existing 768-dim
+  embedding_1536  Unsupported("vector")?   // new 1536-dim
 }
 ```
 
@@ -61,7 +61,7 @@ model documents {
 Create a dedicated migration for the index:
 
 ```bash
-pnpm db migrate dev --create-only --name add_ada_vector_index
+pnpm db migrate dev --create-only --name add_1536_vector_index
 ```
 
 ### Option A — HNSW (recommended)
@@ -71,11 +71,11 @@ Works on an empty table; no pre-existing data required. Best query-speed / recal
 ```sql
 -- Force fixed dimension (avoids "column does not have dimensions" error)
 ALTER TABLE "documents"
-  ALTER COLUMN embedding_ada TYPE vector(1536);
+  ALTER COLUMN embedding_1536 TYPE vector(1536);
 
 -- HNSW index using cosine similarity
-CREATE INDEX document_embedding_ada_idx ON "documents"
-  USING hnsw (embedding_ada vector_cosine_ops);
+CREATE INDEX document_embedding_1536_idx ON "documents"
+  USING hnsw (embedding_1536 vector_cosine_ops);
 ```
 
 ### Option B — IVFFlat (lower memory, needs 1 000+ rows first)
@@ -84,10 +84,10 @@ CREATE INDEX document_embedding_ada_idx ON "documents"
 
 ```sql
 ALTER TABLE "documents"
-  ALTER COLUMN embedding_ada TYPE vector(1536);
+  ALTER COLUMN embedding_1536 TYPE vector(1536);
 
-CREATE INDEX document_embedding_ada_idx ON "documents"
-  USING ivfflat (embedding_ada vector_cosine_ops)
+CREATE INDEX document_embedding_1536_idx ON "documents"
+  USING ivfflat (embedding_1536 vector_cosine_ops)
   WITH (lists = 100);
 ```
 
@@ -107,7 +107,7 @@ The column was created as a generic vector. Cast it to the fixed size before bui
 
 ```sql
 ALTER TABLE "documents"
-  ALTER COLUMN embedding_ada TYPE vector(1536);
+  ALTER COLUMN embedding_1536 TYPE vector(1536);
 ```
 
 Then retry the index creation. Adding the `ALTER` before the `CREATE INDEX` in the same migration file runs both together automatically.
@@ -136,7 +136,7 @@ If you see clustering errors, the table lacks sufficient data. Switch to HNSW or
 
 | Topic               | Detail                                     |
 | ------------------- | ------------------------------------------ |
-| New column          | `embedding_ada VECTOR(1536)`               |
+| New column          | `embedding_1536 VECTOR(1536)`               |
 | Index type          | HNSW (preferred) or IVFFlat                |
 | Model key           | `'ADA_002'` — `'NOMIC'` is the default     |
 | Backwards compat    | Omit `model` param → NOMIC column used     |

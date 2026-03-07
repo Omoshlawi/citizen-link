@@ -14,7 +14,7 @@ docker run -d \
 2. Create prisma migration file
 
 ```bash
-pnpm db migrate dev --name add-pgvector --create-only
+pnpm db migrate dev --name add-768-pgvector --create-only
 ```
 
 3. In th empty migration file created, paste
@@ -26,7 +26,7 @@ ALTER TABLE "documents"
 -- Creates a vector column sized for models like
 -- OpenAI text-embedding-3-small (768)
 -- Many sentence-transformer models
-ADD COLUMN embedding VECTOR(768);
+ADD COLUMN embedding_768 VECTOR(768);
 
 ```
 
@@ -47,10 +47,10 @@ pnpm db migrate deploy
 pnpm db db pull
 ```
 
-instead of pulling via step 5, you can add the embedding field mannually to the schema file, The introspection simply adds the fields to the schema
+instead of pulling via step 5, you can add the embedding_768 field mannually to the schema file, The introspection simply adds the fields to the schema
 
 ```prisma
-embedding    Unsupported("vector")?
+embedding_768    Unsupported("vector")?
 ```
 
 **Optional but recomended steps(indexing for perfomance)**
@@ -75,7 +75,7 @@ Why IVFFLAT fails when there is no data in table
 Create Vector Index migration
 
 ```bash
-pnpm db migrate dev --create-only --name add_vector_index
+pnpm db migrate dev --create-only --name add_768_vector_index
 ```
 
 Paste bellow sql commands
@@ -86,8 +86,8 @@ Paste bellow sql commands
 -- Create IVFFlat index for faster similarity searches
 -- Lists parameter should be roughly sqrt of expected number of rows
 -- Start with 100, adjust based on your data volume
-CREATE INDEX document_embedding_idx ON "documents"
-USING ivfflat (embedding vector_cosine_ops)
+CREATE INDEX document_embedding_768_idx ON "documents"
+USING ivfflat (embedding_768 vector_cosine_ops)
 WITH (lists = 100);
 
 ```
@@ -95,8 +95,8 @@ WITH (lists = 100);
 If your table is large, the standard index build might time out or hit memory locks. Try creating it concurrently to avoid blocking other operations:
 
 ```sql
-CREATE INDEX CONCURRENTLY document_embedding_idx
-ON "documents" USING ivfflat (embedding vector_cosine_ops)
+CREATE INDEX CONCURRENTLY document_embedding_768_idx
+ON "documents" USING ivfflat (embedding_768 vector_cosine_ops)
 WITH (lists = 100);
 ```
 
@@ -116,14 +116,13 @@ Unlike IVFFlat, the HNSW (Hierarchical Navigable Small Worlds) index does not re
 - `Migration`: Replace your index SQL with this:
 
 ```sql
-CREATE INDEX document_embedding_idx ON "documents"
-USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX document_embedding_768_idx ON "documents"
+USING hnsw (embedding_768 vector_cosine_ops);
 ```
-
 
 ## If getting error `ERROR: column does not have dimensions`, bellow is the fix
 
-This error occurs because, despite what  migration file says, the embedding column in your actual database is defined as a generic vector (variable dimensions) instead of vector(768) (fixed dimensions).
+This error occurs because, despite what migration file says, the embedding_768 column in your actual database is defined as a generic vector (variable dimensions) instead of vector(768) (fixed dimensions).
 
 PostgreSQL pgvector indexes (HNSW and IVFFLAT) strictly require the column to have a fixed dimension defined in the database schema. They cannot index a generic vector column because they need to know the exact size to build the graph/clusters.
 
@@ -133,34 +132,38 @@ You need to explicitly force the column to the correct type and dimension. Creat
 
 ```sql
 -- Force the column to have fixed 768 dimensions
-ALTER TABLE "documents" 
-ALTER COLUMN embedding TYPE vector(768);
+ALTER TABLE "documents"
+ALTER COLUMN embedding_768 TYPE vector(768);
 ```
+
 Once you run this, retry your index creation command:
 
 Or better still instead of creating new migration to change type, you could just add the sql on top of you indexing migration to be run before the indexing
 
 - For hsnw
+
 ```sql
 -- Force the column to have fixed 768 dimensions
-ALTER TABLE "documents" 
-ALTER COLUMN embedding TYPE vector(768);
+ALTER TABLE "documents"
+ALTER COLUMN embedding_768 TYPE vector(768);
 -- Create the index
-CREATE INDEX document_embedding_idx ON "documents" USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX document_embedding_768_idx ON "documents" USING hnsw (embedding_768 vector_cosine_ops);
 
 ```
+
 - For ivfflat
+
 ```sql
 -- Force the column to have fixed 768 dimensions
-ALTER TABLE "documents" 
-ALTER COLUMN embedding TYPE vector(768);
+ALTER TABLE "documents"
+ALTER COLUMN embedding_768 TYPE vector(768);
 
 
 -- migrations/XXXXXX_add_vector_index/migration.sql
 -- Create IVFFlat index for faster similarity searches
 -- Lists parameter should be roughly sqrt of expected number of rows
 -- Start with 100, adjust based on your data volume
-CREATE INDEX document_embedding_idx ON "documents"
-USING ivfflat (embedding vector_cosine_ops)
+CREATE INDEX document_embedding_768_idx ON "documents"
+USING ivfflat (embedding_768 vector_cosine_ops)
 WITH (lists = 100);
 ```

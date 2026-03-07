@@ -4,4 +4,4 @@ ALTER TABLE "documents"
 -- Creates a vector column sized for models like
 -- OpenAI text-embedding-3-small (768)
 -- Many sentence-transformer models
-ADD COLUMN embedding VECTOR(768);
+ADD COLUMN embedding_768 VECTOR(768);

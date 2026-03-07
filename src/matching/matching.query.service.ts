@@ -41,7 +41,7 @@ export class MatchingQueryService {
         AND d.id != $3
         AND dc."userId" != $4
         AND 1 - (d.embedding <=> $1::vector) > $5
-      ORDER BY d.embedding <=> $1::vector
+      ORDER BY d.embedding_ada <=> $1::vector
       LIMIT $6
       `,
       vectorString,
@@ -89,7 +89,7 @@ export class MatchingQueryService {
           AND ldc.status = 'SUBMITTED'
           AND d.id != $3
           AND dc."userId" != $4
-          AND 1 - (d.embedding <=> $1::vector) > $5
+          AND 1 - (d.embedding_ada <=> $1::vector) > $5
         ORDER BY d.embedding <=> $1::vector
         LIMIT $6
       `,

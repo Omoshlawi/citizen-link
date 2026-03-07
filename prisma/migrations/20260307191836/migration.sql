@@ -5,7 +5,10 @@ CREATE TYPE "AddressType" AS ENUM ('HOME', 'WORK', 'BILLING', 'SHIPPING', 'OFFIC
 CREATE TYPE "DocumentCategory" AS ENUM ('IDENTITY', 'ACADEMIC', 'PROFESSIONAL', 'VEHICLE', 'FINANCIAL', 'MEDICAL', 'LEGAL', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "AIExtractionInteractionType" AS ENUM ('DATA_EXTRACTION', 'CONFIDENCE_SCORE', 'IMAGE_ANALYSIS', 'SECURITY_QUESTIONS');
+CREATE TYPE "AIInteractionType" AS ENUM ('VISION_EXTRACTION', 'TEXT_EXTRACTION', 'DOCUMENT_MATCHING', 'CLAIM_VERIFICATION', 'SECURITY_QUESTIONS_GEN', 'DISPUTE_ANALYSIS', 'USER_QUERY_RESPONSE');
+
+-- CreateEnum
+CREATE TYPE "AIExtractionInteractionType" AS ENUM ('VISION_EXTRACTION', 'TEXT_EXTRACTION');
 
 -- CreateEnum
 CREATE TYPE "LostDocumentCaseStatus" AS ENUM ('DRAFT', 'SUBMITTED', 'COMPLETED');
@@ -20,16 +23,22 @@ CREATE TYPE "CaseType" AS ENUM ('LOST', 'FOUND');
 CREATE TYPE "ActorType" AS ENUM ('USER', 'ADMIN', 'DEVICE', 'SYSTEM');
 
 -- CreateEnum
-CREATE TYPE "MatchStatus" AS ENUM ('PENDING', 'REJECTED', 'CLAIMED', 'EXPIRED');
+CREATE TYPE "MatchVerdict" AS ENUM ('VERIFIED_MATCH', 'PROBABLE_MATCH', 'POSSIBLE_MATCH', 'NO_MATCH');
 
 -- CreateEnum
-CREATE TYPE "ClaimStatus" AS ENUM ('PENDING', 'VERIFIED', 'REJECTED', 'DISPUTED', 'CANCELLED');
+CREATE TYPE "MatchTrigger" AS ENUM ('LOST_CASE_SUBMITTED', 'FOUND_CASE_VERIFIED', 'MANUAL', 'REINDEX');
 
 -- CreateEnum
-CREATE TYPE "AIInteractionType" AS ENUM ('DATA_EXTRACTION', 'CONFIDENCE_SCORE', 'DOCUMENT_MATCHING', 'CLAIM_VERIFICATION', 'IMAGE_ANALYSIS', 'SECURITY_QUESTIONS_GEN', 'DISPUTE_ANALYSIS', 'USER_QUERY_RESPONSE', 'ALTERNATIVE_MATCHES');
+CREATE TYPE "MatchStatus" AS ENUM ('PENDING', 'REJECTED', 'CLAIMED');
+
+-- CreateEnum
+CREATE TYPE "ClaimStatus" AS ENUM ('PENDING', 'VERIFIED', 'CANCELLED', 'REJECTED', 'DISPUTED', 'UNDER_REVIEW');
 
 -- CreateEnum
 CREATE TYPE "HandoverStatus" AS ENUM ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
+
+-- CreateEnum
+CREATE TYPE "InvoiceStatus" AS ENUM ('PENDING', 'PARTIALLY_PAID', 'PAID', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "PaymentMethod" AS ENUM ('CARD', 'MOBILE_MONEY', 'BANK_TRANSFER', 'WALLET');
@@ -39,12 +48,6 @@ CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', '
 
 -- CreateEnum
 CREATE TYPE "NotificationType" AS ENUM ('MATCH_FOUND', 'CLAIM_VERIFIED', 'PAYMENT_RECEIVED', 'PICKUP_READY', 'HANDOVER_SCHEDULED', 'HANDOVER_COMPLETED', 'RATING_RECEIVED', 'DOCUMENT_EXPIRED', 'SYSTEM_ALERT');
-
--- CreateEnum
-CREATE TYPE "DisputeType" AS ENUM ('VERIFICATION_ERROR', 'ADMIN_OVERRIDE', 'FRAUD_SUSPECTED');
-
--- CreateEnum
-CREATE TYPE "DisputeStatus" AS ENUM ('OPEN', 'INVESTIGATING', 'RESOLVED', 'CLOSED');
 
 -- CreateTable
 CREATE TABLE "user" (
@@ -145,6 +148,16 @@ CREATE TABLE "user_activities" (
 );
 
 -- CreateTable
+CREATE TABLE "entity_sequences" (
+    "id" TEXT NOT NULL,
+    "prefix" TEXT NOT NULL,
+    "lastSeq" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "entity_sequences_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "addresses" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -209,13 +222,51 @@ CREATE TABLE "address_locales" (
 );
 
 -- CreateTable
+CREATE TABLE "transition_reasons" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "entityType" TEXT NOT NULL DEFAULT '*',
+    "fromStatus" TEXT NOT NULL DEFAULT '*',
+    "toStatus" TEXT NOT NULL DEFAULT '*',
+    "auto" BOOLEAN NOT NULL DEFAULT false,
+    "label" TEXT NOT NULL,
+    "description" TEXT,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "voided" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "transition_reasons_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "status_transitions" (
+    "id" TEXT NOT NULL,
+    "entityId" TEXT NOT NULL,
+    "entityType" TEXT NOT NULL,
+    "fromStatus" TEXT NOT NULL,
+    "toStatus" TEXT NOT NULL,
+    "reasonId" TEXT,
+    "comment" TEXT,
+    "changedById" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "status_transitions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "document_types" (
     "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "category" "DocumentCategory" NOT NULL,
     "description" TEXT,
     "icon" TEXT,
     "loyaltyPoints" INTEGER NOT NULL,
+    "serviceFee" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "finderReward" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "totalAmount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "currency" TEXT NOT NULL DEFAULT 'KES',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "replacementInstructions" TEXT,
@@ -233,18 +284,28 @@ CREATE TABLE "documents" (
     "documentNumber" TEXT,
     "serialNumber" TEXT,
     "batchNumber" TEXT,
+    "fullName" TEXT,
+    "surname" TEXT,
+    "givenNames" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "dateOfBirth" TIMESTAMP(3),
     "placeOfBirth" TEXT,
     "gender" TEXT,
-    "fullName" TEXT,
     "issuer" TEXT,
+    "placeOfIssue" TEXT,
+    "issuanceDate" TIMESTAMP(3),
+    "expiryDate" TIMESTAMP(3),
+    "isExpired" BOOLEAN NOT NULL DEFAULT false,
+    "note" TEXT,
+    "addressRaw" TEXT,
+    "addressCountry" TEXT,
+    "addressComponents" JSONB,
+    "photoPresent" BOOLEAN NOT NULL DEFAULT false,
+    "fingerprintPresent" BOOLEAN NOT NULL DEFAULT false,
+    "signaturePresent" BOOLEAN NOT NULL DEFAULT false,
     "typeId" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
-    "issuanceDate" TIMESTAMP(3),
-    "placeOfIssue" TEXT,
-    "expiryDate" TIMESTAMP(3),
-    "note" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
 );
@@ -276,8 +337,39 @@ CREATE TABLE "document_images" (
 );
 
 -- CreateTable
+CREATE TABLE "ai_interactions" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT,
+    "interactionType" "AIInteractionType" NOT NULL,
+    "aiModel" TEXT NOT NULL,
+    "modelVersion" TEXT,
+    "entityType" TEXT,
+    "entityId" TEXT,
+    "prompt" TEXT NOT NULL,
+    "response" TEXT NOT NULL,
+    "parseSuccess" BOOLEAN,
+    "parseError" JSONB,
+    "parsedResponse" JSONB,
+    "tokenUsage" JSONB,
+    "processingTime" INTEGER,
+    "estimatedCost" DOUBLE PRECISION,
+    "callSuccess" BOOLEAN NOT NULL DEFAULT true,
+    "callError" TEXT,
+    "retryCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ai_interactions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ai_extractions" (
     "id" TEXT NOT NULL,
+    "ocrConfidence" DOUBLE PRECISION,
+    "extractionConfidence" DOUBLE PRECISION,
+    "documentTypeCode" TEXT,
+    "warnings" JSONB,
+    "fallbackTriggered" BOOLEAN NOT NULL DEFAULT false,
+    "success" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ai_extractions_pkey" PRIMARY KEY ("id")
@@ -286,12 +378,12 @@ CREATE TABLE "ai_extractions" (
 -- CreateTable
 CREATE TABLE "ai_extraction_interactions" (
     "id" TEXT NOT NULL,
+    "extractionType" "AIExtractionInteractionType" NOT NULL,
     "aiInteractionId" TEXT NOT NULL,
     "aiExtractionId" TEXT NOT NULL,
-    "extractionData" JSONB,
     "success" BOOLEAN NOT NULL DEFAULT true,
     "errorMessage" TEXT,
-    "extractionType" "AIExtractionInteractionType" NOT NULL,
+    "confidence" DOUBLE PRECISION,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ai_extraction_interactions_pkey" PRIMARY KEY ("id")
@@ -300,6 +392,7 @@ CREATE TABLE "ai_extraction_interactions" (
 -- CreateTable
 CREATE TABLE "document_cases" (
     "id" TEXT NOT NULL,
+    "caseNumber" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "eventDate" TIMESTAMP(3) NOT NULL,
     "addressId" TEXT NOT NULL,
@@ -332,7 +425,6 @@ CREATE TABLE "found_document_cases" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "pointAwarded" INTEGER NOT NULL DEFAULT 0,
-    "securityQuestion" JSONB DEFAULT '[]',
     "pickupStationId" TEXT,
 
     CONSTRAINT "found_document_cases_pkey" PRIMARY KEY ("id")
@@ -362,12 +454,20 @@ CREATE TABLE "case_status_transitions" (
 -- CreateTable
 CREATE TABLE "matches" (
     "id" TEXT NOT NULL,
-    "matchNumber" SERIAL NOT NULL,
+    "matchNumber" TEXT NOT NULL,
+    "triggeredBy" "MatchTrigger" NOT NULL,
+    "verdict" "MatchVerdict" NOT NULL,
     "aiInteractionId" TEXT NOT NULL,
+    "securityQuestionsAiInteractionId" TEXT NOT NULL,
+    "securityQuestions" JSONB NOT NULL DEFAULT '[]',
     "lostDocumentCaseId" TEXT NOT NULL,
     "foundDocumentCaseId" TEXT NOT NULL,
-    "matchScore" DOUBLE PRECISION NOT NULL,
-    "aiAnalysis" JSON NOT NULL,
+    "vectorScore" DOUBLE PRECISION NOT NULL,
+    "exactScore" DOUBLE PRECISION NOT NULL,
+    "aiScore" DOUBLE PRECISION NOT NULL,
+    "finalScore" DOUBLE PRECISION NOT NULL,
+    "layer2FieldScores" JSONB NOT NULL,
+    "aiVerificationResult" JSONB NOT NULL,
     "status" "MatchStatus" NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -381,16 +481,14 @@ CREATE TABLE "matches" (
 -- CreateTable
 CREATE TABLE "claims" (
     "id" TEXT NOT NULL,
-    "claimNumber" SERIAL NOT NULL,
+    "claimNumber" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "foundDocumentCaseId" TEXT NOT NULL,
     "matchId" TEXT NOT NULL,
     "pickupStationId" TEXT,
+    "pickupAddressId" TEXT,
     "preferredHandoverDate" TIMESTAMP(3),
     "status" "ClaimStatus" NOT NULL DEFAULT 'PENDING',
-    "serviceFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "finderReward" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "totalAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -417,28 +515,6 @@ CREATE TABLE "claim_verifications" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "claim_verifications_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "ai_interactions" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT,
-    "interactionType" "AIInteractionType" NOT NULL,
-    "aiModel" TEXT NOT NULL,
-    "modelVersion" TEXT,
-    "entityType" TEXT,
-    "entityId" TEXT,
-    "prompt" TEXT NOT NULL,
-    "response" TEXT NOT NULL,
-    "tokenUsage" JSONB,
-    "processingTime" INTEGER,
-    "estimatedCost" DOUBLE PRECISION,
-    "success" BOOLEAN NOT NULL DEFAULT true,
-    "errorMessage" TEXT,
-    "retryCount" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "ai_interactions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -490,22 +566,35 @@ CREATE TABLE "handovers" (
 );
 
 -- CreateTable
+CREATE TABLE "invoices" (
+    "id" TEXT NOT NULL,
+    "invoiceNumber" TEXT NOT NULL,
+    "claimId" TEXT NOT NULL,
+    "serviceFee" DECIMAL(10,2) NOT NULL,
+    "finderReward" DECIMAL(10,2) NOT NULL,
+    "totalAmount" DECIMAL(10,2) NOT NULL,
+    "amountPaid" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "balanceDue" DECIMAL(10,2) NOT NULL,
+    "status" "InvoiceStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "transactions" (
     "id" TEXT NOT NULL,
     "transactionNumber" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "claimId" TEXT NOT NULL,
-    "serviceFee" DOUBLE PRECISION NOT NULL,
-    "finderReward" DOUBLE PRECISION NOT NULL,
-    "platformFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "totalAmount" DOUBLE PRECISION NOT NULL,
+    "invoiceId" TEXT NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'KES',
     "paymentMethod" "PaymentMethod" NOT NULL,
     "paymentProvider" TEXT,
     "providerTransactionId" TEXT,
     "status" "TransactionStatus" NOT NULL DEFAULT 'PENDING',
     "metadata" JSONB,
-    "paidAt" TIMESTAMP(3),
-    "refundedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -544,27 +633,6 @@ CREATE TABLE "notifications" (
     "documentCaseId" TEXT,
 
     CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "disputes" (
-    "id" TEXT NOT NULL,
-    "disputeNumber" TEXT NOT NULL,
-    "claimId" TEXT NOT NULL,
-    "initiatedBy" TEXT NOT NULL,
-    "reason" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "evidence" JSONB,
-    "aiAnalysis" JSONB,
-    "disputeType" "DisputeType" NOT NULL,
-    "status" "DisputeStatus" NOT NULL DEFAULT 'OPEN',
-    "resolution" TEXT,
-    "resolvedBy" TEXT,
-    "resolvedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "disputes_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -661,6 +729,9 @@ CREATE INDEX "user_activities_createdAt_idx" ON "user_activities"("createdAt");
 CREATE INDEX "user_activities_resource_resourceId_idx" ON "user_activities"("resource", "resourceId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "entity_sequences_prefix_key" ON "entity_sequences"("prefix");
+
+-- CreateIndex
 CREATE INDEX "addresses_userId_idx" ON "addresses"("userId");
 
 -- CreateIndex
@@ -694,6 +765,24 @@ CREATE INDEX "address_locales_country_idx" ON "address_locales"("country");
 CREATE INDEX "address_locales_regionName_idx" ON "address_locales"("regionName");
 
 -- CreateIndex
+CREATE INDEX "transition_reasons_entityType_idx" ON "transition_reasons"("entityType");
+
+-- CreateIndex
+CREATE INDEX "transition_reasons_entityType_fromStatus_toStatus_idx" ON "transition_reasons"("entityType", "fromStatus", "toStatus");
+
+-- CreateIndex
+CREATE INDEX "transition_reasons_toStatus_idx" ON "transition_reasons"("toStatus");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "transition_reasons_entityType_fromStatus_toStatus_code_key" ON "transition_reasons"("entityType", "fromStatus", "toStatus", "code");
+
+-- CreateIndex
+CREATE INDEX "status_transitions_entityId_entityType_idx" ON "status_transitions"("entityId", "entityType");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "document_types_code_key" ON "document_types"("code");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "document_types_name_key" ON "document_types"("name");
 
 -- CreateIndex
@@ -704,6 +793,27 @@ CREATE UNIQUE INDEX "document_fields_documentId_fieldName_key" ON "document_fiel
 
 -- CreateIndex
 CREATE UNIQUE INDEX "document_images_url_key" ON "document_images"("url");
+
+-- CreateIndex
+CREATE INDEX "ai_interactions_userId_idx" ON "ai_interactions"("userId");
+
+-- CreateIndex
+CREATE INDEX "ai_interactions_interactionType_idx" ON "ai_interactions"("interactionType");
+
+-- CreateIndex
+CREATE INDEX "ai_interactions_entityType_entityId_idx" ON "ai_interactions"("entityType", "entityId");
+
+-- CreateIndex
+CREATE INDEX "ai_interactions_createdAt_idx" ON "ai_interactions"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "ai_interactions_callSuccess_idx" ON "ai_interactions"("callSuccess");
+
+-- CreateIndex
+CREATE INDEX "ai_interactions_parseSuccess_idx" ON "ai_interactions"("parseSuccess");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "document_cases_caseNumber_key" ON "document_cases"("caseNumber");
 
 -- CreateIndex
 CREATE INDEX "document_cases_eventDate_idx" ON "document_cases"("eventDate");
@@ -736,6 +846,9 @@ CREATE UNIQUE INDEX "matches_matchNumber_key" ON "matches"("matchNumber");
 CREATE UNIQUE INDEX "matches_aiInteractionId_key" ON "matches"("aiInteractionId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "matches_securityQuestionsAiInteractionId_key" ON "matches"("securityQuestionsAiInteractionId");
+
+-- CreateIndex
 CREATE INDEX "matches_status_idx" ON "matches"("status");
 
 -- CreateIndex
@@ -763,21 +876,6 @@ CREATE UNIQUE INDEX "claim_verifications_claimId_key" ON "claim_verifications"("
 CREATE INDEX "claim_verifications_claimId_idx" ON "claim_verifications"("claimId");
 
 -- CreateIndex
-CREATE INDEX "ai_interactions_userId_idx" ON "ai_interactions"("userId");
-
--- CreateIndex
-CREATE INDEX "ai_interactions_interactionType_idx" ON "ai_interactions"("interactionType");
-
--- CreateIndex
-CREATE INDEX "ai_interactions_entityType_entityId_idx" ON "ai_interactions"("entityType", "entityId");
-
--- CreateIndex
-CREATE INDEX "ai_interactions_createdAt_idx" ON "ai_interactions"("createdAt");
-
--- CreateIndex
-CREATE INDEX "ai_interactions_success_idx" ON "ai_interactions"("success");
-
--- CreateIndex
 CREATE UNIQUE INDEX "pickup_stations_code_key" ON "pickup_stations"("code");
 
 -- CreateIndex
@@ -793,16 +891,25 @@ CREATE INDEX "handovers_claimId_idx" ON "handovers"("claimId");
 CREATE INDEX "handovers_status_idx" ON "handovers"("status");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "invoices_invoiceNumber_key" ON "invoices"("invoiceNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "invoices_claimId_key" ON "invoices"("claimId");
+
+-- CreateIndex
+CREATE INDEX "invoices_claimId_idx" ON "invoices"("claimId");
+
+-- CreateIndex
+CREATE INDEX "invoices_status_idx" ON "invoices"("status");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "transactions_transactionNumber_key" ON "transactions"("transactionNumber");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "transactions_claimId_key" ON "transactions"("claimId");
+CREATE INDEX "transactions_invoiceId_idx" ON "transactions"("invoiceId");
 
 -- CreateIndex
 CREATE INDEX "transactions_userId_idx" ON "transactions"("userId");
-
--- CreateIndex
-CREATE INDEX "transactions_claimId_idx" ON "transactions"("claimId");
 
 -- CreateIndex
 CREATE INDEX "transactions_status_idx" ON "transactions"("status");
@@ -818,18 +925,6 @@ CREATE INDEX "notifications_read_idx" ON "notifications"("read");
 
 -- CreateIndex
 CREATE INDEX "notifications_type_idx" ON "notifications"("type");
-
--- CreateIndex
-CREATE UNIQUE INDEX "disputes_disputeNumber_key" ON "disputes"("disputeNumber");
-
--- CreateIndex
-CREATE UNIQUE INDEX "disputes_claimId_key" ON "disputes"("claimId");
-
--- CreateIndex
-CREATE INDEX "disputes_claimId_idx" ON "disputes"("claimId");
-
--- CreateIndex
-CREATE INDEX "disputes_status_idx" ON "disputes"("status");
 
 -- CreateIndex
 CREATE INDEX "messages_senderId_idx" ON "messages"("senderId");
@@ -865,6 +960,12 @@ ALTER TABLE "addresses" ADD CONSTRAINT "addresses_localeId_fkey" FOREIGN KEY ("l
 ALTER TABLE "address_hierarchy" ADD CONSTRAINT "address_hierarchy_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "address_hierarchy"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "status_transitions" ADD CONSTRAINT "status_transitions_reasonId_fkey" FOREIGN KEY ("reasonId") REFERENCES "transition_reasons"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "status_transitions" ADD CONSTRAINT "status_transitions_changedById_fkey" FOREIGN KEY ("changedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "documents" ADD CONSTRAINT "documents_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "document_types"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -875,6 +976,9 @@ ALTER TABLE "document_fields" ADD CONSTRAINT "document_fields_documentId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "document_images" ADD CONSTRAINT "document_images_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ai_interactions" ADD CONSTRAINT "ai_interactions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ai_extraction_interactions" ADD CONSTRAINT "ai_extraction_interactions_aiInteractionId_fkey" FOREIGN KEY ("aiInteractionId") REFERENCES "ai_interactions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -907,6 +1011,9 @@ ALTER TABLE "case_status_transitions" ADD CONSTRAINT "case_status_transitions_ca
 ALTER TABLE "matches" ADD CONSTRAINT "matches_aiInteractionId_fkey" FOREIGN KEY ("aiInteractionId") REFERENCES "ai_interactions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "matches" ADD CONSTRAINT "matches_securityQuestionsAiInteractionId_fkey" FOREIGN KEY ("securityQuestionsAiInteractionId") REFERENCES "ai_interactions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "matches" ADD CONSTRAINT "matches_lostDocumentCaseId_fkey" FOREIGN KEY ("lostDocumentCaseId") REFERENCES "lost_document_cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -919,10 +1026,13 @@ ALTER TABLE "claims" ADD CONSTRAINT "claims_userId_fkey" FOREIGN KEY ("userId") 
 ALTER TABLE "claims" ADD CONSTRAINT "claims_foundDocumentCaseId_fkey" FOREIGN KEY ("foundDocumentCaseId") REFERENCES "found_document_cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "claims" ADD CONSTRAINT "claims_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "matches"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "claims" ADD CONSTRAINT "claims_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "matches"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "claims" ADD CONSTRAINT "claims_pickupStationId_fkey" FOREIGN KEY ("pickupStationId") REFERENCES "pickup_stations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "claims" ADD CONSTRAINT "claims_pickupStationId_fkey" FOREIGN KEY ("pickupStationId") REFERENCES "pickup_stations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "claims" ADD CONSTRAINT "claims_pickupAddressId_fkey" FOREIGN KEY ("pickupAddressId") REFERENCES "addresses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "claim_attachments" ADD CONSTRAINT "claim_attachments_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "claims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -934,10 +1044,7 @@ ALTER TABLE "claim_attachments" ADD CONSTRAINT "claim_attachments_uploadedById_f
 ALTER TABLE "claim_verifications" ADD CONSTRAINT "claim_verifications_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "claims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ai_interactions" ADD CONSTRAINT "ai_interactions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "pickup_stations" ADD CONSTRAINT "pickup_stations_addressLocaleCode_fkey" FOREIGN KEY ("addressLocaleCode") REFERENCES "address_locales"("code") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "pickup_stations" ADD CONSTRAINT "pickup_stations_addressLocaleCode_fkey" FOREIGN KEY ("addressLocaleCode") REFERENCES "address_locales"("code") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "handovers" ADD CONSTRAINT "handovers_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "claims"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -946,10 +1053,13 @@ ALTER TABLE "handovers" ADD CONSTRAINT "handovers_claimId_fkey" FOREIGN KEY ("cl
 ALTER TABLE "handovers" ADD CONSTRAINT "handovers_pickupStationId_fkey" FOREIGN KEY ("pickupStationId") REFERENCES "pickup_stations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "claims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "claims"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "invoices"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ratings" ADD CONSTRAINT "ratings_raterId_fkey" FOREIGN KEY ("raterId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -959,12 +1069,6 @@ ALTER TABLE "notifications" ADD CONSTRAINT "notifications_userId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_documentCaseId_fkey" FOREIGN KEY ("documentCaseId") REFERENCES "document_cases"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "claims"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_initiatedBy_fkey" FOREIGN KEY ("initiatedBy") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "messages" ADD CONSTRAINT "messages_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
