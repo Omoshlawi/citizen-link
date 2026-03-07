@@ -103,7 +103,7 @@ WITH (lists = 100);
 Apply migration
 
 ```bash
-pnpm db migrate dev
+pnpm db migrate deploy
 ```
 
 ## HNSW or Wait index

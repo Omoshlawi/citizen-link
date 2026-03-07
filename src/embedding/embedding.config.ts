@@ -8,11 +8,16 @@ export class EmbeddingConfig {
     parse: z.string().optional().parse,
     default: 'nomic-embed-text',
   })
-  embeddingModel: string;
+  model: string;
 
   @Value('EMBEDDING_BASE_URL', {
     parse: z.url().optional().parse,
     default: 'http://localhost:11434',
   })
-  embeddingBaseUrl: string;
+  baseUrl: string;
+  @Value('EMBEDDING_API_KEY', {
+    parse: z.string().optional().parse,
+    default: 'ollama',
+  })
+  apiKey: string;
 }

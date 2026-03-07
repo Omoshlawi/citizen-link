@@ -22,7 +22,7 @@ export class EmbeddingModule {
         ...(options.imports ?? []),
         HttpModule.registerAsync({
           useFactory: (embeddingConfig: EmbeddingConfig) => ({
-            baseURL: embeddingConfig.embeddingBaseUrl,
+            baseURL: embeddingConfig.baseUrl,
           }),
           inject: [EmbeddingConfig],
         }),

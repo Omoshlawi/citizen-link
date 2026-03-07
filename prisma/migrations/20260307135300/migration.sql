@@ -4,9 +4,15 @@
   - The values [DATA_EXTRACTION,CONFIDENCE_SCORE,IMAGE_ANALYSIS,SECURITY_QUESTIONS] on the enum `AIExtractionInteractionType` will be removed. If these variants are still used in the database, this will fail.
   - The values [DATA_EXTRACTION,CONFIDENCE_SCORE,IMAGE_ANALYSIS,ALTERNATIVE_MATCHES] on the enum `AIInteractionType` will be removed. If these variants are still used in the database, this will fail.
   - The values [EXPIRED] on the enum `MatchStatus` will be removed. If these variants are still used in the database, this will fail.
+  - You are about to drop the column `extractionData` on the `ai_extraction_interactions` table. All the data in the column will be lost.
+  - You are about to drop the column `errorMessage` on the `ai_interactions` table. All the data in the column will be lost.
+  - You are about to drop the column `success` on the `ai_interactions` table. All the data in the column will be lost.
   - You are about to drop the column `finderReward` on the `claims` table. All the data in the column will be lost.
   - You are about to drop the column `serviceFee` on the `claims` table. All the data in the column will be lost.
   - You are about to drop the column `totalAmount` on the `claims` table. All the data in the column will be lost.
+  - You are about to drop the column `securityQuestion` on the `found_document_cases` table. All the data in the column will be lost.
+  - You are about to drop the column `aiAnalysis` on the `matches` table. All the data in the column will be lost.
+  - You are about to drop the column `matchScore` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `claimId` on the `transactions` table. All the data in the column will be lost.
   - You are about to drop the column `finderReward` on the `transactions` table. All the data in the column will be lost.
   - You are about to drop the column `paidAt` on the `transactions` table. All the data in the column will be lost.
@@ -17,13 +23,29 @@
   - You are about to drop the `disputes` table. If the table is not empty, all the data it contains will be lost.
   - A unique constraint covering the columns `[caseNumber]` on the table `document_cases` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[code]` on the table `document_types` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[securityQuestionsAiInteractionId]` on the table `matches` will be added. If there are existing duplicate values, this will fail.
   - Added the required column `caseNumber` to the `document_cases` table without a default value. This is not possible if the table is not empty.
   - Added the required column `code` to the `document_types` table without a default value. This is not possible if the table is not empty.
   - Added the required column `updatedAt` to the `documents` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `aiScore` to the `matches` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `aiVerificationResult` to the `matches` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `exactScore` to the `matches` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `finalScore` to the `matches` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `layer2FieldScores` to the `matches` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `securityQuestionsAiInteractionId` to the `matches` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `triggeredBy` to the `matches` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `vectorScore` to the `matches` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `verdict` to the `matches` table without a default value. This is not possible if the table is not empty.
   - Added the required column `amount` to the `transactions` table without a default value. This is not possible if the table is not empty.
   - Added the required column `invoiceId` to the `transactions` table without a default value. This is not possible if the table is not empty.
 
 */
+-- CreateEnum
+CREATE TYPE "MatchVerdict" AS ENUM ('VERIFIED_MATCH', 'PROBABLE_MATCH', 'POSSIBLE_MATCH', 'NO_MATCH');
+
+-- CreateEnum
+CREATE TYPE "MatchTrigger" AS ENUM ('LOST_CASE_SUBMITTED', 'FOUND_CASE_VERIFIED', 'MANUAL', 'REINDEX');
+
 -- CreateEnum
 CREATE TYPE "InvoiceStatus" AS ENUM ('PENDING', 'PARTIALLY_PAID', 'PAID', 'CANCELLED');
 
@@ -81,6 +103,9 @@ ALTER TABLE "transactions" DROP CONSTRAINT "transactions_claimId_fkey";
 ALTER TABLE "transactions" DROP CONSTRAINT "transactions_userId_fkey";
 
 -- DropIndex
+DROP INDEX "ai_interactions_success_idx";
+
+-- DropIndex
 DROP INDEX "document_embedding_idx";
 
 -- DropIndex
@@ -90,7 +115,24 @@ DROP INDEX "transactions_claimId_idx";
 DROP INDEX "transactions_claimId_key";
 
 -- AlterTable
-ALTER TABLE "ai_interactions" ADD COLUMN     "parseError" JSONB,
+ALTER TABLE "ai_extraction_interactions" DROP COLUMN "extractionData",
+ADD COLUMN     "confidence" DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "ai_extractions" ADD COLUMN     "documentTypeCode" TEXT,
+ADD COLUMN     "extractionConfidence" DOUBLE PRECISION,
+ADD COLUMN     "fallbackTriggered" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "ocrConfidence" DOUBLE PRECISION,
+ADD COLUMN     "success" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "warnings" JSONB;
+
+-- AlterTable
+ALTER TABLE "ai_interactions" DROP COLUMN "errorMessage",
+DROP COLUMN "success",
+ADD COLUMN     "callError" TEXT,
+ADD COLUMN     "callSuccess" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "parseError" JSONB,
+ADD COLUMN     "parseSuccess" BOOLEAN,
 ADD COLUMN     "parsedResponse" JSONB;
 
 -- AlterTable
@@ -125,7 +167,22 @@ ADD COLUMN     "surname" TEXT,
 ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
 
 -- AlterTable
-ALTER TABLE "matches" ALTER COLUMN "matchNumber" DROP DEFAULT,
+ALTER TABLE "found_document_cases" DROP COLUMN "securityQuestion";
+
+-- AlterTable
+ALTER TABLE "matches" DROP COLUMN "aiAnalysis",
+DROP COLUMN "matchScore",
+ADD COLUMN     "aiScore" DOUBLE PRECISION NOT NULL,
+ADD COLUMN     "aiVerificationResult" JSONB NOT NULL,
+ADD COLUMN     "exactScore" DOUBLE PRECISION NOT NULL,
+ADD COLUMN     "finalScore" DOUBLE PRECISION NOT NULL,
+ADD COLUMN     "layer2FieldScores" JSONB NOT NULL,
+ADD COLUMN     "securityQuestions" JSONB NOT NULL DEFAULT '[]',
+ADD COLUMN     "securityQuestionsAiInteractionId" TEXT NOT NULL,
+ADD COLUMN     "triggeredBy" "MatchTrigger" NOT NULL,
+ADD COLUMN     "vectorScore" DOUBLE PRECISION NOT NULL,
+ADD COLUMN     "verdict" "MatchVerdict" NOT NULL,
+ALTER COLUMN "matchNumber" DROP DEFAULT,
 ALTER COLUMN "matchNumber" SET DATA TYPE TEXT;
 DROP SEQUENCE "matches_matchNumber_seq";
 
@@ -241,10 +298,19 @@ CREATE INDEX "invoices_claimId_idx" ON "invoices"("claimId");
 CREATE INDEX "invoices_status_idx" ON "invoices"("status");
 
 -- CreateIndex
+CREATE INDEX "ai_interactions_callSuccess_idx" ON "ai_interactions"("callSuccess");
+
+-- CreateIndex
+CREATE INDEX "ai_interactions_parseSuccess_idx" ON "ai_interactions"("parseSuccess");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "document_cases_caseNumber_key" ON "document_cases"("caseNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "document_types_code_key" ON "document_types"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "matches_securityQuestionsAiInteractionId_key" ON "matches"("securityQuestionsAiInteractionId");
 
 -- CreateIndex
 CREATE INDEX "transactions_invoiceId_idx" ON "transactions"("invoiceId");
@@ -254,6 +320,9 @@ ALTER TABLE "status_transitions" ADD CONSTRAINT "status_transitions_reasonId_fke
 
 -- AddForeignKey
 ALTER TABLE "status_transitions" ADD CONSTRAINT "status_transitions_changedById_fkey" FOREIGN KEY ("changedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "matches" ADD CONSTRAINT "matches_securityQuestionsAiInteractionId_fkey" FOREIGN KEY ("securityQuestionsAiInteractionId") REFERENCES "ai_interactions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "claims" ADD CONSTRAINT "claims_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "matches"("id") ON DELETE CASCADE ON UPDATE CASCADE;

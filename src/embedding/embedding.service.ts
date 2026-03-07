@@ -1,18 +1,23 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { catchError, lastValueFrom, map, Observable } from 'rxjs';
-import { EmbeddingOptions } from './embedding.interfaces';
-import { EMBEDDING_OPTIONS_TOKEN } from './embedding.constants';
+import { PrismaService } from 'src/prisma/prisma.service';
 import {
   Document,
   DocumentCase,
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
+import { EMBEDDING_OPTIONS_TOKEN } from './embedding.constants';
+import {
+  EmbeddingOptions,
+  OpenAIEmbeddingRequest,
+  OpenAIEmbeddingResponse,
+} from './embedding.interfaces';
 @Injectable()
-export class EmbeddingService {
+export class EmbeddingService implements OnModuleInit {
   private readonly logger = new Logger(EmbeddingService.name);
+
   constructor(
     private readonly httpService: HttpService,
     private readonly prismaService: PrismaService,
@@ -20,25 +25,68 @@ export class EmbeddingService {
     private readonly embeddingOptions: EmbeddingOptions,
   ) {}
 
-  generateEmbedding(
-    text: string,
-    useCase: 'search' | 'document' = 'document',
-  ): Observable<Array<number>> {
-    const prefix =
-      useCase === 'search' ? 'search_query: ' : 'search_document: ';
+  onModuleInit() {
+    this.logger.log(
+      `Embedding Module Initialized with options: ${JSON.stringify(this.embeddingOptions, null, 2)}`,
+    );
+  }
 
+  /**
+   *  The embedding is a 1536-dimension array of floats
+   * @param text
+   * @returns
+   */
+  private adaGenerate(text: string): Observable<Array<number>> {
+    const payload: OpenAIEmbeddingRequest = {
+      model: 'text-embedding-ada-002',
+      input: text,
+    };
     return this.httpService
-      .post<{ embedding: Array<number> }>(`/api/embeddings`, {
-        model: this.embeddingOptions.embeddingModel,
-        prompt: prefix + text,
+      .post<OpenAIEmbeddingResponse>('/v1/embeddings', payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.embeddingOptions.apiKey}`,
+        },
       })
       .pipe(
+        map((res) => res.data.data[0].embedding),
+        catchError((error) => {
+          this.logger.error('Error generating embedding', error);
+          throw error;
+        }),
+      );
+  }
+
+  /**
+   * The embedding is a 768-dimension array of floats
+   * @param text
+   * @returns
+   */
+  private nomicGenerate(text: string): Observable<Array<number>> {
+    return this.httpService
+      .post<{ embedding: Array<number> }>(`/api/embeddings`, {
+        model: this.embeddingOptions.model,
+        prompt: text,
+      })
+      .pipe(
+        // tap(() => this.logger.log('Embedding generated succefully')),
         map((res) => res.data.embedding),
         catchError((error) => {
           this.logger.error('Error generating embedding', error);
           throw error;
         }),
       );
+  }
+
+  generateEmbedding(
+    text: string,
+    useCase: 'search' | 'document' = 'document',
+  ): Observable<Array<number>> {
+    const prefix =
+      useCase === 'search' ? 'search_query: ' : 'search_document: ';
+    this.logger.log(`Generating ${useCase} embeddings for ${text}`);
+    if (this.embeddingOptions.isAda) return this.adaGenerate(text);
+    else return this.nomicGenerate(prefix + text);
   }
 
   createDocumentText(
@@ -135,11 +183,18 @@ export class EmbeddingService {
 
       const vectorString = `[${embedding.join(',')}]`;
 
-      await this.prismaService.$executeRawUnsafe(
-        `UPDATE "documents" SET embedding = $1::vector WHERE id = $2`,
-        vectorString,
-        documentId,
-      );
+      if (!this.embeddingOptions.isAda)
+        await this.prismaService.$executeRawUnsafe(
+          `UPDATE "documents" SET embedding = $1::vector WHERE id = $2`,
+          vectorString,
+          documentId,
+        );
+      else
+        await this.prismaService.$executeRawUnsafe(
+          `UPDATE "documents" SET embedding_ada = $1::vector WHERE id = $2`,
+          vectorString,
+          documentId,
+        );
 
       this.logger.log(`Successfully indexed document ${documentId}`);
     } catch (error) {

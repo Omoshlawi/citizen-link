@@ -102,8 +102,10 @@ import { EmbeddingConfig } from './embedding/embedding.config';
     EmbeddingModule.registerAsync({
       useFactory: (config: EmbeddingConfig) => {
         return {
-          embeddingModel: config.embeddingModel,
-          embeddingBaseUrl: config.embeddingBaseUrl,
+          model: config.model,
+          baseUrl: config.baseUrl,
+          apiKey: config.apiKey,
+          isAda: true,
         };
       },
       inject: [EmbeddingConfig],
