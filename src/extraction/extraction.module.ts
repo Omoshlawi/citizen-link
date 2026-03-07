@@ -11,12 +11,12 @@ import { ExtractionService } from './extraction.service';
     AiModule.registerAsync({
       useFactory: (config: AiConfig) => {
         return {
-          apiKey: config.openaiApiKey,
-          baseURL: config.aiBaseUrl,
-          model: config.aiModel,
-          // apiKey: config.textExtractionAiApiKey,
-          // baseURL: config.textExtractionAiBaseUrl,
-          // model: config.textExtractionAiModel,
+          // apiKey: config.openaiApiKey,
+          // baseURL: config.aiBaseUrl,
+          // model: config.aiModel,
+          apiKey: config.textExtractionAiApiKey,
+          baseURL: config.textExtractionAiBaseUrl,
+          model: config.textExtractionAiModel,
         };
       },
       inject: [AiConfig],

@@ -185,18 +185,11 @@ export class EmbeddingService implements OnModuleInit {
 
       const vectorString = `[${embedding.join(',')}]`;
 
-      if (!this.embeddingOptions.isOpenAi)
-        await this.prismaService.$executeRawUnsafe(
-          `UPDATE "documents" SET embedding = $1::vector WHERE id = $2`,
-          vectorString,
-          documentId,
-        );
-      else
-        await this.prismaService.$executeRawUnsafe(
-          `UPDATE "documents" SET embedding_ada = $1::vector WHERE id = $2`,
-          vectorString,
-          documentId,
-        );
+      await this.prismaService.$executeRawUnsafe(
+        `UPDATE "documents" SET embedding_${embedding.length} = $1::vector WHERE id = $2`,
+        vectorString,
+        documentId,
+      );
 
       this.logger.log(`Successfully indexed document ${documentId}`);
     } catch (error) {

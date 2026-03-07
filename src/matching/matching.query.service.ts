@@ -16,6 +16,7 @@ export class MatchingQueryService {
     params: VectorSearchParams,
   ): Promise<CandidateMatch[]> {
     const vectorString = `[${params.embeddingVector.join(',')}]`;
+    const dims = params.embeddingVector.length;
 
     const rows = await this.prisma.$queryRawUnsafe<
       Array<Omit<CandidateMatch, 'similarity'> & { similarity: string }>
@@ -30,18 +31,18 @@ export class MatchingQueryService {
         d."serialNumber",
         d."dateOfBirth",
         d."placeOfBirth",
-        1 - (d.embedding <=> $1::vector) as similarity
+        1 - (d.embedding_${dims} <=> $1::vector) as similarity
       FROM "documents" d
       INNER JOIN "document_cases" dc ON d."caseId" = dc.id
       INNER JOIN "found_document_cases" fdc ON dc.id = fdc."caseId"
       WHERE 
-        d.embedding IS NOT NULL
+        d.embedding_${dims} IS NOT NULL
         AND d."typeId" = $2
         AND fdc.status IN ('VERIFIED')
         AND d.id != $3
         AND dc."userId" != $4
-        AND 1 - (d.embedding <=> $1::vector) > $5
-      ORDER BY d.embedding_ada <=> $1::vector
+        AND 1 - (d.embedding_${dims} <=> $1::vector) > $5
+      ORDER BY d.embedding_${dims} <=> $1::vector
       LIMIT $6
       `,
       vectorString,
@@ -65,6 +66,7 @@ export class MatchingQueryService {
     params: VectorSearchParams,
   ): Promise<CandidateMatch[]> {
     const vectorString = `[${params.embeddingVector.join(',')}]`;
+    const dims = params.embeddingVector.length;
 
     const rows = await this.prisma.$queryRawUnsafe<
       Array<Omit<CandidateMatch, 'similarity'> & { similarity: string }>
@@ -79,18 +81,18 @@ export class MatchingQueryService {
           d."serialNumber",
           d."dateOfBirth",
           d."placeOfBirth",
-          1 - (d.embedding <=> $1::vector) as similarity
+          1 - (d.embedding_${dims} <=> $1::vector) as similarity
         FROM "documents" d
         INNER JOIN "document_cases" dc ON d."caseId" = dc.id
         INNER JOIN "lost_document_cases" ldc ON dc.id = ldc."caseId"
         WHERE 
-          d.embedding IS NOT NULL
+          d.embedding_${dims} IS NOT NULL
           AND d."typeId" = $2
           AND ldc.status = 'SUBMITTED'
           AND d.id != $3
           AND dc."userId" != $4
-          AND 1 - (d.embedding_ada <=> $1::vector) > $5
-        ORDER BY d.embedding <=> $1::vector
+          AND 1 - (d.embedding_${dims} <=> $1::vector) > $5
+        ORDER BY d.embedding_${dims} <=> $1::vector
         LIMIT $6
       `,
       vectorString,
