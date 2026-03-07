@@ -12,7 +12,7 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/enums';
-import { EmbeddingService } from '../ai/embeding.service';
+import { EmbeddingService } from '../embedding/embedding.service';
 @Injectable()
 export class CaseDocumentsService {
   constructor(

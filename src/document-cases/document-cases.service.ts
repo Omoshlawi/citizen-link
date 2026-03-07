@@ -10,7 +10,6 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
-import { EmbeddingService } from '../ai/embeding.service';
 import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
@@ -30,6 +29,7 @@ import { DocumentCasesQueryService } from './document-cases.query.service';
 import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
 import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
+import { EmbeddingService } from '../embedding/embedding.service';
 
 @Injectable()
 export class DocumentCasesService {

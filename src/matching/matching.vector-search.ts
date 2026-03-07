@@ -5,10 +5,10 @@ import {
   QueryMatchesForFoundCaseDto,
   QueryMatchesForLostCaseDto,
 } from './matching.dto';
-import { EmbeddingService } from '../ai/embeding.service';
 import { lastValueFrom } from 'rxjs';
 import { Logger } from '@nestjs/common';
 import { CustomRepresentationService } from '../common/query-builder';
+import { EmbeddingService } from '../embedding/embedding.service';
 
 @Injectable()
 export class MatchingVectorSearchService {

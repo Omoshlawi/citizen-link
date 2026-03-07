@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 import { MatchTrigger } from '../../generated/prisma/enums';
-import { EmbeddingService } from '../ai/embeding.service';
 import { UserSession } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExactMatchLayer } from './layers';
@@ -14,6 +13,7 @@ import { Layer2FildScoreDto } from './matching.dto';
 import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { Match } from 'generated/prisma/client';
+import { EmbeddingService } from '../embedding/embedding.service';
 
 @Injectable()
 export class MatchingLayeredService {

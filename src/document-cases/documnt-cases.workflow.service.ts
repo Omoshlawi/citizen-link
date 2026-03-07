@@ -10,12 +10,12 @@ import {
   LostDocumentCaseStatus,
   MatchTrigger,
 } from '../../generated/prisma/client';
-import { EmbeddingService } from '../ai/embeding.service';
 import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
 import { MatchingLayeredService } from '../matching/matching.layered.service';
 import { UserSession } from '../auth/auth.types';
+import { EmbeddingService } from '../embedding/embedding.service';
 @Injectable()
 export class DocumentCasesWorkflowService {
   private readonly logger = new Logger(DocumentCasesWorkflowService.name);

@@ -32,6 +32,8 @@ import { S3Module } from './s3/s3.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
 import { VisionModule } from './vision/vision.module';
 import { MatchingConfig } from './matching/matching.config';
+import { EmbeddingModule } from './embedding/embedding.module';
+import { EmbeddingConfig } from './embedding/embedding.config';
 
 @Module({
   imports: [
@@ -97,6 +99,15 @@ import { MatchingConfig } from './matching/matching.config';
     }),
     InvoiceModule,
     VisionModule,
+    EmbeddingModule.registerAsync({
+      useFactory: (config: EmbeddingConfig) => {
+        return {
+          embeddingModel: config.embeddingModel,
+          embeddingBaseUrl: config.embeddingBaseUrl,
+        };
+      },
+      inject: [EmbeddingConfig],
+    }),
   ],
   controllers: [AppController],
   providers: [

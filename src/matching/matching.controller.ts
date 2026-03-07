@@ -8,26 +8,26 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { MatchingService } from './matching.service';
-import {
-  GetMatchResponseDto,
-  QueryMatchesDto,
-  QueryMatchesResponseDto,
-  QueryMatchesForFoundCaseDto,
-  QueryMatchesForLostCaseDto,
-} from './matching.dto';
-import { ApiOperation, ApiOkResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
-import { QuerySimilarDocumentCaseResponsesDto } from '../document-cases/document-cases.dto';
 import { RequireSystemPermission } from '../auth/auth.decorators';
+import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
   OriginalUrl,
 } from '../common/query-builder';
-import { Session } from '@thallesp/nestjs-better-auth';
-import { UserSession } from '../auth/auth.types';
+import { QuerySimilarDocumentCaseResponsesDto } from '../document-cases/document-cases.dto';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
+import {
+  GetMatchResponseDto,
+  QueryMatchesDto,
+  QueryMatchesForFoundCaseDto,
+  QueryMatchesForLostCaseDto,
+  QueryMatchesResponseDto,
+} from './matching.dto';
+import { MatchingService } from './matching.service';
 
 @Controller('matching')
 export class MatchingController {

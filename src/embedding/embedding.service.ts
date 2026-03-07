@@ -1,21 +1,23 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { catchError, lastValueFrom, map, Observable } from 'rxjs';
+import { EmbeddingOptions } from './embedding.interfaces';
+import { EMBEDDING_OPTIONS_TOKEN } from './embedding.constants';
 import {
   Document,
   DocumentCase,
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
-
 @Injectable()
 export class EmbeddingService {
   private readonly logger = new Logger(EmbeddingService.name);
-
   constructor(
     private readonly httpService: HttpService,
-    private readonly prisma: PrismaService,
+    private readonly prismaService: PrismaService,
+    @Inject(EMBEDDING_OPTIONS_TOKEN)
+    private readonly embeddingOptions: EmbeddingOptions,
   ) {}
 
   generateEmbedding(
@@ -27,7 +29,7 @@ export class EmbeddingService {
 
     return this.httpService
       .post<{ embedding: Array<number> }>(`/api/embeddings`, {
-        model: 'nomic-embed-text',
+        model: this.embeddingOptions.embeddingModel,
         prompt: prefix + text,
       })
       .pipe(
@@ -117,7 +119,7 @@ export class EmbeddingService {
 
   async indexDocument(documentId: string): Promise<void> {
     try {
-      const document = await this.prisma.document.findUnique({
+      const document = await this.prismaService.document.findUnique({
         where: { id: documentId },
         include: { type: true, additionalFields: true, case: true },
       });
@@ -133,7 +135,7 @@ export class EmbeddingService {
 
       const vectorString = `[${embedding.join(',')}]`;
 
-      await this.prisma.$executeRawUnsafe(
+      await this.prismaService.$executeRawUnsafe(
         `UPDATE "documents" SET embedding = $1::vector WHERE id = $2`,
         vectorString,
         documentId,

@@ -2,11 +2,9 @@ import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { AiController } from './ai.controller';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
 import { AiModuleOptions } from './ai.types';
-import { OcrService } from './ocr.service';
 import { AiService } from './ai.service';
-import { EmbeddingService } from './embeding.service';
-import { HttpModule } from '@nestjs/axios';
-import { AiConfig } from './ai.config';
+import { EmbeddingModule } from '../embedding/embedding.module';
+import { EmbeddingConfig } from 'src/embedding/embedding.config';
 
 @Module({})
 export class AiModule {
@@ -18,20 +16,21 @@ export class AiModule {
       providers: [
         ...(options.providers || []),
         this.createAsyncProvider(options),
-        OcrService,
         AiService,
-        EmbeddingService,
       ],
       imports: [
         ...(options.imports ?? []),
-        HttpModule.registerAsync({
-          useFactory: (aiConfig: AiConfig) => ({
-            baseURL: aiConfig.aiBaseUrl,
-          }),
-          inject: [AiConfig],
+        EmbeddingModule.registerAsync({
+          useFactory: (config: EmbeddingConfig) => {
+            return {
+              embeddingModel: config.embeddingModel,
+              embeddingBaseUrl: config.embeddingBaseUrl,
+            };
+          },
+          inject: [EmbeddingConfig],
         }),
       ],
-      exports: [OcrService, AiService, EmbeddingService],
+      exports: [AiService, EmbeddingModule],
     };
   }
 

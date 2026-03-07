@@ -4,7 +4,6 @@ import { EntityPrefix } from '../human-id/human-id.constants';
 import { VisionService } from '../vision/vision.service';
 import { AIInteraction } from '../../generated/prisma/client';
 import { AIExtractionInteractionType } from '../../generated/prisma/enums';
-import { OcrService } from '../ai/ocr.service';
 import { parseDate } from '../app.utils';
 import { UserSession } from '../auth/auth.types';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
@@ -31,7 +30,6 @@ export class DocumentCasesCreateService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly s3Service: S3Service,
-    private readonly ocrService: OcrService,
     private readonly extractionService: ExtractionService,
     private readonly documentCasesQueryService: DocumentCasesQueryService,
     private readonly humanIdService: HumanIdService,
@@ -66,7 +64,7 @@ export class DocumentCasesCreateService {
         const mimeType =
           metadata?.ContentType ?? `image/${image.split('.').pop()}`;
         const bluredKey = `${caseId}/${this.s3Service.generateFileName(image)}`;
-        const bluredBuffer = await this.ocrService.blueImage(buffer, 'strong');
+        const bluredBuffer = await this.s3Service.blueImage(buffer, 'strong');
         await this.s3Service.uploadFile(
           bluredKey,
           'cases',

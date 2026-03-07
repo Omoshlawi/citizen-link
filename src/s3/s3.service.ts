@@ -20,6 +20,7 @@ import { basename, extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { S3Config } from './s3.config';
 import { Readable } from 'stream';
+import sharp from 'sharp';
 
 @Injectable()
 export class S3Service implements OnModuleInit {
@@ -410,5 +411,15 @@ export class S3Service implements OnModuleInit {
       this.logger.error(`Error downloading file: ${key}`, error);
       throw error;
     }
+  }
+
+  blueImage(
+    buffer: Buffer,
+    type: 'gaussian' | 'light' | 'strong' = 'gaussian',
+  ) {
+    const b = type === 'gaussian' ? 5 : type === 'light' ? 0.8 : 20;
+    // Use Sharp to create a blurred buffer
+    // We resize it small so it's tiny (e.g., 20px) and apply a heavy blur
+    return sharp(buffer).blur(b).toBuffer();
   }
 }
