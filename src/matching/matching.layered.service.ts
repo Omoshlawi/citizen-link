@@ -517,24 +517,46 @@ export class MatchingLayeredService {
     return MatchVerdict.NO_MATCH;
   }
   /**
-   * Mask a value for display
+   * Masks a string value for safe display in document previews.
+   *
+   * Masking rules per token:
+   * - Short tokens (≤ 3 chars): fully masked — too short to reveal anything safely
+   * - All others: first 2 chars visible + masked middle + last char visible
+   *
+   * If the value contains spaces, each token is masked independently
+   * and rejoined with a space — preserving the visual structure of
+   * multi-word values like full names without revealing their content.
+   *
    * @example
-   * maskValue('123456789') // '12******9'
-   * @param value
-   * @returns
+   * maskValue('ODHIAMBO')   // → 'OD*****O'
+   * maskValue('AB123456')   // → 'AB*****6'
+   * maskValue('JOHN DOE')   // → 'JO**N D*E'  (each token masked independently)
+   * maskValue('AB')         // → '**'          (too short — fully masked)
+   *
+   * @param value - The raw string to mask
+   * @returns The masked string, or an empty string if value is falsy
    */
   private maskValue(value: string): string {
     if (!value) return '';
 
-    const len = value.length;
-    if (len <= 4) return '*'.repeat(len);
+    const maskToken = (token: string): string => {
+      const len = token.length;
 
-    const visibleStart = 2;
-    const visibleEnd = len - 2;
-    const start = value.slice(0, visibleStart);
-    const end = value.slice(visibleEnd);
-    const middle = '*'.repeat(visibleEnd - visibleStart);
+      // Too short to show start + end without revealing the full value
+      if (len <= 3) return '*'.repeat(len);
 
-    return `${start}${middle}${end}`;
+      const start = token.slice(0, 2);
+      const middle = '*'.repeat(len - 3); // everything between first 2 and last 1
+      const end = token.slice(-1);
+
+      return `${start}${middle}${end}`;
+    };
+
+    // If multi-word, mask each token independently to preserve visual structure
+    if (value.includes(' ')) {
+      return value.split(' ').map(maskToken).join(' ');
+    }
+
+    return maskToken(value);
   }
 }
