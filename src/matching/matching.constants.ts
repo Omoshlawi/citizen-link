@@ -14,9 +14,8 @@ export const OCR_CONFUSION_PAIRS: [string, string][] = [
 
 // Field weights for Layer 2 exact matching — must sum to 1.0
 export const EXACT_FIELD_WEIGHTS = {
-  documentNumber: 0.4,
-  dateOfBirth: 0.25,
-  surname: 0.15,
-  documentTypeCode: 0.1,
-  serialNumber: 0.1,
+  documentNumber: 0.4, // back to strongest — unique identifier
+  fullName: 0.3, // primary name field
+  dateOfBirth: 0.2, // strong corroborating signal
+  serialNumber: 0.1, // secondary identifier
 } as const;

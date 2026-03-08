@@ -27,9 +27,12 @@ export class MatchingModule {
         AiModule.registerAsync({
           useFactory: (config: AiConfig) => {
             return {
-              apiKey: config.openaiApiKey,
-              baseURL: config.aiBaseUrl,
-              model: config.aiModel, // Default to GPT-4o, can be overridden via env var
+              // apiKey: config.openaiApiKey,
+              // baseURL: config.aiBaseUrl,
+              // model: config.aiModel, // Default to GPT-4o, can be overridden via env var
+              apiKey: config.textExtractionAiApiKey,
+              baseURL: config.textExtractionAiBaseUrl,
+              model: config.textExtractionAiModel,
             };
           },
           inject: [AiConfig],

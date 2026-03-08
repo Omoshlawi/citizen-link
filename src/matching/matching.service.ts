@@ -30,7 +30,7 @@ import { MatchingVectorSearchService } from './matching.vector-search';
 export class MatchingService {
   private readonly logger = new Logger(MatchingService.name);
   private readonly defaultRep =
-    'custom:select(id,matchNumber,vectorScore,exactScore,aiScore,finalScore,securityQuestions,status,createdAt,updatedAt,aiVerificationResult,foundDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))))';
+    'custom:select(id,matchNumber,verdict,vectorScore,exactScore,finalScore,layer2FieldScores,status,createdAt,updatedAt,foundDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))))';
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -62,7 +62,11 @@ export class MatchingService {
   }
 
   private mapMatch(d: Match & { foundDocumentCase: FoundDocumentCase }) {
-    const aiVerificationResult = (d.aiVerificationResult ?? {}) as Record<
+    // const aiVerificationResult = (d.aiVerificationResult ?? {}) as Record<
+    //   string,
+    //   any
+    // >;
+    const layer2FieldScores = (d.layer2FieldScores ?? {}) as Record<
       string,
       any
     >;
@@ -72,7 +76,9 @@ export class MatchingService {
         'matchNumber',
         'vectorScore',
         'exactScore',
-        'aiScore',
+        'verdict',
+        'layer2FieldScores',
+        // 'aiScore',
         'finalScore',
         'status',
         // 'foundDocumentCase',
@@ -80,17 +86,32 @@ export class MatchingService {
         'createdAt',
         'updatedAt',
       ]),
-      aiVerificationResult: {
-        ...pick(aiVerificationResult, ['verdict', 'fieldAnalysis']),
-        fieldAnalysis: (
-          aiVerificationResult.fieldAnalysis as Array<Record<string, any>>
-        ).map((f) => pick(f, ['field', 'match'])),
+      // aiVerificationResult: {
+      //   ...pick(aiVerificationResult, ['verdict', 'fieldAnalysis']),
+      //   fieldAnalysis: (
+      //     aiVerificationResult.fieldAnalysis as Array<Record<string, any>>
+      //   ).map((f) => pick(f, ['field', 'match'])),
+      // },
+      layer2FieldScores: {
+        ...pick(layer2FieldScores, ['threshold', 'fields']),
+        fields: (layer2FieldScores.fields as Array<Record<string, any>>).map(
+          (f) =>
+            pick(f, [
+              'field',
+              'score',
+              'weight',
+              'matched',
+              'contribution',
+              'maskedCandidatevalue',
+              'candidatevalue',
+            ]),
+        ),
       },
-      securityQuestions: (
-        d.securityQuestions as Array<{ answer: string; question: string }>
-      ).map(({ question }) => ({
-        question,
-      })),
+      // securityQuestions: (
+      //   d.securityQuestions as Array<{ answer: string; question: string }>
+      // ).map(({ question }) => ({
+      //   question,
+      // })),
       foundDocumentCase: {
         ...d.foundDocumentCase,
       },

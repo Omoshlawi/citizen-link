@@ -12,6 +12,7 @@ import {
   MATCHING_OPTIONS_TOKEN,
   OCR_CONFUSION_PAIRS,
 } from '../matching.constants';
+import { distance as levenshteinDistance } from 'fastest-levenshtein';
 
 @Injectable()
 export class ExactMatchLayer {
@@ -73,6 +74,7 @@ export class ExactMatchLayer {
     const docNumScore = this.compareWithOcrTolerance(
       triggerDoc.documentNumber,
       candidateDoc.documentNumber,
+      false,
     );
     matchedFields.push({
       field: 'documentNumber',
@@ -98,35 +100,26 @@ export class ExactMatchLayer {
     });
     weightedScore += dobScore * EXACT_FIELD_WEIGHTS.dateOfBirth;
 
-    // ─── Surname (weight: 0.15) ───────────────────────
-    const surnameScore = this.compareWithOcrTolerance(
-      triggerDoc.surname,
-      candidateDoc.surname,
+    // ─── Full name (weight: 0.25) ───────────────────────
+    const fullNameScore = this.compareWithOcrTolerance(
+      triggerDoc.fullName,
+      candidateDoc.fullName,
+      true,
     );
     matchedFields.push({
-      field: 'surname',
-      triggerValue: triggerDoc.surname,
-      candidateValue: candidateDoc.surname,
-      matched: surnameScore > 0,
-      score: surnameScore,
+      field: 'fullName',
+      triggerValue: triggerDoc.fullName,
+      candidateValue: candidateDoc.fullName,
+      matched: fullNameScore > 0,
+      score: fullNameScore,
     });
-    weightedScore += surnameScore * EXACT_FIELD_WEIGHTS.surname;
-
-    // ─── Document type (weight: 0.10) ─────────────────
-    const typeScore = triggerDoc.typeId === candidateDoc.typeId ? 1.0 : 0;
-    matchedFields.push({
-      field: 'documentTypeCode',
-      triggerValue: triggerDoc.typeId,
-      candidateValue: candidateDoc.typeId,
-      matched: typeScore > 0,
-      score: typeScore,
-    });
-    weightedScore += typeScore * EXACT_FIELD_WEIGHTS.documentTypeCode;
+    weightedScore += fullNameScore * EXACT_FIELD_WEIGHTS.fullName;
 
     // ─── Serial number (weight: 0.10) ─────────────────
     const serialScore = this.compareWithOcrTolerance(
       triggerDoc.serialNumber,
       candidateDoc.serialNumber,
+      false,
     );
     matchedFields.push({
       field: 'serialNumber',
@@ -150,6 +143,7 @@ export class ExactMatchLayer {
   private compareWithOcrTolerance(
     a: string | null | undefined,
     b: string | null | undefined,
+    loose: boolean = false,
   ): number {
     // Both null — field not present on either side, do not penalise
     if (!a && !b) return 0;
@@ -157,8 +151,8 @@ export class ExactMatchLayer {
     // One side null — field missing, cannot compare, do not penalise
     if (!a || !b) return 0;
 
-    const normA = this.normalise(a);
-    const normB = this.normalise(b);
+    const normA = loose ? this.normaliseLoose(a) : this.normalise(a);
+    const normB = loose ? this.normaliseLoose(b) : this.normalise(b);
 
     // Exact match after normalisation
     if (normA === normB) return 1.0;
@@ -170,7 +164,7 @@ export class ExactMatchLayer {
     if (ocrCorrectedA === ocrCorrectedB) return 0.9; // OCR confusion pair explains difference
 
     // Levenshtein distance — catch remaining OCR errors
-    const distance = this.levenshtein(normA, normB);
+    const distance = levenshteinDistance(normA, normB);
 
     if (distance === 1) return 0.85; // one char off — likely OCR error
     if (distance === 2) return 0.65; // two chars off — possible OCR error
@@ -191,8 +185,40 @@ export class ExactMatchLayer {
       : 0;
   }
 
+  /**
+   * Normalise a string for exact comparison (removes spaces)
+   * Good for document numbers and serial numbers.
+   * @param value The string to normalise
+   * @returns The normalise string
+   */
   private normalise(value: string): string {
-    return value.toUpperCase().trim().replace(/\s+/g, ' ');
+    return value
+      .normalize('NFD') // split accents first, before any casing
+      .replace(/[\u0300-\u036f]/g, '') // strip accent marks
+      .toLowerCase() // then lowercase (cheaper after NFD)
+      .replace(/[^a-z0-9]/g, ''); // strip everything non-alphanumeric
+  }
+
+  /**
+   * Normalise a string for loose comparison (keeps spaces)
+   * Good for names where word boundaries matter.
+   * If sort is true, the string will be sorted by word.
+   * Comparing full names with normaliseLoose means word order matters.
+   * JOHN ODHIAMBO vs ODHIAMBO JOHN would score poorly despite being the same person
+   * @param value The string to normalise
+   * @param sort Whether to sort the string by word
+   * @returns The normalise string
+   */
+  private normaliseLoose(value: string, sort: boolean = true): string {
+    const normValue = value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // keeps spaces
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (sort) return normValue.split(' ').sort().join(' ');
+    return normValue;
   }
 
   // Replace known OCR confusion chars with a canonical form for comparison
@@ -203,29 +229,5 @@ export class ExactMatchLayer {
       result = result.replaceAll(b, a);
     }
     return result;
-  }
-
-  private levenshtein(a: string, b: string): number {
-    const matrix: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
-      Array.from({ length: b.length + 1 }, (_, j) =>
-        i === 0 ? j : j === 0 ? i : 0,
-      ),
-    );
-
-    for (let i = 1; i <= a.length; i++) {
-      for (let j = 1; j <= b.length; j++) {
-        matrix[i][j] =
-          a[i - 1] === b[j - 1]
-            ? matrix[i - 1][j - 1]
-            : 1 +
-              Math.min(
-                matrix[i - 1][j],
-                matrix[i][j - 1],
-                matrix[i - 1][j - 1],
-              );
-      }
-    }
-
-    return matrix[a.length][b.length];
   }
 }

@@ -151,15 +151,45 @@ export class QueryMatchesForFoundCaseDto extends createZodDto(
   QueryMatechesForFoundCaseSchema,
 ) {}
 
+export class Layer2FieldDto {
+  @ApiProperty({ example: 'documentNumber' })
+  field: string;
+  @ApiProperty({ example: '34567890', nullable: true, required: false })
+  triggerValue?: string | null;
+  @ApiProperty({ example: '34S67890', nullable: true, required: false })
+  candidateValue?: string | null;
+  @ApiProperty({ example: '34***0', nullable: true, required: false })
+  maskedCandidatevalue?: string | null;
+  @ApiProperty({ example: true })
+  matched: boolean;
+  @ApiProperty({ example: 0.85 })
+  score: number;
+  @ApiProperty({ example: 0.4 })
+  weight: number;
+  @ApiProperty({
+    example: 0.34,
+    description: 'score * weight — shows impact per field',
+  })
+  contribution: number;
+}
+export class Layer2FildScoreDto {
+  @ApiProperty({ type: 'number', example: 0.85 })
+  weightedScore: number;
+  @ApiProperty({ type: 'number', example: 0.4 })
+  threshold: number;
+  @ApiProperty({ isArray: true, type: Layer2FieldDto })
+  fields: Layer2FieldDto[];
+}
+
 export class GetMatchResponseDto implements Match {
-  @ApiProperty()
-  securityQuestionsAiInteractionId: string;
-  @ApiProperty({ isArray: true, type: SecurityQuestionDto })
-  securityQuestions: JsonValue;
-  @ApiProperty()
+  // @ApiProperty()
+  // securityQuestionsAiInteractionId: string;
+  // @ApiProperty({ isArray: true, type: SecurityQuestionDto })
+  // securityQuestions: JsonValue;
+  @ApiProperty({ type: Layer2FildScoreDto })
   layer2FieldScores: JsonValue;
-  @ApiProperty()
-  aiVerificationResult: JsonValue;
+  // @ApiProperty()
+  // aiVerificationResult: JsonValue;
   @ApiProperty({ enum: MatchVerdict })
   verdict: MatchVerdict;
   @ApiProperty({ enum: MatchTrigger })
@@ -168,8 +198,8 @@ export class GetMatchResponseDto implements Match {
   vectorScore: number;
   @ApiProperty()
   exactScore: number;
-  @ApiProperty()
-  aiScore: number;
+  // @ApiProperty()
+  // aiScore: number;
   @ApiProperty()
   finalScore: number;
   @ApiProperty()
@@ -184,8 +214,8 @@ export class GetMatchResponseDto implements Match {
   status: MatchStatus;
   @ApiProperty()
   matchNumber: string;
-  @ApiProperty()
-  aiInteractionId: string;
+  // @ApiProperty()
+  // aiInteractionId: string;
   @ApiProperty()
   createdAt: Date;
   @ApiProperty()
@@ -219,33 +249,4 @@ export class QueryMatchesResponseDto {
 
   @ApiProperty()
   prev: string | null;
-}
-
-export class Layer2FieldDto {
-  @ApiProperty({ example: 'documentNumber' })
-  field: string;
-  @ApiProperty({ example: '34567890', nullable: true, required: false })
-  triggerValue?: string | null;
-  @ApiProperty({ example: '34S67890', nullable: true, required: false })
-  candidateValue?: string | null;
-  @ApiProperty({ example: true })
-  matched: boolean;
-  @ApiProperty({ example: 0.85 })
-  score: number;
-  @ApiProperty({ example: 0.4 })
-  weight: number;
-  @ApiProperty({
-    example: 0.34,
-    description: 'score * weight — shows impact per field',
-  })
-  contribution: number;
-}
-export class Layer2FildScoreDto {
-  @ApiProperty({ type: 'number', example: 0.85 })
-  weightedScore: number;
-
-  @ApiProperty({ type: 'number', example: 0.4 })
-  threshold: number;
-  @ApiProperty({ isArray: true, type: Layer2FieldDto })
-  fields: Layer2FieldDto[];
 }

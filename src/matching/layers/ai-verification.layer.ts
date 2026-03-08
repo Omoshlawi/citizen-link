@@ -261,8 +261,8 @@ export class AiVerificationLayer {
 
     this.logger.debug(
       `Layer 3 — verification complete | ` +
-        `lostDoc: ${lostDocCase.document.fullName} | ` +
-        `foundDoc: ${foundDocCase.document.fullName} | ` +
+        `lostDoc: ${lostDocCase.caseNumber} | ` +
+        `foundDoc: ${foundDocCase.caseNumber} | ` +
         `verdict: ${verification.verdict} | ` +
         `overallScore: ${scores.overallScore} | ` +
         `confidence: ${scores.confidence}`,

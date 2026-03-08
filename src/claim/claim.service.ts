@@ -134,7 +134,6 @@ export class ClaimService {
   async create(
     {
       attachments,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       securityQuestions,
       pickupStationId,
       addressId,
@@ -172,7 +171,7 @@ export class ClaimService {
     // Verify security questions
     await this._verify(
       claim.id,
-      match.securityQuestions as any,
+      [], //match.securityQuestions as any,
       securityQuestions,
     );
     // Move files

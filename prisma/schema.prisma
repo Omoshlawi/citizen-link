@@ -397,7 +397,7 @@ model Document {
   additionalFields DocumentField[]
 
   // Vector embeddings
-  embedding_768     Unsupported("vector(768)")?
+  embedding_768  Unsupported("vector(768)")?
   embedding_1536 Unsupported("vector(1536)")? // new 1536-dim
 
   createdAt DateTime @default(now())
@@ -476,8 +476,8 @@ model AIInteraction {
   createdAt              DateTime                  @default(now())
   extractionInteractions AIExtractionInteraction[]
   // aiverification         ClaimVerification?
-  matchVerification      Match?                    @relation("MatchAiInteraction")
-  matchSecurityQuestions Match?                    @relation("MatchSecurityQuestionsAiInteraction")
+  // matchVerification      Match?                    @relation("MatchAiInteraction")
+  // matchSecurityQuestions Match?                    @relation("MatchSecurityQuestionsAiInteraction")
 
   // For analytics and cost tracking
   // Quick filtering of failed requests
@@ -698,14 +698,14 @@ model Match {
   verdict     MatchVerdict // what was the final verdict
 
   // Matching ai interaction
-  aiInteractionId String        @unique
-  aiInteraction   AIInteraction @relation(name: "MatchAiInteraction", fields: [aiInteractionId], references: [id], onDelete: Cascade)
+  // aiInteractionId String        @unique
+  // aiInteraction   AIInteraction @relation(name: "MatchAiInteraction", fields: [aiInteractionId], references: [id], onDelete: Cascade)
 
   // Security questions ai interaction
-  securityQuestionsAiInteractionId String        @unique
-  securityQuestionsAiInteraction   AIInteraction @relation(name: "MatchSecurityQuestionsAiInteraction", fields: [securityQuestionsAiInteractionId], references: [id], onDelete: Cascade)
+  // securityQuestionsAiInteractionId String        @unique
+  // securityQuestionsAiInteraction   AIInteraction @relation(name: "MatchSecurityQuestionsAiInteraction", fields: [securityQuestionsAiInteractionId], references: [id], onDelete: Cascade)
 
-  securityQuestions Json @default("[]")
+  // securityQuestions Json @default("[]")
 
   lostDocumentCaseId  String
   foundDocumentCaseId String
@@ -715,7 +715,7 @@ model Match {
   // AI Matching Results
   vectorScore Float // Layer 1 — cosine similarity 0.0-1.0
   exactScore  Float // Layer 2 — deterministic field match 0.0-1.0
-  aiScore     Float // Layer 3 — AI reasoning confidence 0.0-1.0
+  // aiScore     Float // Layer 3 — AI reasoning confidence 0.0-1.0
   finalScore  Float // weighted combination of all three
 
   // Layer 2 output
@@ -728,6 +728,7 @@ model Match {
   //       "field":          "documentNumber",
   //       "triggerValue":   "34567890",
   //       "candidateValue": "34S67890",
+  //       "maskedCandidatevalue": "34***0"
   //       "matched":        true,
   //       "score":          0.85,
   //       "weight":         0.40,
@@ -737,7 +738,7 @@ model Match {
   // }  
 
   // Layer 3 output
-  aiVerificationResult Json
+  // aiVerificationResult Json
   // {
   //   "verdict":       "PROBABLE_MATCH",
   //   "reasoning":     "PROBABLE_MATCH because...",
