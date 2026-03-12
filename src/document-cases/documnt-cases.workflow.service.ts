@@ -269,7 +269,7 @@ export class DocumentCasesWorkflowService {
         entityType: 'FoundDocumentCase',
         fromStatus: canReject.status,
         toStatus: FoundDocumentCaseStatus.REJECTED,
-        auto: true,
+        auto: false,
       },
     });
     if (!reason) throw new BadRequestException('Invalid reason');

@@ -152,7 +152,7 @@ export class DocumentCasesController {
     return this.documentCasesService.remove(id, query, user.id);
   }
 
-  @Post(':id/verify')
+  @Post('found/:id/verify')
   @RequireSystemPermission({ documentCase: ['verify'] })
   @ApiOperation({ summary: 'Verify Found Document Case' })
   @ApiOkResponse({ type: GetDocumentCaseResponseDto })
@@ -171,7 +171,7 @@ export class DocumentCasesController {
     );
   }
 
-  @Post(':id/reject')
+  @Post('found/:id/reject')
   @RequireSystemPermission({ documentCase: ['reject'] })
   @ApiOperation({ summary: 'Reject Found Document Case' })
   @ApiOkResponse({ type: GetDocumentCaseResponseDto })

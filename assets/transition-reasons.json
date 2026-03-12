@@ -301,7 +301,7 @@
     "fromStatus": "SUBMITTED",
     "toStatus": "REJECTED",
     "code": "INAUTHENTIC_DOCUMENT",
-    "auto": true,
+    "auto": false,
     "label": "Inauthentic Document",
     "description": "Counterfeit Document"
   },
@@ -310,7 +310,7 @@
     "fromStatus": "SUBMITTED",
     "toStatus": "REJECTED",
     "code": "NON_ORIGINAL_SUBMISSION",
-    "auto": true,
+    "auto": false,
     "label": "Non-Original Submission",
     "description": "Counterfeit Document"
   },
