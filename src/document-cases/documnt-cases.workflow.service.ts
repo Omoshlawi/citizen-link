@@ -1,153 +1,300 @@
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
 import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
-import {
-  ActorType,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
   MatchTrigger,
 } from '../../generated/prisma/client';
-import { CaseStatusTransitionsService } from '../case-status-transitions/case-status-transitions.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { CustomRepresentationQueryDto } from '../common/query-builder';
-import { MatchingLayeredService } from '../matching/matching.layered.service';
 import { UserSession } from '../auth/auth.types';
+import {
+  CustomRepresentationQueryDto,
+  CustomRepresentationService,
+} from '../common/query-builder';
 import { EmbeddingService } from '../embedding/embedding.service';
+import { MatchingLayeredService } from '../matching/matching.layered.service';
+import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class DocumentCasesWorkflowService {
   private readonly logger = new Logger(DocumentCasesWorkflowService.name);
 
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly caseStatusTransitionsService: CaseStatusTransitionsService,
+    private readonly representationService: CustomRepresentationService,
     private readonly embeddingService: EmbeddingService,
     private readonly matchingLayeredService: MatchingLayeredService,
   ) {}
-  async submitDocumentCase(
-    id: string,
+
+  async submitLostCase(
+    lostCaseId: string,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    // First, verify it's a found case owned by the user
-    const documentCase = await this.prismaService.documentCase.findUnique({
-      where: { id, userId: user.id },
+    const canSubmit = await this.prismaService.lostDocumentCase.findUnique({
+      where: {
+        id: lostCaseId,
+        status: { in: [LostDocumentCaseStatus.DRAFT] },
+        case: {
+          userId: user.id,
+        },
+      },
       include: {
-        foundDocumentCase: true,
-        lostDocumentCase: true,
-        document: true,
+        case: {
+          include: {
+            document: true,
+          },
+        },
       },
     });
+    if (!canSubmit)
+      throw new BadRequestException(`Can only submit your lost cases`);
+    // Get reasons
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        entityType_fromStatus_toStatus_code: {
+          code: 'OWNER_REPORTED_LOST_DOCUMENT',
+          entityType: 'LostDocumentCase',
+          fromStatus: canSubmit.status,
+          toStatus: LostDocumentCaseStatus.SUBMITTED,
+        },
+        auto: true,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
+    const lostCase = await this.prismaService.$transaction(async (tx) => {
+      // Update claim status to rejected
+      const lostCase = await tx.lostDocumentCase.update({
+        where: { id: lostCaseId },
+        data: {
+          status: LostDocumentCaseStatus.SUBMITTED,
+        },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+      // Create transition history
+      await tx.statusTransition.create({
+        data: {
+          entityType: 'LostDocumentCase',
+          entityId: lostCaseId,
+          fromStatus: canSubmit.status,
+          toStatus: LostDocumentCaseStatus.SUBMITTED,
+          changedById: user?.id,
+          // comment: rejectDto.comment,
+          reasonId: reason.id,
+        },
+      });
+      return lostCase;
+    });
 
-    if (!documentCase) {
-      throw new NotFoundException('Document case not found');
-    }
-
-    if (
-      documentCase.foundDocumentCase?.status !==
-        FoundDocumentCaseStatus.DRAFT &&
-      documentCase.lostDocumentCase?.status !== LostDocumentCaseStatus.DRAFT
-    ) {
-      throw new BadRequestException(
-        `Cannot submit case. Current status: ${documentCase.foundDocumentCase?.status ?? documentCase?.lostDocumentCase?.status}. Only DRAFT cases can be submitted.`,
-      );
-    }
-
-    const statustransition =
-      await this.caseStatusTransitionsService.transitionStatus(
-        id,
-        'SUBMITTED',
-        ActorType.USER,
-        user.id,
-        query?.v,
-      );
-
-    // Index document after submission
-    if (documentCase.document?.id) {
-      await this.embeddingService.indexDocument(documentCase.document.id);
-      // // For lost cass run match algorithm on submission
-      if (documentCase.lostDocumentCase) {
-        void this.matchingLayeredService
-          .layeredMatching(
+    // Index document after submission in background
+    if (canSubmit.case?.document) {
+      this.embeddingService
+        .indexDocument(canSubmit.case.document.id)
+        .then(() =>
+          this.matchingLayeredService.layeredMatching(
             MatchTrigger.LOST_CASE_SUBMITTED,
-            documentCase.document.id,
+            canSubmit.case.document!.id,
             user,
-          )
-          .then((matches) => {
-            this.logger.debug(
-              `Found ${matches.length} matches for case ${documentCase.caseNumber}`,
-              matches.map((m) => m.matchNumber).join(', '),
-            );
-          });
-      }
-    }
-
-    return statustransition;
-  }
-
-  async verifyFoundDocumentCase(
-    id: string,
-    query: CustomRepresentationQueryDto,
-    user: UserSession['user'],
-  ) {
-    this.logger.log(`Verifying found document case ${id} for user ${user.id}`);
-    const documentCase = await this.prismaService.documentCase.findUnique({
-      where: { id },
-      include: {
-        foundDocumentCase: true,
-        document: true,
-      },
-    });
-
-    if (!documentCase) {
-      throw new NotFoundException('Document case not found');
-    }
-
-    if (!documentCase.foundDocumentCase) {
-      throw new BadRequestException('This is not a found document case');
-    }
-    const statusTransition =
-      await this.caseStatusTransitionsService.transitionStatus(
-        id,
-        FoundDocumentCaseStatus.VERIFIED,
-        ActorType.USER,
-        user.id,
-        query?.v,
-      );
-
-    // Index document on veriication and run match algorithm
-    if (documentCase.document?.id) {
-      await this.embeddingService.indexDocument(documentCase.document.id);
-      void this.matchingLayeredService
-        .layeredMatching(
-          MatchTrigger.FOUND_CASE_VERIFIED,
-          documentCase.document.id,
-          user,
+          ),
         )
         .then((matches) => {
           this.logger.debug(
-            `Found ${matches.length} matches for document ${documentCase.caseNumber}`,
+            `Found ${matches.length} matches for case ${canSubmit.case.caseNumber}`,
             matches.map((m) => m.matchNumber).join(', '),
+          );
+        })
+        .catch((e) => {
+          this.logger.error(
+            'Error occured while indexing and running match algorithm',
+            e,
           );
         });
     }
-    return statusTransition;
+
+    return lostCase;
+  }
+
+  async submitFoundCase(
+    foundCaseId: string,
+    query: CustomRepresentationQueryDto,
+    user: UserSession['user'],
+  ) {
+    const canSubmit = await this.prismaService.foundDocumentCase.findUnique({
+      where: {
+        id: foundCaseId,
+        status: { in: [FoundDocumentCaseStatus.DRAFT] },
+        case: {
+          userId: user.id,
+        },
+      },
+    });
+    if (!canSubmit)
+      throw new BadRequestException(`Can only submit your found cases`);
+    // Get reasons
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        entityType_fromStatus_toStatus_code: {
+          code: 'FINDER_REPORTED_FOUND_DOCUMENT',
+          entityType: 'FoundDocumentCase',
+          fromStatus: canSubmit.status,
+          toStatus: FoundDocumentCaseStatus.SUBMITTED,
+        },
+        auto: true,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
+    return await this.prismaService.$transaction(async (tx) => {
+      // Update claim status to rejected
+      const founderCase = await tx.foundDocumentCase.update({
+        where: { id: foundCaseId },
+        data: {
+          status: FoundDocumentCaseStatus.SUBMITTED,
+        },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+      // Create transition history
+      await tx.statusTransition.create({
+        data: {
+          entityType: 'FoundDocumentCase',
+          entityId: foundCaseId,
+          fromStatus: canSubmit.status,
+          toStatus: FoundDocumentCaseStatus.SUBMITTED,
+          changedById: user?.id,
+          // comment: rejectDto.comment,
+          reasonId: reason.id,
+        },
+      });
+      return founderCase;
+    });
+  }
+
+  async verifyFoundCase(
+    foundCaseId: string,
+    verifyDto: StatusTransitionReasonsDto,
+    query: CustomRepresentationQueryDto,
+    user: UserSession['user'],
+  ) {
+    const canVerify = await this.prismaService.foundDocumentCase.findUnique({
+      where: {
+        id: foundCaseId,
+        status: { in: [FoundDocumentCaseStatus.SUBMITTED] },
+      },
+      include: {
+        case: {
+          include: {
+            document: true,
+          },
+        },
+      },
+    });
+    if (!canVerify)
+      throw new BadRequestException(`Can only verify submitted cases`);
+    // Get reasons
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        id: verifyDto.reason,
+        entityType: 'FoundDocumentCase',
+        fromStatus: canVerify.status,
+        toStatus: FoundDocumentCaseStatus.VERIFIED,
+        auto: false,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
+    const foundCase = await this.prismaService.$transaction(async (tx) => {
+      // Update claim status to rejected
+      const founderCase = await tx.foundDocumentCase.update({
+        where: { id: foundCaseId },
+        data: {
+          status: FoundDocumentCaseStatus.VERIFIED,
+        },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+      // Create transition history
+      await tx.statusTransition.create({
+        data: {
+          entityType: 'FoundDocumentCase',
+          entityId: foundCaseId,
+          fromStatus: canVerify.status,
+          toStatus: FoundDocumentCaseStatus.VERIFIED,
+          changedById: user?.id,
+          comment: verifyDto.comment,
+          reasonId: verifyDto.reason,
+        },
+      });
+      return founderCase;
+    });
+    // Index document after submission in background
+    if (canVerify.case?.document?.id) {
+      this.embeddingService
+        .indexDocument(canVerify.case.document.id)
+        .then(() =>
+          this.matchingLayeredService.layeredMatching(
+            MatchTrigger.FOUND_CASE_VERIFIED,
+            canVerify.case.document!.id,
+            user,
+          ),
+        )
+        .then((matches) => {
+          this.logger.debug(
+            `Found ${matches.length} matches for case ${canVerify.case.caseNumber}`,
+            matches.map((m) => m.matchNumber).join(', '),
+          );
+        })
+        .catch((e) => {
+          this.logger.error(
+            'Error occured while indexing and running match algorithm',
+            e,
+          );
+        });
+    }
+    return foundCase;
   }
 
   async rejectFoundDocumentCase(
-    id: string,
+    foundCaseId: string,
+    rejectDto: StatusTransitionReasonsDto,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
-    this.logger.log(`Rejecting found document case ${id} for user ${userId}`);
-    return await this.caseStatusTransitionsService.transitionStatus(
-      id,
-      FoundDocumentCaseStatus.REJECTED,
-      ActorType.USER,
-      userId,
-      query?.v,
-    );
+    const canReject = await this.prismaService.foundDocumentCase.findUnique({
+      where: {
+        id: foundCaseId,
+        status: { in: [FoundDocumentCaseStatus.SUBMITTED] },
+      },
+    });
+    if (!canReject)
+      throw new BadRequestException(`Can only reject submitted found cases`);
+    // Get reasons
+    const reason = await this.prismaService.transitionReason.findUnique({
+      where: {
+        id: rejectDto.reason,
+        entityType: 'FoundDocumentCase',
+        fromStatus: canReject.status,
+        toStatus: FoundDocumentCaseStatus.REJECTED,
+        auto: true,
+      },
+    });
+    if (!reason) throw new BadRequestException('Invalid reason');
+    return await this.prismaService.$transaction(async (tx) => {
+      // Update claim status to rejected
+      const founderCase = await tx.foundDocumentCase.update({
+        where: { id: foundCaseId },
+        data: {
+          status: FoundDocumentCaseStatus.REJECTED,
+        },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+      // Create transition history
+      await tx.statusTransition.create({
+        data: {
+          entityType: 'FoundDocumentCase',
+          entityId: foundCaseId,
+          fromStatus: canReject.status,
+          toStatus: FoundDocumentCaseStatus.REJECTED,
+          changedById: user?.id,
+          comment: rejectDto.comment,
+          reasonId: reason.id,
+        },
+      });
+      return founderCase;
+    });
   }
 }

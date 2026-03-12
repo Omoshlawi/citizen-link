@@ -303,6 +303,7 @@ model StatusTransition {
 
   changedById String
   changedBy   User   @relation(fields: [changedById], references: [id])
+  metadata Json?
 
   createdAt DateTime @default(now())
 
@@ -577,8 +578,6 @@ model DocumentCase {
   foundDocumentCase FoundDocumentCase?
   document          Document?
   notifications     Notification[]
-  statusTransitions CaseStatusTransition[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   voided    Boolean  @default(false)
@@ -637,58 +636,6 @@ enum FoundDocumentCaseStatus {
   REJECTED // When the document is rejected by the admin
   COMPLETED // When the document is reunited with the owner
 }
-
-// Status Transition History - tracks all status changes for audit and IoT integration
-
-model CaseStatusTransition {
-  id     String       @id @default(uuid())
-  caseId String
-  case   DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
-
-  // Status transition details
-  fromStatus String // Previous status (null for initial status)
-  toStatus   String // New status
-  caseType   CaseType // LOST or FOUND
-
-  // Actor information - who/what made the change
-  actorType ActorType // USER, ADMIN, DEVICE, SYSTEM
-  actorId   String? // User ID, Device ID, or null for SYSTEM
-  actorName String? // Human-readable name (device name, user name, etc.)
-
-  // IoT Device specific fields (when actorType is DEVICE)
-  deviceId       String? // IoT device identifier
-  deviceLocation String? // Physical location of device
-  deviceMetadata Json? // Additional device info (firmware version, sensor readings, etc.)
-
-  // Verification/Processing metadata
-  verificationResult Json? // For IoT devices: verification results, confidence scores, etc.
-  notes              String? // Human-readable notes or reason for transition
-
-  // Metadata for flexibility
-  metadata Json? // Additional context (API request details, batch processing info, etc.)
-
-  createdAt DateTime @default(now())
-
-  @@index([caseId])
-  @@index([caseId, caseType])
-  @@index([actorType, actorId])
-  @@index([toStatus])
-  @@index([createdAt])
-  @@map("case_status_transitions")
-}
-
-enum CaseType {
-  LOST
-  FOUND
-}
-
-enum ActorType {
-  USER // Regular user action
-  ADMIN // Admin user action
-  DEVICE // IoT device or automated system
-  SYSTEM // System/automated process (matching, scheduled tasks, etc.)
-}
-
 // Match model for potential matches between lost and found reports
 
 model Match {

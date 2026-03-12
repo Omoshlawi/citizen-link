@@ -32,6 +32,7 @@ import {
 import { DocumentCasesService } from './document-cases.service';
 import { RequireSystemPermission } from '../auth/auth.decorators';
 import { ExtractionService } from '../extraction/extraction.service';
+import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
 
 @Controller('documents/cases')
 export class DocumentCasesController {
@@ -74,8 +75,19 @@ export class DocumentCasesController {
     );
   }
 
-  @Post(':id/submit')
-  @ApiOperation({ summary: 'Submit Document Case' })
+  @Post('lost/:id/submit')
+  @ApiOperation({ summary: 'Submit Lost Document Case' })
+  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiErrorsResponse({ badRequest: true, notFound: true })
+  submitLostDocumentCase(
+    @Param('id') id: string,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.submitLostDocumentCase(id, query, user);
+  }
+  @Post('found/:id/submit')
+  @ApiOperation({ summary: 'Submit Found Document Case' })
   @ApiOkResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse({ badRequest: true, notFound: true })
   submitFoundDocumentCase(
@@ -83,7 +95,7 @@ export class DocumentCasesController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.submitDocumentCase(id, query, user);
+    return this.documentCasesService.submitFoundDocumentCase(id, query, user);
   }
 
   @Get()
@@ -147,10 +159,16 @@ export class DocumentCasesController {
   @ApiErrorsResponse({ badRequest: true })
   verifyFoundDocumentCase(
     @Param('id') id: string,
+    @Body() verifyDto: StatusTransitionReasonsDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.verifyFoundDocumentCase(id, query, user);
+    return this.documentCasesService.verifyFoundDocumentCase(
+      id,
+      verifyDto,
+      query,
+      user,
+    );
   }
 
   @Post(':id/reject')
@@ -160,13 +178,15 @@ export class DocumentCasesController {
   @ApiErrorsResponse({ badRequest: true })
   rejectFoundDocumentCase(
     @Param('id') id: string,
+    @Body() rejectDto: StatusTransitionReasonsDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
     return this.documentCasesService.rejectFoundDocumentCase(
       id,
+      rejectDto,
       query,
-      user.id,
+      user,
     );
   }
 

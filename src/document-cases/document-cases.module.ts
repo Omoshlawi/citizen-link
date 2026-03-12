@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { CaseStatusTransitionsModule } from '../case-status-transitions/case-status-transitions.module';
 import { DocumentCasesController } from './document-cases.controller';
 import { DocumentCasesService } from './document-cases.service';
 import { ExtractionModule } from '../extraction/extraction.module';
@@ -25,8 +24,6 @@ import { MatchingConfig } from '../matching/matching.config';
       },
       inject: [AiConfig],
     }),
-    CaseStatusTransitionsModule,
-    CaseStatusTransitionsModule,
     VisionModule,
     ExtractionModule,
     MatchingModule.registerAsync({

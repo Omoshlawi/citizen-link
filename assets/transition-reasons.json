@@ -116,7 +116,6 @@
     "label": "Fraud confirmed",
     "description": "Fraud was confirmed after investigation."
   },
-
   {
     "entityType": "Claim",
     "fromStatus": "PENDING",
@@ -269,6 +268,51 @@
     "auto": false,
     "label": "Fraud suspected",
     "description": "Suspicion of fraudulent activity during review."
+  },
+  {
+    "entityType": "LostDocumentCase",
+    "fromStatus": "DRAFT",
+    "toStatus": "SUBMITTED",
+    "code": "OWNER_REPORTED_LOST_DOCUMENT",
+    "auto": true,
+    "label": "Owner reported lost document",
+    "description": "Owner reported lost document"
+  },
+  {
+    "entityType": "FoundDocumentCase",
+    "fromStatus": "DRAFT",
+    "toStatus": "SUBMITTED",
+    "code": "FINDER_REPORTED_FOUND_DOCUMENT",
+    "auto": true,
+    "label": "Finder reported found document",
+    "description": "Finder reported found document"
+  },
+  {
+    "entityType": "FoundDocumentCase",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "VERIFIED",
+    "code": "DOCUMENT_RECEIVED_AND_VERIFIED",
+    "auto": false,
+    "label": "verifier received and verified found document from finder",
+    "description": "verifier received and verified found document from finder"
+  },
+  {
+    "entityType": "FoundDocumentCase",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "REJECTED",
+    "code": "INAUTHENTIC_DOCUMENT",
+    "auto": true,
+    "label": "Inauthentic Document",
+    "description": "Counterfeit Document"
+  },
+  {
+    "entityType": "FoundDocumentCase",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "REJECTED",
+    "code": "NON_ORIGINAL_SUBMISSION",
+    "auto": true,
+    "label": "Non-Original Submission",
+    "description": "Counterfeit Document"
   },
   {
     "entityType": "*",

@@ -30,6 +30,7 @@ import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
 import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { EmbeddingService } from '../embedding/embedding.service';
+import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
 
 @Injectable()
 export class DocumentCasesService {
@@ -238,39 +239,54 @@ export class DocumentCasesService {
     return await this.findOne(documentCase.id, query, user);
   }
 
-  submitDocumentCase(
-    id: string,
+  submitLostDocumentCase(
+    lostCaseId: string,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    return this.documentCasesWorkflowService.submitDocumentCase(
-      id,
+    return this.documentCasesWorkflowService.submitLostCase(
+      lostCaseId,
+      query,
+      user,
+    );
+  }
+  submitFoundDocumentCase(
+    foundCaseId: string,
+    query: CustomRepresentationQueryDto,
+    user: UserSession['user'],
+  ) {
+    return this.documentCasesWorkflowService.submitFoundCase(
+      foundCaseId,
       query,
       user,
     );
   }
 
   verifyFoundDocumentCase(
-    id: string,
+    foundCaseId: string,
+    verifyDto: StatusTransitionReasonsDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    return this.documentCasesWorkflowService.verifyFoundDocumentCase(
-      id,
+    return this.documentCasesWorkflowService.verifyFoundCase(
+      foundCaseId,
+      verifyDto,
       query,
       user,
     );
   }
 
   rejectFoundDocumentCase(
-    id: string,
+    foundCaseId: string,
+    rejectDto: StatusTransitionReasonsDto,
     query: CustomRepresentationQueryDto,
-    userId: string,
+    user: UserSession['user'],
   ) {
     return this.documentCasesWorkflowService.rejectFoundDocumentCase(
-      id,
+      foundCaseId,
+      rejectDto,
       query,
-      userId,
+      user,
     );
   }
 
