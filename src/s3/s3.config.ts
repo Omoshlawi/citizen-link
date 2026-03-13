@@ -65,4 +65,13 @@ export class S3Config {
     default: 3600,
   })
   expiresIn: number;
+  @Value('S3_MAX_FILE_SIZE', {
+    parse: z.coerce
+      .number()
+      .min(1)
+      .default(10 * 1024 * 1024)
+      .optional().parse,
+    default: 10 * 1024 * 1024, // 10MB
+  })
+  maxFileSize: number;
 }

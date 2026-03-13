@@ -3,6 +3,8 @@ import { S3Module as NestS3Module } from 'nestjs-s3';
 import { S3Config } from './s3.config';
 import { S3Service } from './s3.service';
 import { S3Controller } from './s3.controller';
+import { MulterModule } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 @Global()
 @Module({
@@ -22,6 +24,17 @@ import { S3Controller } from './s3.controller';
             forcePathStyle: true,
             signatureVersion: 'v4',
           },
+        };
+      },
+      inject: [S3Config],
+    }),
+    MulterModule.registerAsync({
+      useFactory(config: S3Config) {
+        return {
+          limits: {
+            fileSize: config.maxFileSize,
+          },
+          storage: memoryStorage(),
         };
       },
       inject: [S3Config],
