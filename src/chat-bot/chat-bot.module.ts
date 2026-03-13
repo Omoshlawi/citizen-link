@@ -11,9 +11,9 @@ import { AiConfig } from '../ai/ai.config';
     AiModule.registerAsync({
       useFactory: (config: AiConfig) => {
         return {
-          apiKey: config.openaiApiKey,
-          baseURL: config.aiBaseUrl,
-          model: config.aiModel || 'gpt-4o', // Default to GPT-4o, can be overridden via env var
+          apiKey: config.textExtractionAiApiKey,
+          baseURL: config.textExtractionAiBaseUrl,
+          model: config.textExtractionAiModel,
         };
       },
       inject: [AiConfig],
