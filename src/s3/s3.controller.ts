@@ -121,7 +121,7 @@ export class S3Controller {
   @ApiOkResponse({ type: UploadFileResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    const key = this.s3Service.generateFileName(file.filename);
+    const key = this.s3Service.generateFileName(file.originalname);
     await this.s3Service.uploadFile(key, 'tmp', file.buffer, file.mimetype);
     return { key };
   }
@@ -149,7 +149,7 @@ export class S3Controller {
   async uploadFiles(@UploadedFiles() files: Express.Multer.File[]) {
     const keys: string[] = [];
     for (const file of files) {
-      const key = this.s3Service.generateFileName(file.filename);
+      const key = this.s3Service.generateFileName(file.originalname);
       await this.s3Service.uploadFile(key, 'tmp', file.buffer, file.mimetype);
       keys.push(key);
     }
