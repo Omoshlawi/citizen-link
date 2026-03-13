@@ -7,7 +7,6 @@ import {
   HeadBucketCommand,
   HeadObjectCommand,
   PutObjectCommand,
-  S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
@@ -26,24 +25,11 @@ import sharp from 'sharp';
 @Injectable()
 export class S3Service implements OnModuleInit {
   private readonly logger = new Logger(S3Service.name);
-  private readonly presignerClient: S3Client;
 
   constructor(
     @InjectS3() private readonly s3: S3,
     private readonly config: S3Config,
-  ) {
-    // Instantiate the presigner client directly on service initialization
-    // This client never makes network requests, it just does math for the URL!
-    this.presignerClient = new S3Client({
-      region: 'us-east-1',
-      endpoint: this.config.publicEndpoint,
-      forcePathStyle: true,
-      credentials: {
-        accessKeyId: this.config.accessKeyId,
-        secretAccessKey: this.config.secreteAccessKeyId,
-      },
-    });
-  }
+  ) {}
 
   private async ensureBucketExists(bucket: string) {
     try {
@@ -103,9 +89,7 @@ export class S3Service implements OnModuleInit {
       Metadata: metadata,
     });
 
-    const url = await getSignedUrl(this.presignerClient, command, {
-      expiresIn,
-    });
+    const url = await getSignedUrl(this.s3, command, { expiresIn });
     this.logger.debug(`Generated upload URL for key: ${key}`);
 
     return { url, key };
@@ -128,9 +112,7 @@ export class S3Service implements OnModuleInit {
       Key: key,
     });
 
-    const url = await getSignedUrl(this.presignerClient, command, {
-      expiresIn,
-    });
+    const url = await getSignedUrl(this.s3, command, { expiresIn });
     this.logger.debug(`Generated download URL for key: ${key}`);
 
     return url;

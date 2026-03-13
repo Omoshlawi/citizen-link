@@ -13,11 +13,6 @@ export class S3Config {
     default: 'http://localhost:9000',
   })
   endpoint: string;
-  @Value('S3_PUBLIC_ENDPOINT', {
-    parse: z.url().parse,
-    default: 'http://localhost:9000',
-  })
-  publicEndpoint: string;
   @Value('S3_BUCKET_TMP', {
     parse: z.string().parse,
     default: 'cl-tmp',
