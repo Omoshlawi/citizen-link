@@ -16,4 +16,3 @@ describe('AddressLocalesService', () => {
     expect(service).toBeDefined();
   });
 });
-

@@ -69,4 +69,3 @@ export class QueryStatusTransitionsResponseDto {
   @ApiProperty()
   prev: string | null;
 }
-

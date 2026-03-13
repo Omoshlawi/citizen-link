@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Global, Module } from '@nestjs/common';
 import { S3Module as NestS3Module } from 'nestjs-s3';
 import { S3Config } from './s3.config';

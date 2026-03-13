@@ -16,4 +16,3 @@ describe('AddressLocalesController', () => {
     expect(controller).toBeDefined();
   });
 });
-

@@ -9,7 +9,9 @@ describe('StatusTransitionsController', () => {
       controllers: [StatusTransitionsController],
     }).compile();
 
-    controller = module.get<StatusTransitionsController>(StatusTransitionsController);
+    controller = module.get<StatusTransitionsController>(
+      StatusTransitionsController,
+    );
   });
 
   it('should be defined', () => {

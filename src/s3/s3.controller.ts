@@ -1,6 +1,21 @@
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Res,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
+} from '@nestjs/common';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { S3Service } from './s3.service';
-import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
 import {
   GetDownloadUrlDto,
@@ -8,6 +23,8 @@ import {
   GetUploadUrlDto,
   GetUploadUrlResponseDto,
   StreamDocumentDto,
+  UploadFileResponseDto,
+  UploadFilesResponseDto,
 } from './s3.dto';
 import dayjs from 'dayjs';
 import { S3Config } from './s3.config';
@@ -84,5 +101,58 @@ export class S3Controller {
         res.status(500).json({ message: 'Error streaming document' });
       }
     });
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload a single file' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiOkResponse({ type: UploadFileResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+    const key = this.s3Service.generateFileName(file.originalname);
+    await this.s3Service.uploadFile(key, 'tmp', file.buffer, file.mimetype);
+    return { key };
+  }
+
+  @Post('upload-many')
+  @UseInterceptors(FilesInterceptor('files'))
+  @ApiOperation({ summary: 'Upload multiple files' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+        },
+      },
+    },
+  })
+  @ApiOkResponse({ type: UploadFilesResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  async uploadFiles(@UploadedFiles() files: Express.Multer.File[]) {
+    const keys: string[] = [];
+    for (const file of files) {
+      const key = this.s3Service.generateFileName(file.originalname);
+      await this.s3Service.uploadFile(key, 'tmp', file.buffer, file.mimetype);
+      keys.push(key);
+    }
+    return { keys };
   }
 }

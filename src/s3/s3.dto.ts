@@ -33,3 +33,16 @@ export const StreamDocumentSchema = z.object({
 });
 
 export class StreamDocumentDto extends createZodDto(StreamDocumentSchema) {}
+
+export class UploadFileResponseDto {
+  @ApiProperty({ description: 'The key of the uploaded file' })
+  key: string;
+}
+
+export class UploadFilesResponseDto {
+  @ApiProperty({
+    description: 'The keys of the uploaded files',
+    type: [String],
+  })
+  keys: string[];
+}
