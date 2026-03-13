@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,

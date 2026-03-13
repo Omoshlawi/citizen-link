@@ -30,7 +30,7 @@ import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
 import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { EmbeddingService } from '../embedding/embedding.service';
-import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 
 @Injectable()
 export class DocumentCasesService {

@@ -32,7 +32,7 @@ import {
 import { DocumentCasesService } from './document-cases.service';
 import { RequireSystemPermission } from '../auth/auth.decorators';
 import { ExtractionService } from '../extraction/extraction.service';
-import { StatusTransitionReasonsDto } from 'src/status-transitions/status-transitions.dto';
+import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 
 @Controller('documents/cases')
 export class DocumentCasesController {
