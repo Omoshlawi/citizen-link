@@ -18,19 +18,18 @@ done
 echo "✅ Prisma migrations applied successfully"
 
 echo "🌱 Running seed scripts..."
-# Run compiled JavaScript seed scripts to avoid ts-node/ESM issues in production
-if node dist/scripts/seed-address-hierarchy.js \
-  && node dist/scripts/seed-admin-user.js \
-  && node dist/scripts/seed-address-locales.js \
-  && node dist/scripts/seed-pickup-stations.js \
-  && node dist/scripts/seed-transition-statuses.js \
-  && node dist/scripts/seed-document-types.js; then
+# Run seed scripts using ts-node since they are TypeScript
+if npx ts-node scripts/seed-address-hierarchy.ts \
+  && npx ts-node scripts/seed-admin-user.ts \
+  && npx ts-node scripts/seed-address-locales.ts \
+  && npx ts-node scripts/seed-pickup-stations.ts \
+  && npx ts-node scripts/seed-transition-statuses.ts \
+  && npx ts-node scripts/seed-document-types.ts; then
   echo "✅ Seed scripts completed successfully"
 else
   echo "⚠️ Seed scripts failed. Continuing to start the app..."
 fi
 
 echo "🚀 Starting NestJS application..."
-# main.ts compiles to dist/src/main.js when using tsc with current tsconfig
 exec node dist/src/main.js
 

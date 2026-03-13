@@ -13,7 +13,7 @@ export class EmbeddingConfig {
     parse: z
       .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
       .optional().parse,
-    default: false,
+    default: 'false',
   })
   isOpenAi: boolean;
 
