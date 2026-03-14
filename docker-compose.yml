@@ -8,11 +8,16 @@ services:
     env_file:
       - .env
     volumes:
-      - db_data:/pgvector/pgvector
+      # note: pgvector's official image uses the default Postgres data directory but within the container hence data is lost on container restart unless mapped to a volume. The following line maps the named volume 'db_data' to the internal Postgres data folder.
+      # - db_data:/pgvector/pgvector
+      # This maps the named volume 'db_data' to the internal Postgres data folder
+      - db_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+      # Best practice: ensures the DB uses the exact volume path
+      - PGDATA=/var/lib/postgresql/data/pgdata
   minio:
     container_name: citizen_link_minio
     image: minio/minio:latest
