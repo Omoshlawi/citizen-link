@@ -51,7 +51,11 @@ export class ClaimService {
         },
       },
       include: {
-        foundDocumentCase: true,
+        foundDocumentCase: {
+          include: {
+            case: true,
+          },
+        },
       },
     });
     if (!match) {
@@ -176,7 +180,7 @@ export class ClaimService {
     // Move files
     const keys = await Promise.all(
       attachments.map(async (attachment) => {
-        const toDir = `${match.foundDocumentCase.caseId}/claims/${claim.claimNumber}`;
+        const toDir = `${match.foundDocumentCase.case.caseNumber}/claims/${claim.claimNumber}`;
         await this.s3Service.moveFileToCasesBucket(attachment, toDir);
         return `${toDir}/${attachment}`;
       }),

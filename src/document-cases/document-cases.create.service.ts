@@ -53,17 +53,20 @@ export class DocumentCasesCreateService {
     this.logger.debug('All images exist');
   }
 
-  private moveAndGenerateBluredVersions(images: Array<string>, caseId: string) {
+  private moveAndGenerateBluredVersions(
+    images: Array<string>,
+    caseNumber: string,
+  ) {
     return Promise.all(
       images.map(async (image) => {
-        const caseImageKey = `${caseId}/${image}`;
+        const caseImageKey = `${caseNumber}/${image}`;
 
         // Generate blured version and save to case bucket
         const buffer = await this.s3Service.downloadFile(image, 'tmp');
         const metadata = await this.s3Service.getFileMetadata(image, 'tmp');
         const mimeType =
           metadata?.ContentType ?? `image/${image.split('.').pop()}`;
-        const bluredKey = `${caseId}/${this.s3Service.generateFileName(image)}`;
+        const bluredKey = `${caseNumber}/${this.s3Service.generateFileName(image)}`;
         const bluredBuffer = await this.s3Service.blueImage(buffer, 'strong');
         await this.s3Service.uploadFile(
           bluredKey,
@@ -77,9 +80,9 @@ export class DocumentCasesCreateService {
         );
 
         // Move file from tmp to cases
-        await this.s3Service.moveFileToCasesBucket(image, caseId);
+        await this.s3Service.moveFileToCasesBucket(image, caseNumber);
         return await this.prismaService.documentImage.update({
-          where: { document: { caseId }, url: image },
+          where: { document: { caseId: caseNumber }, url: image },
           data: {
             url: caseImageKey,
             blurredUrl: bluredKey,
@@ -388,7 +391,7 @@ export class DocumentCasesCreateService {
         document: true,
       },
     });
-    await this.moveAndGenerateBluredVersions(images, documentCase.id);
+    await this.moveAndGenerateBluredVersions(images, documentCase.caseNumber);
     return await this.documentCasesQueryService.findOne(
       documentCase.id,
       query,
@@ -487,7 +490,7 @@ export class DocumentCasesCreateService {
         document: true,
       },
     });
-    await this.moveAndGenerateBluredVersions(images, documentCase.id);
+    await this.moveAndGenerateBluredVersions(images, documentCase.caseNumber);
     return await this.documentCasesQueryService.findOne(
       documentCase.id,
       query,

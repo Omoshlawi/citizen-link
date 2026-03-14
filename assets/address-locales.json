@@ -103,8 +103,12 @@
       "levels": [
         { "level": "level1", "label": "County", "required": true },
         { "level": "level2", "label": "Sub-County", "required": true },
-        { "level": "level3", "label": "Constituency", "required": false },
-        { "level": "level4", "label": "Ward / Estate", "required": false },
+        {
+          "level": "level3",
+          "label": "Constituency / Ward",
+          "required": false
+        },
+        { "level": "level4", "label": "Estate", "required": false },
         { "level": "level5", "label": "Village / Plot", "required": false }
       ],
       "postalCode": {
@@ -311,7 +315,11 @@
     "formatSpec": {
       "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
       "levels": [
-        { "level": "level1", "label": "Province / Territory", "required": true },
+        {
+          "level": "level1",
+          "label": "Province / Territory",
+          "required": true
+        },
         { "level": "level2", "label": "City / Municipality", "required": true },
         { "level": "level3", "label": "District / Borough", "required": false },
         { "level": "level4", "label": "Neighbourhood", "required": false }
@@ -352,7 +360,11 @@
       "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}} {{postalCode}}, {{country}}",
       "levels": [
         { "level": "level1", "label": "State / Territory", "required": true },
-        { "level": "level2", "label": "City / Local Government Area", "required": true },
+        {
+          "level": "level2",
+          "label": "City / Local Government Area",
+          "required": true
+        },
         { "level": "level3", "label": "District", "required": false },
         { "level": "level4", "label": "Suburb", "required": true }
       ],
@@ -389,7 +401,11 @@
         { "level": "level1", "label": "State (UF)", "required": true },
         { "level": "level2", "label": "City / Municipality", "required": true },
         { "level": "level3", "label": "District", "required": false },
-        { "level": "level4", "label": "Bairro / Neighborhood", "required": true }
+        {
+          "level": "level4",
+          "label": "Bairro / Neighborhood",
+          "required": true
+        }
       ],
       "postalCode": {
         "label": "CEP",
@@ -501,7 +517,11 @@
       "levels": [
         { "level": "level1", "label": "Emirate", "required": true },
         { "level": "level2", "label": "City / Municipality", "required": true },
-        { "level": "level3", "label": "Community / District", "required": false }
+        {
+          "level": "level3",
+          "label": "Community / District",
+          "required": false
+        }
       ],
       "metadata": {
         "instructions": "postalCode optional, PO Box often used",
