@@ -82,7 +82,7 @@ export class DocumentCasesCreateService {
         // Move file from tmp to cases
         await this.s3Service.moveFileToCasesBucket(image, caseNumber);
         return await this.prismaService.documentImage.update({
-          where: { document: { caseId: caseNumber }, url: image },
+          where: { document: { case: { caseNumber } }, url: image },
           data: {
             url: caseImageKey,
             blurredUrl: bluredKey,
