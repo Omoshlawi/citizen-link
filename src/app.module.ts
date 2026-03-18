@@ -36,6 +36,7 @@ import { EmbeddingModule } from './embedding/embedding.module';
 import { EmbeddingConfig } from './embedding/embedding.config';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SettingsModule } from './common/settings';
+import { TemplatesModule } from './common/templates';
 
 @Module({
   imports: [
@@ -114,6 +115,7 @@ import { SettingsModule } from './common/settings';
     }),
     NotificationsModule,
     SettingsModule,
+    TemplatesModule,
   ],
   controllers: [AppController],
   providers: [

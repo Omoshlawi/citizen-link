@@ -17,9 +17,13 @@ export class PromptsService {
   getDocumentDataExtractionPrompt(
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
   ) {
-    return this.templatesService.render('prompts', 'document-data-extraction', {
-      documentTypes,
-    });
+    return this.templatesService.renderFile(
+      'prompts',
+      'document-data-extraction',
+      {
+        documentTypes,
+      },
+    );
   }
 
   getImageAnalysisPrompt(
@@ -27,9 +31,13 @@ export class PromptsService {
       Pick<DocumentType, 'id' | 'name' | 'category'>
     >,
   ) {
-    return this.templatesService.render('prompts', 'image-quality-analysis', {
-      supportedDocumentTypes,
-    });
+    return this.templatesService.renderFile(
+      'prompts',
+      'image-quality-analysis',
+      {
+        supportedDocumentTypes,
+      },
+    );
   }
 
   getMatchVerificationPrompt(
@@ -53,7 +61,7 @@ export class PromptsService {
     const lostTags = (lostCase.tags as Array<string>).length
       ? (lostCase.tags as Array<string>).join(', ')
       : null;
-    return this.templatesService.render('prompts', 'match-verification', {
+    return this.templatesService.renderFile('prompts', 'match-verification', {
       found: foundCase,
       lost: lostCase,
       foundTags,
@@ -83,7 +91,7 @@ export class PromptsService {
     const lostTags = (lostCase.tags as Array<string>).length
       ? (lostCase.tags as Array<string>).join(', ')
       : null;
-    return this.templatesService.render('prompts', 'security-questions', {
+    return this.templatesService.renderFile('prompts', 'security-questions', {
       found: foundCase,
       lost: lostCase,
       foundTags,
@@ -96,7 +104,7 @@ export class PromptsService {
     userQuery: string,
     supportedDocumentTypes: Array<string>,
   ) {
-    return this.templatesService.render('prompts', 'chatbot-guide', {
+    return this.templatesService.renderFile('prompts', 'chatbot-guide', {
       userQuery,
       supportedDocumentTypes,
     });
@@ -105,7 +113,7 @@ export class PromptsService {
   getVisionExtractionPrompt(
     output: 'structured' | 'unstructured' = 'structured',
   ) {
-    return this.templatesService.render(
+    return this.templatesService.renderFile(
       'prompts',
       `vision-extraction-${output}`,
       {},
@@ -116,7 +124,7 @@ export class PromptsService {
     visionOutput: z.infer<typeof VisionExtractionOutputSchema>,
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
   ) {
-    return this.templatesService.render('prompts', 'text-extraction', {
+    return this.templatesService.renderFile('prompts', 'text-extraction', {
       visionOutput: JSON.stringify(visionOutput, null, 2),
       documentTypes,
     });

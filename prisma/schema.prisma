@@ -48,6 +48,7 @@ model User {
   claimAttachments    ClaimAttachment[]
   statusTransitions   StatusTransition[]
   pushTokens          UserPushToken[]
+  templateVersions    TemplateVersion[]
 
   @@unique([email])
   @@unique([username])
@@ -1084,8 +1085,8 @@ model TwoFactor {
 //   "features.new_dashboard" → "true"
 model Setting {
   id          String   @id @default(uuid())
-  key         String 
-  userId      String  @default("*")// * for system wide settings
+  key         String
+  userId      String   @default("*") // * for system wide settings
   value       String
   description String?
   isPublic    Boolean  @default(false)
@@ -1146,7 +1147,6 @@ model Template {
   updatedAt DateTime @updatedAt
 
   versions         TemplateVersion[]
-  renderLogs       TemplateRenderLog[]
   notificationLogs NotificationLog[]
 
   @@map("templates")
@@ -1154,44 +1154,22 @@ model Template {
 
 // Full snapshot of every version — lets you roll back or diff changes
 model TemplateVersion {
-  id         String   @id @default(cuid())
-  templateId String
-  version    Int
-  slots      Json
-  schema     Json?
-  metadata   Json?
-  changedBy  String? // userId of who made the change
-  changeNote String? // optional commit-message style note
-  createdAt  DateTime @default(now())
+  id          String   @id @default(uuid())
+  templateId  String
+  version     Int
+  slots       Json
+  schema      Json?
+  metadata    Json?
+  changedById String // userId of who made the change
+  changeNote  String? // optional commit-message style note
+  createdAt   DateTime @default(now())
 
-  template Template @relation(fields: [templateId], references: [id])
+  template  Template @relation(fields: [templateId], references: [id])
+  changedBy User     @relation(fields: [changedById], references: [id], onDelete: Cascade)
 
   @@unique([templateId, version])
   @@index([templateId])
   @@map("template_versions")
-}
-
-// audit every render for debugging and analytics
-model TemplateRenderLog {
-  id          String   @id @default(cuid())
-  templateId  String
-  templateKey String // denormalized for fast lookup without join
-  type        String
-  // Input data (sanitized — strip PII before storing if needed)
-  inputData   Json?
-  // Which slots were rendered
-  slotsUsed   String[]
-  durationMs  Int?
-  success     Boolean  @default(true)
-  error       String?
-  createdAt   DateTime @default(now())
-
-  template Template @relation(fields: [templateId], references: [id])
-
-  @@index([templateKey])
-  @@index([type])
-  @@index([createdAt])
-  @@map("template_render_logs")
 }
 
 // -------------Notification models ---------
