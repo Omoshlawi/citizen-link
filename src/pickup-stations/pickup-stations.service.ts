@@ -5,7 +5,6 @@ import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
-  FunctionFirstArgument,
   PaginationService,
   SortService,
 } from '../common/query-builder';
@@ -17,7 +16,7 @@ import {
 import { UserSession } from '../auth/auth.types';
 import { isSuperUser } from '../app.utils';
 import { pick } from 'lodash';
-import { PickupStation } from '../../generated/prisma/client';
+import { PickupStation, Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class PickupStationsService {
@@ -34,145 +33,143 @@ export class PickupStationsService {
     user?: UserSession['user'],
   ) {
     const isAdmin = isSuperUser(user);
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.pickupStation.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            voided: isAdmin && query?.includeVoided ? undefined : false,
-            level1: query?.level1,
-            level2: query?.level2,
-            level3: query?.level3,
-            level4: query?.level4,
-            level5: query?.level5,
-            country: query?.country,
-            addressLocaleCode: query?.addressLocaleCode,
-            postalCode: query?.postalCode,
-            createdAt: {
-              gte: query?.createdAtFrom,
-              lte: query?.createdAtTo,
-            },
-            code: query.code,
+    const dbQuery: Prisma.PickupStationWhereInput = {
+      AND: [
+        {
+          voided: isAdmin && query?.includeVoided ? undefined : false,
+          level1: query?.level1,
+          level2: query?.level2,
+          level3: query?.level3,
+          level4: query?.level4,
+          level5: query?.level5,
+          country: query?.country,
+          addressLocaleCode: query?.addressLocaleCode,
+          postalCode: query?.postalCode,
+          createdAt: {
+            gte: query?.createdAtFrom,
+            lte: query?.createdAtTo,
           },
-          {
-            OR: query.search
-              ? [
-                  {
-                    name: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
+          code: query.code,
+        },
+        {
+          OR: query.search
+            ? [
+                {
+                  name: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
-                  {
-                    code: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  code: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
-                  {
-                    formatted: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  formatted: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
-                ]
-              : undefined,
-          },
-          {
-            OR: query.location
-              ? [
-                  {
-                    name: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+              ]
+            : undefined,
+        },
+        {
+          OR: query.location
+            ? [
+                {
+                  name: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    id: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  id: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    address1: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  address1: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    address2: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  address2: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    country: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  country: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    formatted: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  formatted: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    landmark: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  landmark: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    level1: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  level1: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    level2: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  level2: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    level3: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  level3: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    level4: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  level4: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    level5: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  level5: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                  {
-                    postalCode: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  postalCode: {
+                    contains: query.location,
+                    mode: 'insensitive',
                   },
-                ]
-              : undefined,
-          },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
+                },
+              ]
+            : undefined,
+        },
+      ],
+    };
+    const totalCount = await this.prismaService.pickupStation.count({
+      where: dbQuery,
+    });
+    const data = await this.prismaService.pickupStation.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
       ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.pickupStation.findMany(dbQuery),
-      this.prismaService.pickupStation.count(pick(dbQuery, 'where')),
-    ]);
+    });
     return {
       results: data,
       ...this.paginationService.buildPaginationControls(

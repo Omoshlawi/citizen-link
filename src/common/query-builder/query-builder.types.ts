@@ -32,3 +32,5 @@ export type SortQuery = z.infer<typeof OrderQuerySchema>;
 export type FunctionFirstArgument<T> = T extends (...args: any[]) => any
   ? Parameters<T>[0]
   : never;
+
+export type WhereInput<T> = Pick<FunctionFirstArgument<T>, 'where'>['where'];

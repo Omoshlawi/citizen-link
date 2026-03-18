@@ -12,9 +12,7 @@ import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
 } from '../common/query-builder/query-builder.utils';
-import { FunctionFirstArgument } from '../common/query-builder/query-builder.types';
-import { pick } from 'lodash';
-import { DocumentType } from '../../generated/prisma/browser';
+import { DocumentType, Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class DocumentTypesService {
@@ -40,37 +38,36 @@ export class DocumentTypesService {
   }
 
   async findAll(query: QueryDocumentTypeDto, originalUrl: string) {
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.documentType.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            voided: query?.includeVoided ? undefined : false,
-            category: query?.category,
-          },
-          {
-            OR: query.search
-              ? [
-                  {
-                    name: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
+    const dbQuery: Prisma.DocumentTypeWhereInput = {
+      AND: [
+        {
+          voided: query?.includeVoided ? undefined : false,
+          category: query?.category,
+        },
+        {
+          OR: query.search
+            ? [
+                {
+                  name: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
-                ]
-              : undefined,
-          },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
+                },
+              ]
+            : undefined,
+        },
+      ],
+    };
+    const totalCount = await this.prismaService.documentType.count({
+      where: dbQuery,
+    });
+
+    const data = await this.prismaService.documentType.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
       ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.documentType.findMany(dbQuery),
-      this.prismaService.documentType.count(pick(dbQuery, 'where')),
-    ]);
+    });
     return {
       results: data,
       ...this.paginationService.buildPaginationControls(

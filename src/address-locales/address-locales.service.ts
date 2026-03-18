@@ -3,7 +3,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
-  FunctionFirstArgument,
   PaginationService,
   SortService,
   CustomRepresentationService,
@@ -13,8 +12,7 @@ import {
   QueryAddressLocaleDto,
   UpdateAddressLocaleDto,
 } from './address-locales.dto';
-import { pick } from 'lodash';
-import { AddressLocale } from '../../generated/prisma/browser';
+import { AddressLocale, Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class AddressLocalesService {
@@ -37,42 +35,42 @@ export class AddressLocalesService {
   }
 
   async findAll(query: QueryAddressLocaleDto, originalUrl: string) {
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.addressLocale.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            voided: query?.includeVoided ? undefined : false,
-            country: query?.country?.toUpperCase(),
-            code: query?.code,
-            tags: query?.tag ? { has: query.tag } : undefined,
-          },
-          {
-            OR: query.search
-              ? [
-                  { code: { contains: query.search, mode: 'insensitive' } },
-                  {
-                    regionName: { contains: query.search, mode: 'insensitive' },
+    const dbQuery: Prisma.AddressLocaleWhereInput = {
+      AND: [
+        {
+          voided: query?.includeVoided ? undefined : false,
+          country: query?.country?.toUpperCase(),
+          code: query?.code,
+          tags: query?.tag ? { has: query.tag } : undefined,
+        },
+        {
+          OR: query.search
+            ? [
+                { code: { contains: query.search, mode: 'insensitive' } },
+                {
+                  regionName: { contains: query.search, mode: 'insensitive' },
+                },
+                {
+                  description: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
-                  {
-                    description: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
-                  },
-                ]
-              : undefined,
-          },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
-      ...this.sortService.buildSortQuery(query?.orderBy),
+                },
+              ]
+            : undefined,
+        },
+      ],
     };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.addressLocale.findMany(dbQuery),
-      this.prismaService.addressLocale.count(pick(dbQuery, 'where')),
-    ]);
+
+    const totalCount = await this.prismaService.addressLocale.count({
+      where: dbQuery,
+    });
+    const data = await this.prismaService.addressLocale.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      ...this.sortService.buildSortQuery(query?.orderBy),
+    });
     return {
       results: data,
       ...this.paginationService.buildPaginationControls(

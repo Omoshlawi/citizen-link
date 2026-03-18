@@ -1,11 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { pick } from 'lodash';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
-  FunctionFirstArgument,
   PaginationService,
   SortService,
 } from '../common/query-builder';
@@ -14,10 +12,11 @@ import {
   QueryAddressDto,
   UpdateAddressDto,
 } from './address.dto';
-import { Address, AddressType } from '../../generated/prisma/browser';
+import { Address, AddressType } from '../../generated/prisma/client';
 import dayjs from 'dayjs';
 import { UserSession } from '../auth/auth.types';
 import { isSuperUser } from '../app.utils';
+import { Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class AddressService {
@@ -34,166 +33,165 @@ export class AddressService {
     user: UserSession['user'],
   ) {
     const isAdmin = isSuperUser(user);
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.address.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            voided: query?.includeVoided ? undefined : false,
-            userId: isAdmin ? query.userId : user.id,
-            type: query?.type as AddressType,
-            level1: query?.level1,
-            level2: query?.level2,
-            level3: query?.level3,
-            level4: query?.level4,
-            level5: query?.level5,
-            country: query?.country,
-            localeId: query?.localeId,
-            postalCode: query?.postalCode,
-            startDate: {
-              gte: query?.startDateFrom,
-              lte: query?.startDateTo,
-            },
-            endDate: {
-              gte: query?.endDateFrom,
-              lte: query?.endDateTo,
-            },
-            createdAt: {
-              gte: query?.createdAtFrom,
-              lte: query?.createdAtTo,
-            },
+    const dbQuery: Prisma.AddressWhereInput = {
+      AND: [
+        {
+          voided: query?.includeVoided ? undefined : false,
+          userId: isAdmin ? query.userId : user.id,
+          type: query?.type as AddressType,
+          level1: query?.level1,
+          level2: query?.level2,
+          level3: query?.level3,
+          level4: query?.level4,
+          level5: query?.level5,
+          country: query?.country,
+          localeId: query?.localeId,
+          postalCode: query?.postalCode,
+          startDate: {
+            gte: query?.startDateFrom,
+            lte: query?.startDateTo,
           },
-          {
-            OR: query.search
-              ? [
-                  {
-                    label: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    formatted: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
-                  },
-                ]
-              : undefined,
+          endDate: {
+            gte: query?.endDateFrom,
+            lte: query?.endDateTo,
           },
-          {
-            OR: query.location
-              ? [
-                  {
-                    label: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    id: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    address1: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    address2: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    cityVillage: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    country: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    formatted: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    label: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    landmark: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    level1: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    level2: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    level3: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    level4: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    level5: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    plusCode: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                  {
-                    postalCode: {
-                      contains: query.location,
-                      mode: 'insensitive',
-                    },
-                  },
-                ]
-              : undefined,
+          createdAt: {
+            gte: query?.createdAtFrom,
+            lte: query?.createdAtTo,
           },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
+        },
+        {
+          OR: query.search
+            ? [
+                {
+                  label: {
+                    contains: query.search,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  formatted: {
+                    contains: query.search,
+                    mode: 'insensitive',
+                  },
+                },
+              ]
+            : undefined,
+        },
+        {
+          OR: query.location
+            ? [
+                {
+                  label: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  id: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  address1: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  address2: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  cityVillage: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  country: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  formatted: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  label: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  landmark: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  level1: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  level2: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  level3: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  level4: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  level5: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  plusCode: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  postalCode: {
+                    contains: query.location,
+                    mode: 'insensitive',
+                  },
+                },
+              ]
+            : undefined,
+        },
+      ],
+    };
+    const totalCount = await this.prismaService.address.count({
+      where: dbQuery,
+    });
+    const data = await this.prismaService.address.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
       ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.address.findMany(dbQuery),
-      this.prismaService.address.count(pick(dbQuery, 'where')),
-    ]);
+    });
+
     return {
       results: data,
       ...this.paginationService.buildPaginationControls(

@@ -1,16 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, TransitionReason } from '../../generated/prisma/client';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
-  FunctionFirstArgument,
   PaginationService,
   SortService,
 } from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueryStatusTransitionReasonsDto } from './status-transitions.dto';
-import { pick } from 'lodash';
-import { TransitionReason } from '../../generated/prisma/client';
 
 @Injectable()
 export class TransitionReasonsService {
@@ -22,57 +20,55 @@ export class TransitionReasonsService {
   ) {}
 
   async findAll(query: QueryStatusTransitionReasonsDto, originalUrl: string) {
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prisma.transitionReason.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            voided: query?.includeVoided ? undefined : false,
-            entityType:
-              query?.entityType && query.includeGlobal
-                ? { in: [query?.entityType, '*'] }
-                : query?.entityType,
-            fromStatus:
-              query?.fromStatus && query.includeGlobal
-                ? { in: [query?.fromStatus, '*'] }
-                : query?.fromStatus,
-            toStatus:
-              query?.toStatus && query.includeGlobal
-                ? { in: [query?.toStatus, '*'] }
-                : query?.toStatus,
-            auto: query?.auto,
-            label: query?.label,
-            code: query?.code,
-          },
-          {
-            OR: query.search
-              ? [
-                  {
-                    label: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
+    const dbQuery: Prisma.TransitionReasonWhereInput = {
+      AND: [
+        {
+          voided: query?.includeVoided ? undefined : false,
+          entityType:
+            query?.entityType && query.includeGlobal
+              ? { in: [query?.entityType, '*'] }
+              : query?.entityType,
+          fromStatus:
+            query?.fromStatus && query.includeGlobal
+              ? { in: [query?.fromStatus, '*'] }
+              : query?.fromStatus,
+          toStatus:
+            query?.toStatus && query.includeGlobal
+              ? { in: [query?.toStatus, '*'] }
+              : query?.toStatus,
+          auto: query?.auto,
+          label: query?.label,
+          code: query?.code,
+        },
+        {
+          OR: query.search
+            ? [
+                {
+                  label: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
-                  {
-                    code: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
+                },
+                {
+                  code: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
-                ]
-              : undefined,
-          },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
+                },
+              ]
+            : undefined,
+        },
+      ],
+    };
+    const totalCount = await this.prisma.transitionReason.count({
+      where: dbQuery,
+    });
+    const data = await this.prisma.transitionReason.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
       ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prisma.transitionReason.findMany(dbQuery),
-      this.prisma.transitionReason.count(pick(dbQuery, 'where')),
-    ]);
+    });
     return {
       results: data,
       ...this.paginationService.buildPaginationControls(

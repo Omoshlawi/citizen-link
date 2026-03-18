@@ -12,11 +12,39 @@ export class PaginationService {
     return (page - 1) * limit;
   }
 
+  /**
+   * @deprecated Use buildSafePaginationQuery instead to ensure requested page is within bounds based on totalCount
+   * @param query
+   * @returns
+   */
   buildPaginationQuery(query: Record<string, any> = {}) {
     const limit = this.parseLimit(query.limit);
     const page = this.parsePage(query.page);
     return {
       skip: this.getOffset(limit, page),
+      take: limit,
+    };
+  }
+
+  /**
+   * Builds a pagination query that ensures the requested page does not exceed total pages based on totalCount.
+   * If the requested page exceeds total pages, it will return the last page of results.
+   * @param query
+   * @param totalCount
+   * @returns
+   */
+
+  buildSafePaginationQuery(
+    query: Record<string, any> = {},
+    totalCount: number,
+  ) {
+    const limit = this.parseLimit(query.limit);
+    const requestedPage = this.parsePage(query.page);
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+    const safePage = Math.min(requestedPage, totalPages);
+
+    return {
+      skip: this.getOffset(limit, safePage),
       take: limit,
     };
   }

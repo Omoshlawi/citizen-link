@@ -7,16 +7,14 @@ import { CreateInvoiceDto, QueryInvoiceDto } from './invoice.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { HumanIdService } from '../human-id/human-id.service';
-import { PrismaClient } from '../../generated/prisma/client';
+import { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { DefaultArgs } from '@prisma/client/runtime/client';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
-  FunctionFirstArgument,
   PaginationService,
   SortService,
 } from '../common/query-builder';
-import { pick } from 'lodash';
 import { UserSession } from '../auth/auth.types';
 import { isSuperUser } from '../app.utils';
 
@@ -100,30 +98,29 @@ export class InvoiceService {
     user: UserSession['user'],
   ) {
     const isAdmin = isSuperUser(user);
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.invoice.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            claimId: query?.claimId,
-            status: query?.status,
-            invoiceNumber: query?.invoiceNumber,
-            claim: {
-              claimNumber: query?.claimNumber,
-              userId: isAdmin ? query?.userId : user.id,
-            },
+    const dbQuery: Prisma.InvoiceWhereInput = {
+      AND: [
+        {
+          claimId: query?.claimId,
+          status: query?.status,
+          invoiceNumber: query?.invoiceNumber,
+          claim: {
+            claimNumber: query?.claimNumber,
+            userId: isAdmin ? query?.userId : user.id,
           },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
+        },
+      ],
+    };
+    const totalCount = await this.prismaService.invoice.count({
+      where: dbQuery,
+    });
+
+    const data = await this.prismaService.invoice.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
       ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.invoice.findMany(dbQuery),
-      this.prismaService.invoice.count(pick(dbQuery, 'where')),
-    ]);
+    });
     return {
       results: data,
       ...this.paginationService.buildPaginationControls(

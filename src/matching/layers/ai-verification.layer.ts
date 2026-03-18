@@ -31,7 +31,7 @@ import {
   MatchingOptions,
 } from '../matching.interface';
 import { MATCHING_OPTIONS_TOKEN } from '../matching.constants';
-import { LostDocumentCase } from 'generated/prisma/browser';
+import { LostDocumentCase } from 'generated/prisma/client';
 
 // ─── Match value → raw score ────────────────────────
 const MATCH_SCORES: Record<string, number> = {

@@ -1,16 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { pick } from 'lodash';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
-  FunctionFirstArgument,
   PaginationService,
   SortService,
 } from '../common/query-builder';
 import { QueryAddressHierarchyDto } from './address-hierarchy.dto';
-import { AddressHierarchy } from '../../generated/prisma/browser';
+import { AddressHierarchy } from '../../generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class AddressHierarchyService {
@@ -22,48 +21,47 @@ export class AddressHierarchyService {
   ) {}
 
   async getAll(query: QueryAddressHierarchyDto, originalUrl: string) {
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.addressHierarchy.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            voided: query?.includeVoided ? undefined : false,
-            country: query?.country,
-            level: query?.level,
-            code: query?.code,
-            name: query?.name,
-            nameLocal: query?.nameLocal,
-            parentId: query?.parentId,
-            parent: {
-              code: query?.parentCode,
-              country: query?.parentCountry,
-              level: query?.parentLevel,
-              name: query?.parentName,
-              nameLocal: query?.parentNameLocal,
-            },
+    const dbQuery: Prisma.AddressHierarchyWhereInput = {
+      AND: [
+        {
+          voided: query?.includeVoided ? undefined : false,
+          country: query?.country,
+          level: query?.level,
+          code: query?.code,
+          name: query?.name,
+          nameLocal: query?.nameLocal,
+          parentId: query?.parentId,
+          parent: {
+            code: query?.parentCode,
+            country: query?.parentCountry,
+            level: query?.parentLevel,
+            name: query?.parentName,
+            nameLocal: query?.parentNameLocal,
           },
-          {
-            OR: query.search
-              ? [
-                  {
-                    name: {
-                      contains: query.search, //mode: 'insensitive'
-                    },
+        },
+        {
+          OR: query.search
+            ? [
+                {
+                  name: {
+                    contains: query.search, //mode: 'insensitive'
                   },
-                ]
-              : undefined,
-          },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
+                },
+              ]
+            : undefined,
+        },
+      ],
+    };
+    const totalCount = await this.prismaService.addressHierarchy.count({
+      where: dbQuery,
+    });
+    const data = await this.prismaService.addressHierarchy.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
       ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.addressHierarchy.findMany(dbQuery),
-      this.prismaService.addressHierarchy.count(pick(dbQuery, 'where')),
-    ]);
+    });
+
     return {
       results: data,
       ...this.paginationService.buildPaginationControls(

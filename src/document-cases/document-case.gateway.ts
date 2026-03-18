@@ -12,7 +12,7 @@ import {
   AIExtraction,
   AIExtractionInteraction,
   DocumentCase,
-} from '../../generated/prisma/browser';
+} from '../../generated/prisma/client';
 import { WsSession } from '../auth/auth.socket.decorators';
 import { WsAuthGuard } from '../auth/auth.socket.guards';
 import { UserSession } from '../auth/auth.types';

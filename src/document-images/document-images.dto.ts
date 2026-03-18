@@ -1,7 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
-import { DocumentImage } from '../../generated/prisma/browser';
+import { DocumentImage } from '../../generated/prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 
 export const QueryDocumentImageSchema = z.object({

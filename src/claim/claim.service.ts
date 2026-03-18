@@ -4,13 +4,11 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { pick } from 'lodash';
 import { isSuperUser, normalizeString, parseDate } from '../app.utils';
 import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
-  FunctionFirstArgument,
   PaginationService,
   SortService,
 } from '../common/query-builder';
@@ -23,6 +21,7 @@ import { StatusTransitionReasonsDto } from '../status-transitions/status-transit
 import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { MatchStatus } from '../../generated/prisma/enums';
+import { Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class ClaimService {
@@ -249,69 +248,65 @@ export class ClaimService {
     user: UserSession['user'],
   ) {
     const isAdmin = isSuperUser(user);
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.claim.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            claimNumber: query.claimNumber,
-            matchId: query.matchId,
-            pickupStationId: query.pickupStationId,
-            status: query.status,
-            preferredHandoverDate: {
-              gte: parseDate(query.preferredHandoverDateFrom),
-              lte: parseDate(query.preferredHandoverDateTo),
-            },
-            userId: isAdmin ? query.userId : user.id,
-            createdAt: {
-              lte: parseDate(query.createdAtTo),
-              gte: parseDate(query.createdAtFrom),
-            },
-            foundDocumentCaseId: query.foundDocumentCaseId,
+    const dbQuery: Prisma.ClaimWhereInput = {
+      AND: [
+        {
+          claimNumber: query.claimNumber,
+          matchId: query.matchId,
+          pickupStationId: query.pickupStationId,
+          status: query.status,
+          preferredHandoverDate: {
+            gte: parseDate(query.preferredHandoverDateFrom),
+            lte: parseDate(query.preferredHandoverDateTo),
           },
-          {
-            OR: query.search
-              ? [
-                  {
-                    claimNumber: {
-                      contains: query.search,
-                      mode: 'insensitive',
-                    },
+          userId: isAdmin ? query.userId : user.id,
+          createdAt: {
+            lte: parseDate(query.createdAtTo),
+            gte: parseDate(query.createdAtFrom),
+          },
+          foundDocumentCaseId: query.foundDocumentCaseId,
+        },
+        {
+          OR: query.search
+            ? [
+                {
+                  claimNumber: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
-                ]
-              : undefined,
-          },
-          {
-            OR: query.caseId
-              ? [
-                  {
-                    foundDocumentCase: {
+                },
+              ]
+            : undefined,
+        },
+        {
+          OR: query.caseId
+            ? [
+                {
+                  foundDocumentCase: {
+                    caseId: query.caseId,
+                  },
+                },
+                {
+                  match: {
+                    lostDocumentCase: {
                       caseId: query.caseId,
                     },
                   },
-                  {
-                    match: {
-                      lostDocumentCase: {
-                        caseId: query.caseId,
-                      },
-                    },
-                  },
-                ]
-              : undefined,
-          },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
+                },
+              ]
+            : undefined,
+        },
+      ],
+    };
+    const totalCount = await this.prismaService.claim.count({ where: dbQuery });
+    const data = await this.prismaService.claim.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(
         isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
       ),
       ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.claim.findMany(dbQuery),
-      this.prismaService.claim.count(pick(dbQuery, 'where')),
-    ]);
+    });
     return {
       results: data,
       ...this.paginationService.buildPaginationControls(

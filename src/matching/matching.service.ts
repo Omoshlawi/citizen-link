@@ -11,7 +11,6 @@ import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
-  FunctionFirstArgument,
   PaginationService,
   SortService,
 } from '../common/query-builder';
@@ -124,173 +123,169 @@ export class MatchingService {
     user: UserSession['user'],
   ) {
     const isAdmin = isSuperUser(user);
-    const dbQuery: FunctionFirstArgument<
-      typeof this.prismaService.match.findMany
-    > = {
-      where: {
-        AND: [
-          {
-            voided: query?.includeVoided ? undefined : false,
-          },
-          {
-            OR: query.search
+    const dbQuery: Prisma.MatchWhereInput = {
+      AND: [
+        {
+          voided: query?.includeVoided ? undefined : false,
+        },
+        {
+          OR: query.search
+            ? [
+                {
+                  foundDocumentCase: {
+                    case: {
+                      document: {
+                        fullName: {
+                          contains: query.search,
+                          mode: Prisma.QueryMode.insensitive,
+                        },
+                      },
+                    },
+                  },
+                },
+                {
+                  foundDocumentCase: {
+                    case: {
+                      document: {
+                        documentNumber: {
+                          contains: query.search,
+                          mode: Prisma.QueryMode.insensitive,
+                        },
+                      },
+                    },
+                  },
+                },
+                {
+                  lostDocumentCase: {
+                    case: {
+                      document: {
+                        fullName: {
+                          contains: query.search,
+                          mode: Prisma.QueryMode.insensitive,
+                        },
+                      },
+                    },
+                  },
+                },
+                {
+                  lostDocumentCase: {
+                    case: {
+                      document: {
+                        documentNumber: {
+                          contains: query.search,
+                          mode: Prisma.QueryMode.insensitive,
+                        },
+                      },
+                    },
+                  },
+                },
+              ]
+            : undefined,
+        },
+        {
+          OR: query.documentCaseId
+            ? [
+                {
+                  foundDocumentCase: {
+                    caseId: query.documentCaseId,
+                  },
+                },
+                {
+                  lostDocumentCase: {
+                    caseId: query.documentCaseId,
+                  },
+                },
+              ]
+            : undefined,
+        },
+        {
+          OR:
+            isAdmin && query.userId
               ? [
                   {
                     foundDocumentCase: {
                       case: {
-                        document: {
-                          fullName: {
-                            contains: query.search,
-                            mode: Prisma.QueryMode.insensitive,
-                          },
-                        },
-                      },
-                    },
-                  },
-                  {
-                    foundDocumentCase: {
-                      case: {
-                        document: {
-                          documentNumber: {
-                            contains: query.search,
-                            mode: Prisma.QueryMode.insensitive,
-                          },
-                        },
+                        userId: query.userId,
                       },
                     },
                   },
                   {
                     lostDocumentCase: {
                       case: {
-                        document: {
-                          fullName: {
-                            contains: query.search,
-                            mode: Prisma.QueryMode.insensitive,
-                          },
-                        },
-                      },
-                    },
-                  },
-                  {
-                    lostDocumentCase: {
-                      case: {
-                        document: {
-                          documentNumber: {
-                            contains: query.search,
-                            mode: Prisma.QueryMode.insensitive,
-                          },
-                        },
+                        userId: query.userId,
                       },
                     },
                   },
                 ]
               : undefined,
-          },
-          {
-            OR: query.documentCaseId
-              ? [
-                  {
-                    foundDocumentCase: {
-                      caseId: query.documentCaseId,
+        },
+        {
+          OR: !isAdmin
+            ? [
+                {
+                  foundDocumentCase: {
+                    case: {
+                      userId: user.id,
                     },
                   },
-                  {
-                    lostDocumentCase: {
-                      caseId: query.documentCaseId,
+                },
+                {
+                  lostDocumentCase: {
+                    case: {
+                      userId: user.id,
                     },
                   },
-                ]
-              : undefined,
-          },
-          {
-            OR:
-              isAdmin && query.userId
-                ? [
-                    {
-                      foundDocumentCase: {
-                        case: {
-                          userId: query.userId,
-                        },
-                      },
-                    },
-                    {
-                      lostDocumentCase: {
-                        case: {
-                          userId: query.userId,
-                        },
-                      },
-                    },
-                  ]
-                : undefined,
-          },
-          {
-            OR: !isAdmin
-              ? [
-                  {
-                    foundDocumentCase: {
-                      case: {
-                        userId: user.id,
-                      },
+                },
+              ]
+            : undefined,
+        },
+        {
+          OR: query.lostDocumentCase
+            ? [
+                {
+                  lostDocumentCase: {
+                    id: query.lostDocumentCase,
+                  },
+                },
+                {
+                  lostDocumentCase: {
+                    case: {
+                      caseNumber: query.lostDocumentCase,
                     },
                   },
-                  {
-                    lostDocumentCase: {
-                      case: {
-                        userId: user.id,
-                      },
+                },
+              ]
+            : undefined,
+        },
+        {
+          OR: query.foundDocumentCase
+            ? [
+                {
+                  foundDocumentCase: {
+                    id: query.foundDocumentCase,
+                  },
+                },
+                {
+                  foundDocumentCase: {
+                    case: {
+                      caseNumber: query.foundDocumentCase,
                     },
                   },
-                ]
-              : undefined,
-          },
-          {
-            OR: query.lostDocumentCase
-              ? [
-                  {
-                    lostDocumentCase: {
-                      id: query.lostDocumentCase,
-                    },
-                  },
-                  {
-                    lostDocumentCase: {
-                      case: {
-                        caseNumber: query.lostDocumentCase,
-                      },
-                    },
-                  },
-                ]
-              : undefined,
-          },
-          {
-            OR: query.foundDocumentCase
-              ? [
-                  {
-                    foundDocumentCase: {
-                      id: query.foundDocumentCase,
-                    },
-                  },
-                  {
-                    foundDocumentCase: {
-                      case: {
-                        caseNumber: query.foundDocumentCase,
-                      },
-                    },
-                  },
-                ]
-              : undefined,
-          },
-        ],
-      },
-      ...this.paginationService.buildPaginationQuery(query),
+                },
+              ]
+            : undefined,
+        },
+      ],
+    };
+    const totalCount = await this.prismaService.match.count({ where: dbQuery });
+    const data = await this.prismaService.match.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(
         isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
       ),
       ...this.sortService.buildSortQuery(query?.orderBy),
-    };
-    const [data, totalCount] = await Promise.all([
-      this.prismaService.match.findMany(dbQuery),
-      this.prismaService.match.count(pick(dbQuery, 'where')),
-    ]);
+    });
     return {
       results: isAdmin
         ? data

@@ -1,7 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../common/query-builder/query-builder.utils';
 import z from 'zod';
-import { DocumentCategory, DocumentType } from '../../generated/prisma/browser';
+import { DocumentCategory, DocumentType } from '../../generated/prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 import { Decimal } from '@prisma/client/runtime/client';
 
