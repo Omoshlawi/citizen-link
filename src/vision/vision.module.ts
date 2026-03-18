@@ -11,12 +11,9 @@ import { VisionController } from './vision.controller';
     AiModule.registerAsync({
       useFactory: (config: AiConfig) => {
         return {
-          // apiKey: config.visionAiApiKey,
-          // baseURL: config.visionAiBaseUrl,
-          // model: config.visionAiModel,
-          apiKey: config.textExtractionAiApiKey,
-          baseURL: config.textExtractionAiBaseUrl,
-          model: config.textExtractionAiModel,
+          apiKey: config.visionAiApiKey,
+          baseURL: config.visionAiBaseUrl,
+          model: config.visionAiModel,
         };
       },
       inject: [AiConfig],

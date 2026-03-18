@@ -31,7 +31,7 @@ model User {
   // relationshipd
   sessions       Session[]
   accounts       Account[]
-  notifications  Notification[]
+  notifications  NotificationLog[]
   messages       Message[]
   ratings        Rating[]
   cases          DocumentCase[]
@@ -47,6 +47,7 @@ model User {
   twofactors          TwoFactor[]
   claimAttachments    ClaimAttachment[]
   statusTransitions   StatusTransition[]
+  pushTokens          UserPushToken[]
 
   @@unique([email])
   @@unique([username])
@@ -303,7 +304,7 @@ model StatusTransition {
 
   changedById String
   changedBy   User   @relation(fields: [changedById], references: [id])
-  metadata Json?
+  metadata    Json?
 
   createdAt DateTime @default(now())
 
@@ -577,10 +578,10 @@ model DocumentCase {
   lostDocumentCase  LostDocumentCase?
   foundDocumentCase FoundDocumentCase?
   document          Document?
-  notifications     Notification[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  voided    Boolean  @default(false)
+  notifications     NotificationLog[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  voided            Boolean            @default(false)
 
   // images         DocumentImage[]
   // notifications  Notification[]
@@ -636,6 +637,7 @@ enum FoundDocumentCaseStatus {
   REJECTED // When the document is rejected by the admin
   COMPLETED // When the document is reunited with the owner
 }
+
 // Match model for potential matches between lost and found reports
 
 model Match {
@@ -698,7 +700,7 @@ model Match {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  // Notification
+  // NotificationLog
   notifiedAt DateTime?
   viewedAt   DateTime?
 
@@ -1006,51 +1008,6 @@ model Rating {
   @@map("ratings")
 }
 
-model Notification {
-  id String @id @default(uuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  type    NotificationType
-  title   String
-  message String           @db.Text
-
-  // Related Entity
-  relatedId   String?
-  relatedType String?
-
-  // Delivery
-  read   Boolean   @default(false)
-  readAt DateTime?
-
-  // Channels
-  sentViaEmail Boolean @default(false)
-  sentViaSMS   Boolean @default(false)
-  sentViaPush  Boolean @default(false)
-
-  createdAt      DateTime      @default(now())
-  documentCase   DocumentCase? @relation(fields: [documentCaseId], references: [id])
-  documentCaseId String?
-
-  @@index([userId])
-  @@index([read])
-  @@index([type])
-  @@map("notifications")
-}
-
-enum NotificationType {
-  MATCH_FOUND
-  CLAIM_VERIFIED
-  PAYMENT_RECEIVED
-  PICKUP_READY
-  HANDOVER_SCHEDULED
-  HANDOVER_COMPLETED
-  RATING_RECEIVED
-  DOCUMENT_EXPIRED
-  SYSTEM_ALERT
-}
-
 // Message model for communication between users
 
 model Message {
@@ -1100,20 +1057,6 @@ model FAQ {
   @@map("faqs")
 }
 
-// System Settings
-
-model Setting {
-  id          String   @id @default(uuid())
-  key         String   @unique
-  value       String
-  description String?
-  updatedAt   DateTime @updatedAt
-  updatedBy   String?
-  voided      Boolean  @default(false)
-
-  @@map("settings")
-}
-
 model TwoFactor {
   id          String @id
   secret      String
@@ -1122,4 +1065,204 @@ model TwoFactor {
   user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("twoFactor")
+}
+
+// -------------Settings Model------------
+
+// Every setting is ONE atomic value stored as a string.
+// Complex objects are flattened to dot-notation key paths:
+//
+//   "theme"                          → "dark"
+//   "locale"                         → "en-KE"
+//   "notifications.email"            → "true"
+//   "notifications.sms"              → "false"
+//
+//   "app.maintenance_mode"   → "false"
+//   "app.max_upload_mb"      → "50"
+//   "email.from"             → "noreply@yourapp.com"
+//   "sms.default_from"       → "+254700000000"
+//   "features.new_dashboard" → "true"
+model Setting {
+  id          String   @id @default(uuid())
+  key         String 
+  userId      String  @default("*")// * for system wide settings
+  value       String
+  description String?
+  isPublic    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  voided      Boolean  @default(false)
+
+  @@unique([key, userId]) // enforces uniqueness, allows nullable userId
+  @@index([userId])
+  @@map("settings")
+}
+
+// -------------Template Models------------
+// ─── Generic reusable template model ─────────────────────────────────────────
+//
+// `slots` is a flat Record<string, string> of named Handlebars strings.
+// The slot names are defined by each consumer's contract (see template.contracts.ts).
+//
+// Examples:
+//   Notification: { email_subject, email_body, sms_body, push_title, push_body }
+//   AI Prompt:    { system, user, assistant_prefix }
+//   Report:       { title, header, body, footer, summary }
+//   Invoice:      { header, line_items, totals, footer }
+//
+model Template {
+  id String @id @default(uuid())
+
+  // Unique identifier used in code: 'order.confirmed', 'summarize.document'
+  key String @unique
+
+  // Consumer category — not enforced by DB, validated at service layer
+  // e.g. 'notification' | 'prompt' | 'report' | 'document' | 'invoice'
+  type String
+
+  name        String
+  description String?
+
+  // Template engine — only 'handlebars' supported now, future-proofed
+  engine String @default("handlebars")
+
+  // The actual template content: { slotName: "Handlebars string" }
+  slots Json
+
+  // Optional JSON Schema describing required/optional slots and their types.
+  // Used by TemplateService.validate() to catch missing slots at dev time.
+  // Example: { required: ["email_subject", "email_body"], optional: ["sms_body"] }
+  schema Json?
+
+  // Type-specific config. Each consumer defines their own shape.
+  // Notification: { channels: { email: true, sms: true, push: false } }
+  // Prompt:       { model: "claude-sonnet-4-6", max_tokens: 1000, temperature: 0.7 }
+  // Report:       { format: "pdf", pageSize: "A4" }
+  metadata Json?
+
+  voided    Boolean  @default(false)
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions         TemplateVersion[]
+  renderLogs       TemplateRenderLog[]
+  notificationLogs NotificationLog[]
+
+  @@map("templates")
+}
+
+// Full snapshot of every version — lets you roll back or diff changes
+model TemplateVersion {
+  id         String   @id @default(cuid())
+  templateId String
+  version    Int
+  slots      Json
+  schema     Json?
+  metadata   Json?
+  changedBy  String? // userId of who made the change
+  changeNote String? // optional commit-message style note
+  createdAt  DateTime @default(now())
+
+  template Template @relation(fields: [templateId], references: [id])
+
+  @@unique([templateId, version])
+  @@index([templateId])
+  @@map("template_versions")
+}
+
+// audit every render for debugging and analytics
+model TemplateRenderLog {
+  id          String   @id @default(cuid())
+  templateId  String
+  templateKey String // denormalized for fast lookup without join
+  type        String
+  // Input data (sanitized — strip PII before storing if needed)
+  inputData   Json?
+  // Which slots were rendered
+  slotsUsed   String[]
+  durationMs  Int?
+  success     Boolean  @default(true)
+  error       String?
+  createdAt   DateTime @default(now())
+
+  template Template @relation(fields: [templateId], references: [id])
+
+  @@index([templateKey])
+  @@index([type])
+  @@index([createdAt])
+  @@map("template_render_logs")
+}
+
+// -------------Notification models ---------
+model NotificationLog {
+  id             String              @id @default(cuid())
+  templateId     String?
+  template       Template?           @relation(fields: [templateId], references: [id])
+  channel        NotificationChannel
+  provider       String // "sendgrid" | "twilio" | "expo" | ...
+  recipientId    String? // userId if known
+  to             String // email/phone/expo token
+  subject        String?
+  body           String
+  status         NotificationStatus  @default(PENDING)
+  attempts       Int                 @default(0)
+  maxAttempts    Int                 @default(3)
+  lastError      String?
+  metadata       Json?
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  user           User?               @relation(fields: [userId], references: [id])
+  userId         String?
+  documentCase   DocumentCase?       @relation(fields: [documentCaseId], references: [id])
+  documentCaseId String?
+
+  @@index([recipientId])
+  @@index([status])
+  @@index([channel])
+  @@index([createdAt])
+  @@map("notification_logs")
+}
+
+model UserPushToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  provider   String   @default("expo") // "expo" | "fcm" | "apns"
+  deviceName String?
+  voided     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_push_tokens")
+}
+
+enum NotificationType {
+  MATCH_FOUND
+  CLAIM_VERIFIED
+  PAYMENT_RECEIVED
+  PICKUP_READY
+  HANDOVER_SCHEDULED
+  HANDOVER_COMPLETED
+  RATING_RECEIVED
+  DOCUMENT_EXPIRED
+  SYSTEM_ALERT
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED // user opted out / quiet hours
 }

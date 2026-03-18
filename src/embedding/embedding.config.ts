@@ -5,7 +5,8 @@ import z from 'zod';
 @Configuration()
 export class EmbeddingConfig {
   @Value('EMBEDDING_MODEL', {
-    parse: z.string().optional().parse,
+    parse: z.string({ message: 'Embedding Model is required' }).optional()
+      .parse,
     default: 'nomic-embed-text',
   })
   model: string;
@@ -18,12 +19,14 @@ export class EmbeddingConfig {
   isOpenAi: boolean;
 
   @Value('EMBEDDING_BASE_URL', {
-    parse: z.url().optional().parse,
+    parse: z.url({ message: 'Embedding Base URL is required' }).optional()
+      .parse,
     default: 'http://localhost:11434',
   })
   baseUrl: string;
   @Value('EMBEDDING_API_KEY', {
-    parse: z.string().optional().parse,
+    parse: z.string({ message: 'Embedding API Key is required' }).optional()
+      .parse,
     default: 'ollama',
   })
   apiKey: string;

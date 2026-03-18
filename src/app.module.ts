@@ -34,11 +34,13 @@ import { VisionModule } from './vision/vision.module';
 import { MatchingConfig } from './matching/matching.config';
 import { EmbeddingModule } from './embedding/embedding.module';
 import { EmbeddingConfig } from './embedding/embedding.config';
+import { NotificationsModule } from './notifications/notifications.module';
+import { SettingsModule } from './common/settings';
 
 @Module({
   imports: [
     PromptsModule,
-    ConfigifyModule.forRootAsync(),
+    ConfigifyModule.forRootAsync({}),
     PrismaModule.forRootAsync({
       global: true,
       useFactory: (config: PrismaConfig) => {
@@ -110,6 +112,8 @@ import { EmbeddingConfig } from './embedding/embedding.config';
       },
       inject: [EmbeddingConfig],
     }),
+    NotificationsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [
