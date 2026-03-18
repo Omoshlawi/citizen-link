@@ -104,6 +104,19 @@ export class TemplatesController {
   ) {
     return this.templatesService.findVersion(key, version, query);
   }
+  @Post(':key/rollback/:version')
+  @ApiOperation({ summary: 'Rollback Template Version' })
+  @ApiOkResponse({ type: GetTemplateResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ templates: ['update'] })
+  rollbackVersion(
+    @Param('key') key: string,
+    @Param('version', ParseIntPipe) version: number,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.templatesService.rollback(key, version, user, query);
+  }
 
   @Delete(':key')
   @ApiOperation({ summary: 'Delete Template' })
