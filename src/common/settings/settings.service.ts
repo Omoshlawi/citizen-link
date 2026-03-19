@@ -74,6 +74,8 @@ export class SettingsService {
    * notif.email        // boolean
    * notif.quiet_start  // number | null
    * notif.timezone     // string
+   * { email: true, sms: false, quiet_start: 22, quiet_end: 7 }
+
    */
   async getObject<S extends z.ZodObject<z.ZodRawShape>>(
     userId: string,

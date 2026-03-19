@@ -1077,12 +1077,13 @@ model TwoFactor {
 //   "locale"                         → "en-KE"
 //   "notifications.email"            → "true"
 //   "notifications.sms"              → "false"
+//   "notifications.quiet_start"      → "22"
+//   "notifications.quiet_end"        → "7"
+//   "notifications.timezone"         → "Africa/Nairobi"
+//   "notifications.overrides.order.confirmed.sms"  → "false"
+//   "dashboard.cols"                 → "3"
+//   "dashboard.widgets.0"            → "revenue"
 //
-//   "app.maintenance_mode"   → "false"
-//   "app.max_upload_mb"      → "50"
-//   "email.from"             → "noreply@yourapp.com"
-//   "sms.default_from"       → "+254700000000"
-//   "features.new_dashboard" → "true"
 model Setting {
   id          String   @id @default(uuid())
   key         String
@@ -1205,7 +1206,7 @@ model NotificationLog {
 }
 
 model UserPushToken {
-  id         String   @id @default(cuid())
+  id         String   @id @default(uuid())
   userId     String
   token      String   @unique
   provider   String   @default("expo") // "expo" | "fcm" | "apns"

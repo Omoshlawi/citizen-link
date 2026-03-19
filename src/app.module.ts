@@ -37,6 +37,7 @@ import { EmbeddingConfig } from './embedding/embedding.config';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SettingsModule } from './common/settings';
 import { TemplatesModule } from './common/templates';
+import { PushTokenModule } from './push-token/push-token.module';
 
 @Module({
   imports: [
@@ -116,6 +117,7 @@ import { TemplatesModule } from './common/templates';
     NotificationsModule,
     SettingsModule,
     TemplatesModule,
+    PushTokenModule,
   ],
   controllers: [AppController],
   providers: [

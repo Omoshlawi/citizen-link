@@ -47,6 +47,26 @@ export const QuerySettingsSchema = z.object({
   userId: z.string().optional().describe('Admin Only - User ID '),
 });
 
+export const NotificationSettingsSchema = z.object({
+  email: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional()
+    .default(true),
+  sms: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .default(false),
+  push: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .default(false),
+  overrides: z
+    .record(z.string(), z.record(z.string(), z.boolean()))
+    .optional()
+    .default({}),
+  quietHoursStart: z.coerce.number().default(22),
+  quietHoursEnd: z.coerce.number().default(8),
+  timezone: z.string().default('UTC'),
+});
+
 export class QuerySettingsDto extends createZodDto(QuerySettingsSchema) {}
 export class QuerySettingObjectDto extends createZodDto(
   QuerySettingsSchema.pick({ keyPrefix: true, userId: true }).required({
@@ -60,6 +80,9 @@ export class SetSettingDto extends createZodDto(
 
 export class SetSettingObjectDto extends createZodDto(SettingObjectSchema) {}
 
+export class SaveUserPreferenceDto extends createZodDto(
+  NotificationSettingsSchema,
+) {}
 export class GetSettingResponseDto implements Setting {
   @ApiProperty()
   value: string;
