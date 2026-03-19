@@ -10,7 +10,7 @@ export class SystemSettingService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async setSystem<S extends z.ZodTypeAny>(
+  async set<S extends z.ZodTypeAny>(
     key: string,
     value: string,
     schema: S,
@@ -29,10 +29,18 @@ export class SystemSettingService {
     return parsed;
   }
 
-  async deleteSystem(key: string): Promise<void> {
-    this.systemCache.delete(key);
+  async delete(keyOrPrefix: string): Promise<void> {
+    const keys = this.systemCache.keys();
+    for (const key of keys) {
+      if (key.startsWith(keyOrPrefix)) {
+        this.systemCache.delete(key);
+      }
+    }
     await this.prisma.setting.deleteMany({
-      where: { key, userId: '*' },
+      where: {
+        userId: '*',
+        OR: [{ key: keyOrPrefix }, { key: { startsWith: `${keyOrPrefix}.` } }],
+      },
     });
   }
 
@@ -42,7 +50,7 @@ export class SystemSettingService {
    * const enabled = await settings.getSystem('features.new_dashboard', SettingBoolean, false);
    * const from    = await settings.getSystem('email.from', SettingString, 'noreply@app.com');
    */
-  async getSystem<S extends z.ZodTypeAny>(
+  async get<S extends z.ZodTypeAny>(
     key: string,
     schema: S,
     defaultValue: z.infer<S>,
@@ -76,7 +84,7 @@ export class SystemSettingService {
     );
   }
 
-  async getPublicSystem(): Promise<Record<string, string>> {
+  async getPublic(): Promise<Record<string, string>> {
     const rows = await this.prisma.setting.findMany({
       where: { userId: '*', isPublic: true },
     });

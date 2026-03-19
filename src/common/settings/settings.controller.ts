@@ -1,10 +1,12 @@
-import { Controller, Query, Get, Post, Body } from '@nestjs/common';
+import { Controller, Query, Get, Post, Body, Delete } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import {
   SetSettingDto,
   QuerySettingObjectDto,
   QuerySettingsDto,
   SetSettingObjectDto,
+  DeleteSettingDto,
+  DeleteSettingResponseDto,
 } from './settings.dto';
 import { CustomRepresentationQueryDto, OriginalUrl } from '../query-builder';
 import { ApiOperation } from '@nestjs/swagger';
@@ -60,5 +62,16 @@ export class SettingsController {
     @Session() { user }: UserSession,
   ) {
     return this.settingsService.setObjectSetting(body, user);
+  }
+
+  @Delete()
+  @ApiOperation({ summary: 'Delete Setting' })
+  @ApiOkResponse({ type: DeleteSettingResponseDto })
+  @ApiErrorsResponse()
+  async deleteSetting(
+    @Body() body: DeleteSettingDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.settingsService.deleteSetting(body, user);
   }
 }
