@@ -58,8 +58,7 @@ export class SettingsController {
   async setSettingObject(
     @Body() body: SetSettingObjectDto,
     @Session() { user }: UserSession,
-    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.settingsService.setObjectSetting(body, user, query);
+    return this.settingsService.setObjectSetting(body, user);
   }
 }
