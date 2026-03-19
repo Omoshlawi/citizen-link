@@ -13,6 +13,7 @@ const scripts = [
   'seed-pickup-stations.ts',
   'seed-transition-statuses.ts',
   'seed-admin-user.ts',
+  'seed-templates.ts',
 ];
 
 async function runScript(scriptName: string): Promise<void> {

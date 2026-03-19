@@ -23,7 +23,7 @@ async function seedAddressHierarchy(): Promise<void> {
   try {
     console.log('🌍 Seeding Kenya Address Hierarchy...');
     const COUNTRY_CODE = 'KE';
-    const counties: County[] = require('../assets/kenyan-counties-subcounties-wards.json');
+    const counties: County[] = require('../assets/json/kenyan-counties-subcounties-wards.json');
 
     for (const county of counties) {
       const countyCode = `${COUNTRY_CODE}-${county.code}`;

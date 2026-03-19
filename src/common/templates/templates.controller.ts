@@ -17,6 +17,7 @@ import {
   QueryTemplateResponseDto,
   QueryTemplateVersionDto,
   QueryTemplateVersionResponseDto,
+  RenderTemplateDto,
   TemplateVersionResponseDto,
   UpdateTemplateDto,
 } from './templates.dto';
@@ -90,6 +91,14 @@ export class TemplatesController {
     @OriginalUrl() url: string,
   ) {
     return this.templatesService.findVersionHistory(key, query, url);
+  }
+  @Post(':key/render')
+  @ApiOperation({ summary: 'Render Template' })
+  @ApiOkResponse({ type: QueryTemplateVersionResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  @AllowAnonymous()
+  renderTemplate(@Param('key') key: string, @Body() query: RenderTemplateDto) {
+    return this.templatesService.renderAll(key, query);
   }
 
   @Get(':key/versions/:version')

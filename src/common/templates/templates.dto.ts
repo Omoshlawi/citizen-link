@@ -19,6 +19,10 @@ export const TemplateShema = z.object({
   metadata: z.record(z.string(), z.any()),
 });
 
+export const RenderTemplateSchema = z.object({
+  data: z.record(z.string(), z.any()),
+});
+
 export const QueryTemplateSchema = z.object({
   ...QueryBuilderSchema.shape,
   type: z.enum(TemplateType).optional(),
@@ -50,9 +54,12 @@ export class QueryTemplateVersionDto extends createZodDto(
 ) {}
 
 export class CreateTemplateDto extends createZodDto(TemplateShema) {}
+export class RenderTemplateDto extends createZodDto(RenderTemplateSchema) {}
 
 export class UpdateTemplateDto extends createZodDto(
-  TemplateShema.extend({ changeNote: z.string().optional() }).partial(),
+  TemplateShema.omit({ key: true })
+    .extend({ changeNote: z.string().optional() })
+    .partial(),
 ) {}
 
 class TemplateSchemaDto extends createZodDto(z.object({})) {}

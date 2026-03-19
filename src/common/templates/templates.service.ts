@@ -17,6 +17,7 @@ import {
   CreateTemplateDto,
   QueryTemplateDto,
   QueryTemplateVersionDto,
+  RenderTemplateDto,
   UpdateTemplateDto,
 } from './templates.dto';
 import { UserSession } from '../..//auth/auth.types';
@@ -274,7 +275,7 @@ export class TemplatesService implements OnModuleInit {
 
   renderAll(
     key: string,
-    data: Record<string, unknown> = {},
+    { data }: RenderTemplateDto,
     options: { validate?: boolean } = {},
   ): Promise<RenderedSlots> {
     return this.templatesRenderService.renderAll(key, data, options);

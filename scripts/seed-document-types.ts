@@ -28,10 +28,11 @@ async function seedDocumentTypes(): Promise<void> {
     __dirname,
     '..',
     'assets',
+    'json',
     'document-types.json',
   );
   if (!fs.existsSync(filePath)) {
-    throw new Error('Missing assets/document-types.json seed file');
+    throw new Error('Missing assets/json/document-types.json seed file');
   }
 
   const payload: DocumentType[] = JSON.parse(

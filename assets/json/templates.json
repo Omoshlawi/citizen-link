@@ -1,0 +1,75 @@
+[
+  {
+    "key": "prompt.chatbot.guide",
+    "type": "prompt",
+    "name": "Chatbot Guide",
+    "description": "Chatbot guide prompt",
+    "engine": "handlebars",
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/chatbot-guide.hbs"
+      },
+      "system": {
+        "source": "text",
+        "text": "You are a helpful assistant."
+      }
+    },
+    "schema": {
+      "required": ["user"],
+      "optional": ["system"]
+    },
+    "metadata": {
+      "model": "gemma3:4b",
+      "temperature": 0.2,
+      "maxTokens": 4096,
+      "topP": 0.2
+    }
+  },
+  {
+    "key": "notification.document.matched",
+    "type": "notification",
+    "name": "Document Matched",
+    "description": "Document matched notification",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Document Case #{{caseNumber}} Matched"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/document-match-found.hbs"
+      },
+      "sms_body": {
+        "source": "text",
+        "text": "Document Matched"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Document Matched"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Document Matched"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "sms_body",
+        "push_title",
+        "push_body"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": true,
+        "push": true
+      }
+    }
+  }
+]

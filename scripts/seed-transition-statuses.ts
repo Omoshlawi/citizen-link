@@ -19,11 +19,12 @@ async function seedTransitionReasons(): Promise<void> {
     __dirname,
     '..',
     'assets',
+    'json',
     'transition-reasons.json', // your JSON seed
   );
 
   if (!fs.existsSync(filePath)) {
-    throw new Error('Missing assets/transition-reasons.json seed file');
+    throw new Error('Missing assets/json/transition-reasons.json seed file');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

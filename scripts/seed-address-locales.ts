@@ -19,10 +19,11 @@ async function seedAddressLocales(): Promise<void> {
     __dirname,
     '..',
     'assets',
+    'json',
     'address-locales.json',
   );
   if (!fs.existsSync(filePath)) {
-    throw new Error('Missing assets/address-locales.json seed file');
+    throw new Error('Missing assets/json/address-locales.json seed file');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

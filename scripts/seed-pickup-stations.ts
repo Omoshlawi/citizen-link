@@ -36,11 +36,12 @@ async function seedPickupStations(): Promise<void> {
     __dirname,
     '..',
     'assets',
+    'json',
     'pickup-stations.json',
   );
 
   if (!fs.existsSync(filePath)) {
-    throw new Error('Missing assets/pickup-stations.json seed file');
+    throw new Error('Missing assets/json/pickup-stations.json seed file');
   }
 
   const payload: PickupStationSeed[] = JSON.parse(
