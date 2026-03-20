@@ -110,4 +110,25 @@ export class PushTokenService {
     });
     return data;
   }
+
+  /**
+   * For internal use only
+   * Get all active push tokens for a user */
+  async getPushTokens(userId: string): Promise<string[]> {
+    const tokens = await this.prismaService.userPushToken.findMany({
+      where: { userId, voided: false },
+      select: { token: true },
+    });
+    return tokens.map((t) => t.token);
+  }
+
+  /**
+   * For internal use only
+   * Deactivate a push token (e.g. after Expo returns DeviceNotRegistered) */
+  async deactivatePushToken(token: string) {
+    await this.prismaService.userPushToken.updateMany({
+      where: { token },
+      data: { voided: true },
+    });
+  }
 }

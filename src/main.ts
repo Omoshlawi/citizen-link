@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { AppConfig } from './config/app.config';
+import { AppConfig } from './app.config';
 import { AuthService } from '@thallesp/nestjs-better-auth';
 import { BetterAuthWithPlugins } from './auth/auth.types';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';

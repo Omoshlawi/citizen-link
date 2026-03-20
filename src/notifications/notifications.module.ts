@@ -2,23 +2,34 @@
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullModule } from '@nestjs/bullmq';
-import { DynamicModule, Global, Module, Provider, Type } from '@nestjs/common';
+import { DynamicModule, Global, Module, Type } from '@nestjs/common';
+import { TemplatesModule } from 'src/common/templates';
+import { EmailDispatcher, PushDispatcher, SmsDispatcher } from './dispatchers';
 import {
   NOTIFICATION_OPTIONS_TOKEN,
   NOTIFICATION_QUEUES,
 } from './notification.constants';
 import {
   EmailProviders,
+  IEmailProvider,
+  IPushProvider,
+  ISmsProvider,
   NotificationModuleOptions,
   NotificationOptions,
   PushProviders,
   SmsProviders,
 } from './notification.interfaces';
+import {
+  NotificationHighProcessor,
+  NotificationLowProcessor,
+  NotificationNormalProcessor,
+} from './notification.processor';
+import { NotificationProcessorHandler } from './notification.processor.handler';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import {
   AfricasTalkingProvider,
-  ExpoProvider,
+  ExpoPushProvider,
   SendGridProvider,
   TwilioProvider,
 } from './service-providers';
@@ -37,9 +48,10 @@ export class NotificationsModule {
         },
         ...this.getNotificationProviderClasses(options.options),
         NotificationsService,
+        ...this.registerProcessors(),
       ],
       controllers: [NotificationsController],
-      imports: this.registerQueues(),
+      imports: [...this.registerQueues(), TemplatesModule],
     };
   }
 
@@ -71,32 +83,54 @@ export class NotificationsModule {
     ];
   }
 
+  private static registerProcessors() {
+    return [
+      NotificationProcessorHandler, // shared logic
+      NotificationHighProcessor, // concurrency: 10
+      NotificationNormalProcessor, // concurrency: 5
+      NotificationLowProcessor, // concurrency: 2
+    ];
+  }
+
   private static getNotificationProviderClasses(options: NotificationOptions) {
-    const emailProviderMap: Record<EmailProviders, Type<any>> = {
+    const emailProviderMap: Record<EmailProviders, Type<IEmailProvider>> = {
       [EmailProviders.SENDGRID]: SendGridProvider,
     };
-    const smsProviderMap: Record<SmsProviders, Type<any>> = {
+    const smsProviderMap: Record<SmsProviders, Type<ISmsProvider>> = {
       [SmsProviders.TWILIO]: TwilioProvider,
       [SmsProviders.AFRICASTALK]: AfricasTalkingProvider,
     };
-    const pushProviderMap: Record<PushProviders, Type<any>> = {
-      [PushProviders.EXPO]: ExpoProvider,
+    const pushProviderMap: Record<PushProviders, Type<IPushProvider>> = {
+      [PushProviders.EXPO]: ExpoPushProvider,
     };
 
-    const emailProviderClasses: Array<Provider> = options.emailProviders
-      .map((p) => emailProviderMap[p])
-      .filter(Boolean);
-    const smsProviderClasses: Array<Provider> = options.smsProviders
+    const emailProviderClasses: Array<Type<IEmailProvider>> =
+      options.emailProviders.map((p) => emailProviderMap[p]).filter(Boolean);
+    const smsProviderClasses: Array<Type<ISmsProvider>> = options.smsProviders
       .map((p) => smsProviderMap[p])
       .filter(Boolean);
-    const pushProviderClasses: Array<Provider> = options.pushProviders
-      .map((p) => pushProviderMap[p])
-      .filter(Boolean);
+    const pushProviderClasses: Array<Type<IPushProvider>> =
+      options.pushProviders.map((p) => pushProviderMap[p]).filter(Boolean);
 
     return [
       ...emailProviderClasses,
       ...smsProviderClasses,
       ...pushProviderClasses,
+      {
+        provide: EmailDispatcher,
+        useFactory: (...p: IEmailProvider[]) => new EmailDispatcher(p),
+        inject: emailProviderClasses,
+      },
+      {
+        provide: SmsDispatcher,
+        useFactory: (...p: ISmsProvider[]) => new SmsDispatcher(p),
+        inject: smsProviderClasses,
+      },
+      {
+        provide: PushDispatcher,
+        useFactory: (...p: IPushProvider[]) => new PushDispatcher(p),
+        inject: pushProviderClasses,
+      },
     ];
   }
 }
