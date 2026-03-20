@@ -44,6 +44,7 @@ import { QueueModule } from './queue/queue.module';
 import { S3Module } from './s3/s3.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
 import { VisionModule } from './vision/vision.module';
+import { ExpoSdkModule } from './expo-sdk/expo-sdk.module';
 
 @Module({
   imports: [
@@ -133,6 +134,7 @@ import { VisionModule } from './vision/vision.module';
     TemplatesModule,
     PushTokenModule,
     QueueModule,
+    ExpoSdkModule.register(),
   ],
   controllers: [AppController],
   providers: [

@@ -33,6 +33,7 @@ import {
   SendGridProvider,
   TwilioProvider,
 } from './service-providers';
+import { ExpoSdkModule } from '../expo-sdk/expo-sdk.module';
 
 @Global()
 @Module({})
@@ -51,7 +52,11 @@ export class NotificationsModule {
         ...this.registerProcessors(),
       ],
       controllers: [NotificationsController],
-      imports: [...this.registerQueues(), TemplatesModule],
+      imports: [
+        ...this.registerQueues(),
+        TemplatesModule,
+        ExpoSdkModule.register(),
+      ],
     };
   }
 

@@ -50,6 +50,7 @@
     "bullmq": "^5.71.0",
     "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
+    "expo-server-sdk": "^6.1.0",
     "fastest-levenshtein": "^1.0.16",
     "flattie": "^1.1.1",
     "handlebars": "^4.7.8",
