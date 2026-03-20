@@ -83,6 +83,7 @@ export interface ProviderResult {
   messageId?: string; // provider's own message ID for tracking
   error?: string; // human-readable error if success is false
   raw?: unknown; // raw provider response — useful for debugging
+  errorCode?: string; // provider-specific error code
 }
 
 // Channel dispatcher interface
@@ -120,6 +121,12 @@ export interface NotificationRecipient {
   userId?: string;
 }
 
+export enum NotificationQueue {
+  HIGH = 'high',
+  NORMAL = 'normal',
+  LOW = 'low',
+}
+
 export interface SendNotificationOptions {
   templateKey?: string;
   inlineContent?: {
@@ -132,7 +139,7 @@ export interface SendNotificationOptions {
   data?: Record<string, unknown>;
   scheduledAt?: Date;
   delayMs?: number;
-  priority?: number;
+  priority?: NotificationQueue;
   userId?: string;
   force?: boolean;
 }

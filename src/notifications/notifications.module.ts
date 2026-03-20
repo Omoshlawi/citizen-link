@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullModule } from '@nestjs/bullmq';
@@ -33,7 +32,6 @@ import {
   SendGridProvider,
   TwilioProvider,
 } from './service-providers';
-import { ExpoSdkModule } from '../expo-sdk/expo-sdk.module';
 
 @Global()
 @Module({})
@@ -52,11 +50,7 @@ export class NotificationsModule {
         ...this.registerProcessors(),
       ],
       controllers: [NotificationsController],
-      imports: [
-        ...this.registerQueues(),
-        TemplatesModule,
-        ExpoSdkModule.register(),
-      ],
+      imports: [...this.registerQueues(), TemplatesModule],
     };
   }
 

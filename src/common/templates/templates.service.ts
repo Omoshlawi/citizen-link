@@ -316,6 +316,7 @@ export class TemplatesService implements OnModuleInit {
       'default',
       (value: unknown, fallback: string) => value ?? fallback,
     );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Handlebars.registerHelper('date', (d: Date | string, fmt?: string) => {
       const date = new Date(d);
       return date.toLocaleDateString('en-KE', { dateStyle: 'medium' });

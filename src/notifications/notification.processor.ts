@@ -23,7 +23,6 @@ export class NotificationHighProcessor extends WorkerHost {
   }
 }
 
-// src/notifications/processors/notification-normal.processor.ts
 @Processor(NOTIFICATION_QUEUES.NORMAL, { concurrency: 5 })
 export class NotificationNormalProcessor extends WorkerHost {
   private readonly logger = new Logger(NotificationNormalProcessor.name);
@@ -41,7 +40,6 @@ export class NotificationNormalProcessor extends WorkerHost {
   }
 }
 
-// src/notifications/processors/notification-low.processor.ts
 @Processor(NOTIFICATION_QUEUES.LOW, { concurrency: 2 })
 export class NotificationLowProcessor extends WorkerHost {
   private readonly logger = new Logger(NotificationLowProcessor.name);

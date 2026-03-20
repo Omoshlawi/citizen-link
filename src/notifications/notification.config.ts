@@ -1,5 +1,7 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import { Configuration } from '@itgorillaz/configify';
+import { Configuration, Value } from '@itgorillaz/configify';
 
 @Configuration()
-export class NotificationConfig {}
+export class NotificationConfig {
+  @Value('EXPO_ACCESS_TOKEN')
+  expoAccessToken?: string;
+}

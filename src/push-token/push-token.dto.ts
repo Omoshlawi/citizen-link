@@ -12,7 +12,7 @@ export enum PushTokenProvider {
 
 export const PushTokenShema = z.object({
   userId: z.string().describe('Admin Only - Query token for provided user'),
-  token: z.string(),
+  token: z.string().nonempty('Token is required'),
   provider: z.enum(PushTokenProvider),
   deviceName: z.string().optional(),
 });

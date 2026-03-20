@@ -29,11 +29,7 @@ import { HumanIdModule } from './human-id/human-id.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { MatchingConfig } from './matching/matching.config';
 import { MatchingModule } from './matching/matching.module';
-import {
-  EmailProviders,
-  PushProviders,
-  SmsProviders,
-} from './notifications/notification.interfaces';
+import { PushProviders } from './notifications/notification.interfaces';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
 import { PrismaConfig } from './prisma/prisma.config';
@@ -44,7 +40,6 @@ import { QueueModule } from './queue/queue.module';
 import { S3Module } from './s3/s3.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
 import { VisionModule } from './vision/vision.module';
-import { ExpoSdkModule } from './expo-sdk/expo-sdk.module';
 
 @Module({
   imports: [
@@ -125,8 +120,8 @@ import { ExpoSdkModule } from './expo-sdk/expo-sdk.module';
     NotificationsModule.register({
       global: true,
       options: {
-        emailProviders: [EmailProviders.SENDGRID],
-        smsProviders: [SmsProviders.TWILIO, SmsProviders.AFRICASTALK],
+        emailProviders: [],
+        smsProviders: [],
         pushProviders: [PushProviders.EXPO],
       },
     }),
@@ -134,7 +129,6 @@ import { ExpoSdkModule } from './expo-sdk/expo-sdk.module';
     TemplatesModule,
     PushTokenModule,
     QueueModule,
-    ExpoSdkModule.register(),
   ],
   controllers: [AppController],
   providers: [
