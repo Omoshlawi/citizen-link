@@ -16,28 +16,34 @@ import { CaseDocumentsModule } from './case-documents/case-documents.module';
 import { ChatBotModule } from './chat-bot/chat-bot.module';
 import { ClaimModule } from './claim/claim.module';
 import { QueryBuilderModule } from './common/query-builder';
+import { SettingsModule } from './common/settings';
+import { TemplatesModule } from './common/templates';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
 import { DocumentImagesModule } from './document-images/document-images.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
+import { EmbeddingConfig } from './embedding/embedding.config';
+import { EmbeddingModule } from './embedding/embedding.module';
 import { ExtractionModule } from './extraction/extraction.module';
 import { HumanIdConfig } from './human-id/human-id.config';
 import { HumanIdModule } from './human-id/human-id.module';
 import { InvoiceModule } from './invoice/invoice.module';
+import { MatchingConfig } from './matching/matching.config';
 import { MatchingModule } from './matching/matching.module';
+import {
+  EmailProviders,
+  PushProviders,
+  SmsProviders,
+} from './notifications/notification.interfaces';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
 import { PrismaConfig } from './prisma/prisma.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
+import { PushTokenModule } from './push-token/push-token.module';
+import { QueueModule } from './queue/queue.module';
 import { S3Module } from './s3/s3.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
 import { VisionModule } from './vision/vision.module';
-import { MatchingConfig } from './matching/matching.config';
-import { EmbeddingModule } from './embedding/embedding.module';
-import { EmbeddingConfig } from './embedding/embedding.config';
-import { NotificationsModule } from './notifications/notifications.module';
-import { SettingsModule } from './common/settings';
-import { TemplatesModule } from './common/templates';
-import { PushTokenModule } from './push-token/push-token.module';
 
 @Module({
   imports: [
@@ -114,10 +120,19 @@ import { PushTokenModule } from './push-token/push-token.module';
       },
       inject: [EmbeddingConfig],
     }),
-    NotificationsModule,
+    QueueModule,
+    NotificationsModule.register({
+      global: true,
+      options: {
+        emailProviders: [EmailProviders.SENDGRID],
+        smsProviders: [SmsProviders.TWILIO, SmsProviders.AFRICASTALK],
+        pushProviders: [PushProviders.EXPO],
+      },
+    }),
     SettingsModule,
     TemplatesModule,
     PushTokenModule,
+    QueueModule,
   ],
   controllers: [AppController],
   providers: [
