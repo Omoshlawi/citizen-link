@@ -1,13 +1,13 @@
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { catchError, lastValueFrom, map, Observable } from 'rxjs';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   Document,
   DocumentCase,
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { EMBEDDING_OPTIONS_TOKEN } from './embedding.constants';
 import {
   EmbeddingOptions,
@@ -167,7 +167,7 @@ export class EmbeddingService implements OnModuleInit {
     return parts.filter(Boolean).join('. ') + '.';
   }
 
-  async indexDocument(documentId: string): Promise<void> {
+  async embeddDocument(documentId: string): Promise<void> {
     try {
       const document = await this.prismaService.document.findUnique({
         where: { id: documentId },
@@ -212,7 +212,7 @@ export class EmbeddingService implements OnModuleInit {
       const chunk = documentIds.slice(i, i + concurrency);
 
       const results = await Promise.allSettled(
-        chunk.map((id) => this.indexDocument(id)),
+        chunk.map((id) => this.embeddDocument(id)),
       );
 
       results.forEach((result, index) => {

@@ -12,7 +12,16 @@ import { MatchingVectorSearchService } from './matching.vector-search';
 import { MatchingLayeredService } from './matching.layered.service';
 import { MatchingSecurityQuestionsService } from './matching.security-questions.service';
 import { MatchingModuleAsyncOptions } from './matching.interface';
-import { MATCHING_OPTIONS_TOKEN } from './matching.constants';
+import {
+  DOCUMENT_MATCHING_QUEUE,
+  MATCHING_OPTIONS_TOKEN,
+} from './matching.constants';
+import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { DocumentMatchingProcessor } from './matching.processor';
+import { EmbeddingModule } from '../embedding/embedding.module';
+import { EmbeddingConfig } from '../embedding/embedding.config';
 @Module({})
 export class MatchingModule {
   static registerAsync(
@@ -24,6 +33,22 @@ export class MatchingModule {
       imports: [
         ...(options.imports ?? []),
         PromptsModule,
+        BullModule.registerQueue({
+          name: DOCUMENT_MATCHING_QUEUE,
+          defaultJobOptions: {
+            priority: 5,
+            // attempts: 3,
+            // backoff: {
+            //   type: 'exponential',
+            //    delay: 1000 //
+
+            //  },
+          },
+        }),
+        BullBoardModule.forFeature({
+          name: DOCUMENT_MATCHING_QUEUE,
+          adapter: BullMQAdapter,
+        }),
         AiModule.registerAsync({
           useFactory: (config: AiConfig) => {
             return {
@@ -36,6 +61,17 @@ export class MatchingModule {
             };
           },
           inject: [AiConfig],
+        }),
+        EmbeddingModule.registerAsync({
+          useFactory: (config: EmbeddingConfig) => {
+            return {
+              model: config.model,
+              baseUrl: config.baseUrl,
+              apiKey: config.apiKey,
+              isOpenAi: config.isOpenAi,
+            };
+          },
+          inject: [EmbeddingConfig],
         }),
       ],
       providers: [
@@ -50,6 +86,7 @@ export class MatchingModule {
         MatchingSecurityQuestionsService, // For layer 3 post verification
         AiVerificationLayer, // layer 3
         MatchingLayeredService,
+        DocumentMatchingProcessor,
       ],
       exports: [MatchingService, MatchingLayeredService],
       controllers: [MatchingController],

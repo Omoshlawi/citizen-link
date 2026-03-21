@@ -1,10 +1,8 @@
 import { DynamicModule, Module, Provider } from '@nestjs/common';
-import { AiController } from './ai.controller';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
-import { AiModuleOptions } from './ai.types';
+import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
-import { EmbeddingModule } from '../embedding/embedding.module';
-import { EmbeddingConfig } from '../embedding/embedding.config';
+import { AiModuleOptions } from './ai.types';
 
 @Module({})
 export class AiModule {
@@ -18,21 +16,8 @@ export class AiModule {
         this.createAsyncProvider(options),
         AiService,
       ],
-      imports: [
-        ...(options.imports ?? []),
-        EmbeddingModule.registerAsync({
-          useFactory: (config: EmbeddingConfig) => {
-            return {
-              model: config.model,
-              baseUrl: config.baseUrl,
-              apiKey: config.apiKey,
-              isOpenAi: config.isOpenAi,
-            };
-          },
-          inject: [EmbeddingConfig],
-        }),
-      ],
-      exports: [AiService, EmbeddingModule],
+      imports: [...(options.imports ?? [])],
+      exports: [AiService],
     };
   }
 

@@ -19,3 +19,5 @@ export const EXACT_FIELD_WEIGHTS = {
   dateOfBirth: 0.2, // strong corroborating signal
   serialNumber: 0.1, // secondary identifier
 } as const;
+
+export const DOCUMENT_MATCHING_QUEUE = 'document-matching';

@@ -71,5 +71,51 @@
         "push": true
       }
     }
+  },
+  {
+    "key": "notification.case.repoted",
+    "type": "notification",
+    "name": "Document Case Reported",
+    "description": "Document Case Reported",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Document Case #{{caseNumber}} Matched"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/document-case-reported.hbs"
+      },
+      "sms_body": {
+        "source": "text",
+        "text": "Document Matched"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Document Matched"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Document Matched"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "sms_body",
+        "push_title",
+        "push_body"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": true,
+        "push": true
+      }
+    }
   }
 ]

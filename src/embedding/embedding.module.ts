@@ -1,10 +1,10 @@
 import { HttpModule } from '@nestjs/axios';
 import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { EmbeddingConfig } from './embedding.config';
-import { EmbeddingController } from './embedding.controller';
-import { EmbeddingService } from './embedding.service';
-import { EmbeddingModuleAsyncOptions } from './embedding.interfaces';
 import { EMBEDDING_OPTIONS_TOKEN } from './embedding.constants';
+import { EmbeddingController } from './embedding.controller';
+import { EmbeddingModuleAsyncOptions } from './embedding.interfaces';
+import { EmbeddingService } from './embedding.service';
 
 @Module({})
 export class EmbeddingModule {

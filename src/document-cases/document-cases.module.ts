@@ -11,9 +11,43 @@ import { AiModule } from '../ai/ai.module';
 import { AiConfig } from '../ai/ai.config';
 import { VisionModule } from '../vision/vision.module';
 import { MatchingConfig } from '../matching/matching.config';
+import { EmbeddingModule } from '../embedding/embedding.module';
+import { EmbeddingConfig } from '../embedding/embedding.config';
+import { BullModule } from '@nestjs/bullmq';
+import { DOCUMENT_EMBEDDING_QUEUE } from './document-cases.constants';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { DocumentEmbeddingProcessor } from './document.processor';
 
 @Module({
   imports: [
+    BullModule.registerQueue({
+      name: DOCUMENT_EMBEDDING_QUEUE,
+      defaultJobOptions: {
+        priority: 5,
+        // attempts: 3,
+        // backoff: {
+        //   type: 'exponential',
+        //    delay: 1000 //
+
+        //  },
+      },
+    }),
+    BullBoardModule.forFeature({
+      name: DOCUMENT_EMBEDDING_QUEUE,
+      adapter: BullMQAdapter,
+    }),
+    EmbeddingModule.registerAsync({
+      useFactory: (config: EmbeddingConfig) => {
+        return {
+          model: config.model,
+          baseUrl: config.baseUrl,
+          apiKey: config.apiKey,
+          isOpenAi: config.isOpenAi,
+        };
+      },
+      inject: [EmbeddingConfig],
+    }),
     AiModule.registerAsync({
       useFactory: (config: AiConfig) => {
         return {
@@ -53,6 +87,7 @@ import { MatchingConfig } from '../matching/matching.config';
   ],
   controllers: [DocumentCasesController],
   providers: [
+    DocumentEmbeddingProcessor,
     DocumentCasesService,
     DocumentCasesCreateService,
     DocumentCasesQueryService,

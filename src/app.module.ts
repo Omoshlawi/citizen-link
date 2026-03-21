@@ -21,8 +21,6 @@ import { TemplatesModule } from './common/templates';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
 import { DocumentImagesModule } from './document-images/document-images.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
-import { EmbeddingConfig } from './embedding/embedding.config';
-import { EmbeddingModule } from './embedding/embedding.module';
 import { ExtractionModule } from './extraction/extraction.module';
 import { HumanIdConfig } from './human-id/human-id.config';
 import { HumanIdModule } from './human-id/human-id.module';
@@ -108,17 +106,6 @@ import { VisionModule } from './vision/vision.module';
     }),
     InvoiceModule,
     VisionModule,
-    EmbeddingModule.registerAsync({
-      useFactory: (config: EmbeddingConfig) => {
-        return {
-          model: config.model,
-          baseUrl: config.baseUrl,
-          apiKey: config.apiKey,
-          isOpenAi: config.isOpenAi,
-        };
-      },
-      inject: [EmbeddingConfig],
-    }),
     QueueModule,
     NotificationsModule.register({
       global: true,

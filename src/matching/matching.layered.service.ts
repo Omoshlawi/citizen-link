@@ -1,34 +1,37 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
+import {
+  Document,
+  DocumentCase,
+  DocumentField,
+  DocumentType,
+  FoundDocumentCase,
+  LostDocumentCase,
+  Match,
+} from '../../generated/prisma/client';
 import { MatchTrigger, MatchVerdict } from '../../generated/prisma/enums';
-import { UserSession } from '../auth/auth.types';
+import { EmbeddingService } from '../embedding/embedding.service';
+import { EntityPrefix } from '../human-id/human-id.constants';
+import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExactMatchLayer } from './layers';
 import { AiVerificationLayer } from './layers/ai-verification.layer';
 import { VectorSearchLayer } from './layers/vector-search.layer';
 import {
+  DOCUMENT_MATCHING_QUEUE,
+  EXACT_FIELD_WEIGHTS,
+  MATCHING_OPTIONS_TOKEN,
+} from './matching.constants';
+import { Layer2FildScoreDto } from './matching.dto';
+import {
+  DocumentMatchingJobData,
   ExactMatchResult,
   FindMatchesOptions,
   MatchingOptions,
 } from './matching.interface';
 import { MatchingSecurityQuestionsService } from './matching.security-questions.service';
-import {
-  EXACT_FIELD_WEIGHTS,
-  MATCHING_OPTIONS_TOKEN,
-} from './matching.constants';
-import { Layer2FildScoreDto } from './matching.dto';
-import { HumanIdService } from '../human-id/human-id.service';
-import { EntityPrefix } from '../human-id/human-id.constants';
-import {
-  DocumentCase,
-  Document,
-  DocumentField,
-  DocumentType,
-  LostDocumentCase,
-  FoundDocumentCase,
-  Match,
-} from '../../generated/prisma/client';
-import { EmbeddingService } from '../embedding/embedding.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class MatchingLayeredService {
@@ -43,7 +46,27 @@ export class MatchingLayeredService {
     @Inject(MATCHING_OPTIONS_TOKEN)
     private readonly matchingOptions: MatchingOptions,
     private readonly humanIdService: HumanIdService,
+    @InjectQueue(DOCUMENT_MATCHING_QUEUE)
+    private readonly documentMatchingQueue: Queue<DocumentMatchingJobData>,
   ) {}
+
+  async queueDocumentMatchingJob(
+    trigger: MatchTrigger,
+    documentId: string,
+    userId: string,
+  ) {
+    return await this.documentMatchingQueue.add(
+      documentId,
+      {
+        trigger,
+        documentId,
+        userId,
+      },
+      {
+        removeOnComplete: true,
+      },
+    );
+  }
 
   private async getDocumentSearchEmbedding(documentId: string) {
     const document = await this.prismaService.document.findUnique({
@@ -69,12 +92,10 @@ export class MatchingLayeredService {
     return { searchEmbedding, document };
   }
 
-  private;
-
   async layeredMatching(
     trigger: MatchTrigger,
     documentId: string,
-    user: UserSession['user'],
+    userId: string,
     options?: FindMatchesOptions,
   ) {
     this.logger.log(
@@ -88,7 +109,7 @@ export class MatchingLayeredService {
     const vectorSearchCandidates = await this.vectorSearchLayer.findCandidates(
       trigger,
       documentId,
-      user.id,
+      userId,
       document.typeId,
       searchEmbedding,
       options,
@@ -125,7 +146,7 @@ export class MatchingLayeredService {
     return await this.persistCandidates(
       trigger,
       exactMatchesCandidates,
-      user,
+      userId,
       options,
     );
 
@@ -321,7 +342,7 @@ export class MatchingLayeredService {
   private async persistCandidates(
     trigger: MatchTrigger,
     exactResults: ExactMatchResult[],
-    user: UserSession['user'],
+    userId: string,
     options?: FindMatchesOptions,
   ) {
     const promises = exactResults.map(

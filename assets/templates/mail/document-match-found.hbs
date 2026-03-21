@@ -1,6 +1,18 @@
-<h1>Hi {{name}},</h1><br>
-<p>Your document case <strong>#{{caseNumber}}</strong> has been matched.</p>
-<p>You can view your document here: {{link}} and if yours claim it</p>
-<p>Thank you for using our service.</p>
-<p>Best regards,</p>
-<p>Citizen Link Team</p>
+<p>Dear {{user.name}},</p>
+<p>Your {{caseType}} case report has been successfully.<br>We will notify you once a match is found
+    <br><br>
+    You can view the document <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"https://google.com\">here</a>
+    <br><br>
+    <strong>Case Details:</strong>
+</p>
+<ul>
+    <li>
+        <p><strong>Case Number</strong>: {{case.caseNumber}}</p>
+    </li>
+    <li>
+        <p><strong>Document Number</strong>: {{case.document.documentNumber}}</p>
+    </li>
+</ul>
+<p>For further inquiry please reach out to <em>info@citizenlink.app</em></p>
+<p>Kindl Regards.</p>
+<p><span style=\"color: rgb(112, 72, 232);\">Citizen Link Team</span><br><br></p>

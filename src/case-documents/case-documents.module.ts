@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { CaseDocumentsService } from './case-documents.service';
-import { CaseDocumentsController } from './case-documents.controller';
-import { AiModule } from '../ai/ai.module';
 import { AiConfig } from '../ai/ai.config';
+import { AiModule } from '../ai/ai.module';
+import { CaseDocumentsController } from './case-documents.controller';
+import { CaseDocumentsService } from './case-documents.service';
 
 @Module({
   imports: [

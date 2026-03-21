@@ -6,6 +6,7 @@ import {
   DocumentType,
   FoundDocumentCase,
   LostDocumentCase,
+  MatchTrigger,
 } from '../../generated/prisma/client';
 import { AiMatchVerificationSchema, FieldAnalysisSchema } from './matching.dto';
 import { Provider, Type } from '@nestjs/common';
@@ -131,3 +132,9 @@ export type MatchingModuleAsyncOptions = {
   imports?: Type<any>[];
   providers?: Array<Provider>;
 };
+
+export interface DocumentMatchingJobData {
+  documentId: string;
+  trigger: MatchTrigger;
+  userId: string;
+}

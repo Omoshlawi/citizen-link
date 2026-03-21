@@ -113,8 +113,6 @@ export class DocumentCasesService {
         document: true,
       },
     });
-    if (docCase.document?.id)
-      await this.embeddingService.indexDocument(docCase.document.id);
     return await this.findOne(docCase.id, query, user);
   }
 

@@ -10,9 +10,11 @@ import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
 } from '../common/query-builder';
-import { EmbeddingService } from '../embedding/embedding.service';
-import { MatchingLayeredService } from '../matching/matching.layered.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { Job, Queue } from 'bullmq';
+import { DocumentEmbeddingJob } from './document-cases.interface';
+import { InjectQueue } from '@nestjs/bullmq';
+import { DOCUMENT_EMBEDDING_QUEUE } from './document-cases.constants';
 @Injectable()
 export class DocumentCasesWorkflowService {
   private readonly logger = new Logger(DocumentCasesWorkflowService.name);
@@ -20,8 +22,8 @@ export class DocumentCasesWorkflowService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly representationService: CustomRepresentationService,
-    private readonly embeddingService: EmbeddingService,
-    private readonly matchingLayeredService: MatchingLayeredService,
+    @InjectQueue(DOCUMENT_EMBEDDING_QUEUE)
+    private readonly documentEmbeddingQueue: Queue<DocumentEmbeddingJob>,
   ) {}
 
   async submitLostCase(
@@ -29,6 +31,7 @@ export class DocumentCasesWorkflowService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
+    //1. Validate lost case
     const canSubmit = await this.prismaService.lostDocumentCase.findUnique({
       where: {
         id: lostCaseId,
@@ -47,7 +50,7 @@ export class DocumentCasesWorkflowService {
     });
     if (!canSubmit)
       throw new BadRequestException(`Can only submit your lost cases`);
-    // Get reasons
+    //2. Get and validate transition reasons
     const reason = await this.prismaService.transitionReason.findUnique({
       where: {
         entityType_fromStatus_toStatus_code: {
@@ -60,6 +63,7 @@ export class DocumentCasesWorkflowService {
       },
     });
     if (!reason) throw new BadRequestException('Invalid reason');
+    //3. Transition status and log the transition
     const lostCase = await this.prismaService.$transaction(async (tx) => {
       // Update claim status to rejected
       const lostCase = await tx.lostDocumentCase.update({
@@ -84,31 +88,29 @@ export class DocumentCasesWorkflowService {
       return lostCase;
     });
 
-    // Index document after submission in background
+    //4. Add indexing job to queue for the document after submission in background
     if (canSubmit.case?.document) {
-      this.embeddingService
-        .indexDocument(canSubmit.case.document.id)
-        .then(() =>
-          this.matchingLayeredService.layeredMatching(
-            MatchTrigger.LOST_CASE_SUBMITTED,
-            canSubmit.case.document!.id,
-            user,
-          ),
-        )
-        .then((matches) => {
+      this.documentEmbeddingQueue
+        .add('embed-document', {
+          documentId: canSubmit.case.document.id,
+          trigger: MatchTrigger.LOST_CASE_SUBMITTED,
+          userId: user.id,
+        })
+        .then((job: Job<DocumentEmbeddingJob>) => {
           this.logger.debug(
-            `Found ${matches.length} matches for case ${canSubmit.case.caseNumber}`,
-            matches.map((m) => m.matchNumber).join(', '),
+            `Added embedding job ${job.id} for document ${canSubmit.case.document!.id} to queue`,
           );
         })
+
         .catch((e) => {
           this.logger.error(
-            'Error occured while indexing and running match algorithm',
+            `Error queuing document ${canSubmit.case.document!.id} for embedding to queue`,
             e,
           );
         });
     }
-
+    // 5. Notify owner of successfull submission of case and inform them they'll be notified on matches
+    // TODO: implement notification
     return lostCase;
   }
 
@@ -172,6 +174,7 @@ export class DocumentCasesWorkflowService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
+    //1. Validate found case
     const canVerify = await this.prismaService.foundDocumentCase.findUnique({
       where: {
         id: foundCaseId,
@@ -187,7 +190,7 @@ export class DocumentCasesWorkflowService {
     });
     if (!canVerify)
       throw new BadRequestException(`Can only verify submitted cases`);
-    // Get reasons
+    //2. Get and validate transition reasons
     const reason = await this.prismaService.transitionReason.findUnique({
       where: {
         id: verifyDto.reason,
@@ -198,6 +201,7 @@ export class DocumentCasesWorkflowService {
       },
     });
     if (!reason) throw new BadRequestException('Invalid reason');
+    //3. Transition status and log the transition
     const foundCase = await this.prismaService.$transaction(async (tx) => {
       // Update claim status to rejected
       const founderCase = await tx.foundDocumentCase.update({
@@ -221,30 +225,29 @@ export class DocumentCasesWorkflowService {
       });
       return founderCase;
     });
-    // Index document after submission in background
+    //4. Add indexing job to queue for the document after submission in background
     if (canVerify.case?.document?.id) {
-      this.embeddingService
-        .indexDocument(canVerify.case.document.id)
-        .then(() =>
-          this.matchingLayeredService.layeredMatching(
-            MatchTrigger.FOUND_CASE_VERIFIED,
-            canVerify.case.document!.id,
-            user,
-          ),
-        )
-        .then((matches) => {
+      this.documentEmbeddingQueue
+        .add('embed-document', {
+          documentId: canVerify.case.document.id,
+          trigger: MatchTrigger.FOUND_CASE_VERIFIED,
+          userId: user.id,
+        })
+        .then((job: Job<DocumentEmbeddingJob>) => {
           this.logger.debug(
-            `Found ${matches.length} matches for case ${canVerify.case.caseNumber}`,
-            matches.map((m) => m.matchNumber).join(', '),
+            `Added embedding job ${job.id} for document ${canVerify.case.document!.id} to queue`,
           );
         })
+
         .catch((e) => {
           this.logger.error(
-            'Error occured while indexing and running match algorithm',
+            `Error occured while adding document ${canVerify.case.document!.id} to embedding queue`,
             e,
           );
         });
     }
+    //5. Notify finder of success verification of the found document
+    // TODO: implement notification
     return foundCase;
   }
 
