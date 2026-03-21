@@ -1,4 +1,3 @@
-// src/settings/settings.service.ts
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -16,7 +15,7 @@ import {
   SortService,
 } from '../query-builder';
 import { UserSession } from '../../auth/auth.types';
-import { isSuperUser } from 'src/app.utils';
+import { isSuperUser } from '../../app.utils';
 import { SettingsUtils } from './settings.utils';
 import { SystemSettingService } from './settings.system.service';
 import { UserSettingService } from './settings.user.service';

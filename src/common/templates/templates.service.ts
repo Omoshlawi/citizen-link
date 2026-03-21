@@ -12,7 +12,7 @@ import {
   TemplateType,
 } from './templates.interfaces';
 import { TemplatesRenderService } from './templates.render.service';
-import { Prisma, Template } from '../../../generated/prisma/browser';
+import { Prisma, Template } from '../../../generated/prisma/client';
 import {
   CreateTemplateDto,
   QueryTemplateDto,

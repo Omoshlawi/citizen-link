@@ -22,7 +22,7 @@ import {
   OriginalUrl,
 } from '../common/query-builder';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { ApiErrorsResponse } from 'src/app.decorators';
+import { ApiErrorsResponse } from '../app.decorators';
 
 @Controller('push-token')
 export class PushTokenController {

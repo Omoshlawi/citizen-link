@@ -2,7 +2,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullModule } from '@nestjs/bullmq';
 import { DynamicModule, Global, Module, Type } from '@nestjs/common';
-import { TemplatesModule } from 'src/common/templates';
+import { TemplatesModule } from '../common/templates';
 import { EmailDispatcher, PushDispatcher, SmsDispatcher } from './dispatchers';
 import {
   NOTIFICATION_OPTIONS_TOKEN,

@@ -16,7 +16,7 @@ import {
   NotificationChannel,
   NotificationStatus,
 } from '../../generated/prisma/enums';
-import { PushTokenService } from 'src/push-token/push-token.service';
+import { PushTokenService } from '../push-token/push-token.service';
 
 @Injectable()
 export class NotificationProcessorHandler {

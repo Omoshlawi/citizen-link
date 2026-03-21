@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserSession } from '../auth/auth.types';
 import { QueryPushTokenDto, SetPushTokenDto } from './push-token.dto';
 import { Prisma, UserPushToken } from '../../generated/prisma/client';
-import { isSuperUser } from 'src/app.utils';
+import { isSuperUser } from '../app.utils';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
