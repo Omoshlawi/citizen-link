@@ -1164,7 +1164,7 @@ model TemplateVersion {
   changeNote  String? // optional commit-message style note
   createdAt   DateTime @default(now())
 
-  template  Template @relation(fields: [templateId], references: [id])
+  template  Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
   changedBy User     @relation(fields: [changedById], references: [id], onDelete: Cascade)
 
   @@unique([templateId, version])
@@ -1176,7 +1176,7 @@ model TemplateVersion {
 model NotificationLog {
   id          String              @id @default(uuid())
   templateId  String?
-  template    Template?           @relation(fields: [templateId], references: [id])
+  template    Template?           @relation(fields: [templateId], references: [id], onDelete: Cascade)
   channel     NotificationChannel
   provider    String // "sendgrid" | "twilio" | "expo" | ...
   recipientId String? // userId if known
@@ -1192,7 +1192,7 @@ model NotificationLog {
   sentAt      DateTime?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
-  user        User?               @relation(fields: [userId], references: [id])
+  user        User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String?
 
   @@index([recipientId])

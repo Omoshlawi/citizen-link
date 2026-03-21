@@ -35,13 +35,13 @@ export const PROMPT_CONTRACT: SlotContract<
   (typeof PROMPT_SLOTS)[keyof typeof PROMPT_SLOTS]
 > = {
   required: ['user'], // user message is always required
-  optional: ['system', 'assistant_prefix'], // system prompt and priming prefix
+  optional: ['system', 'assistant'], // system prompt and priming prefix
 };
 
 export const PROMPT_SLOTS = {
   SYSTEM: 'system',
   USER: 'user',
-  ASSISTANT_PREFIX: 'assistant_prefix',
+  ASSISTANT_PREFIX: 'assistant',
 } as const;
 
 // Report / Document
@@ -67,17 +67,11 @@ export const REPORT_SLOTS = {
 export const INVOICE_CONTRACT: SlotContract<
   (typeof INVOICE_SLOTS)[keyof typeof INVOICE_SLOTS]
 > = {
-  required: ['header', 'line_items', 'totals'],
-  optional: ['notes', 'payment_instructions', 'footer'],
+  required: ['invoice_template'],
 };
 
 export const INVOICE_SLOTS = {
-  HEADER: 'header',
-  LINE_ITEMS: 'line_items',
-  TOTALS: 'totals',
-  NOTES: 'notes',
-  PAYMENT_INSTRUCTIONS: 'payment_instructions',
-  FOOTER: 'footer',
+  INVOICE_TEMPLATE: 'invoice_template',
 } as const;
 
 // Registry — maps type string → contract

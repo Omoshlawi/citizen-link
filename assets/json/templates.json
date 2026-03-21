@@ -22,8 +22,8 @@
     "metadata": {
       "model": "gemma3:4b",
       "temperature": 0.2,
-      "maxTokens": 4096,
-      "topP": 0.2
+      "max_tokens": 4096,
+      "top_p": 0.2
     }
   },
   {
