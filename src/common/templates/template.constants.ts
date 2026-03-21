@@ -13,6 +13,8 @@ export const NOTIFICATION_CONTRACT: SlotContract<
     'sms_body',
     'push_title',
     'push_body',
+    'push_data',
+    'push_channel',
   ],
 };
 
@@ -23,6 +25,8 @@ export const NOTIFICATION_SLOTS = {
   SMS_BODY: 'sms_body',
   PUSH_TITLE: 'push_title',
   PUSH_BODY: 'push_body',
+  PUSH_DATA: 'push_data', // JSON string for deep linking
+  PUSH_CHANNEL: 'push_channel', // Android notification channel ID
 } as const;
 
 // AI Prompt

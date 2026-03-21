@@ -29,9 +29,12 @@ import { NotificationsService } from './notifications.service';
 import {
   AfricasTalkingProvider,
   ExpoPushProvider,
-  SendGridProvider,
   TwilioProvider,
 } from './service-providers';
+import { EmailMailpitProvider } from './service-providers/email.mailpit.provider';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
+import { NotificationConfig } from './notification.config';
 
 @Global()
 @Module({})
@@ -50,7 +53,30 @@ export class NotificationsModule {
         ...this.registerProcessors(),
       ],
       controllers: [NotificationsController],
-      imports: [...this.registerQueues(), TemplatesModule],
+      imports: [
+        ...this.registerQueues(),
+        TemplatesModule,
+        MailerModule.forRootAsync({
+          inject: [NotificationConfig],
+          useFactory: (config: NotificationConfig) => ({
+            transport: {
+              host: config.smtpHost,
+              port: config.smtpPort,
+              // auth: {
+              //   user: config.smtpUser,
+              //   pass: config.smtpPassword,
+              // },
+            },
+            defaults: {
+              from: config.smtpFrom,
+              name: config.smtpName,
+            },
+            template: {
+              adapter: new HandlebarsAdapter(),
+            },
+          }),
+        }),
+      ],
     };
   }
 
@@ -93,7 +119,7 @@ export class NotificationsModule {
 
   private static getNotificationProviderClasses(options: NotificationOptions) {
     const emailProviderMap: Record<EmailProviders, Type<IEmailProvider>> = {
-      [EmailProviders.SENDGRID]: SendGridProvider,
+      [EmailProviders.MAILPIT]: EmailMailpitProvider,
     };
     const smsProviderMap: Record<SmsProviders, Type<ISmsProvider>> = {
       [SmsProviders.TWILIO]: TwilioProvider,

@@ -1,7 +1,8 @@
 import { NotificationChannel } from '../../generated/prisma/enums';
 
 export enum EmailProviders {
-  SENDGRID = 'sendgrid',
+  // SENDGRID = 'sendgrid',
+  MAILPIT = 'mailpit',
   //   MAILGUN = 'mailgun',
   //   AWS_SES = 'aws-ses',
   //   RESEND = 'resend',
@@ -92,13 +93,6 @@ export interface IChannelDispatcher {
   dispatch(job: NotificationJob): Promise<ProviderResult>;
 }
 
-// Provider interfaces
-
-export interface IChannelDispatcher {
-  readonly channel: NotificationChannel;
-  dispatch(job: NotificationJob): Promise<ProviderResult>;
-}
-
 export type DispatcherRegistry = Map<NotificationChannel, IChannelDispatcher>;
 
 export interface ISmsProvider {
@@ -116,34 +110,15 @@ export interface IPushProvider {
 
 export interface NotificationRecipient {
   email?: string;
-  phone?: string;
-  pushTokens?: string[];
-  userId?: string;
+  phone?: string; // E.164: +254712345678
+  pushTokens?: string[]; // auto-loaded from DB when userId is provided
 }
 
-export enum NotificationQueue {
+export enum NotificationPriority {
   HIGH = 'high',
   NORMAL = 'normal',
   LOW = 'low',
 }
-
-export interface SendNotificationOptions {
-  templateKey?: string;
-  inlineContent?: {
-    email?: { subject: string; html: string };
-    sms?: { body: string };
-    push?: { title: string; body: string; data?: Record<string, unknown> };
-  };
-  channels?: NotificationChannel[];
-  recipient: NotificationRecipient;
-  data?: Record<string, unknown>;
-  scheduledAt?: Date;
-  delayMs?: number;
-  priority?: NotificationQueue;
-  userId?: string;
-  force?: boolean;
-}
-
 // PROVIDER INTERFACES
 
 export interface IEmailProvider {
@@ -160,4 +135,59 @@ export interface IPushProvider {
   readonly name: string;
   send(payload: PushPayload): Promise<ProviderResult>;
   sendBatch?(payloads: PushPayload[]): Promise<ProviderResult[]>;
+}
+
+// SHARED BASE OPTIONS
+// Fields common to all send methods
+interface BaseOptions {
+  recipient: NotificationRecipient;
+
+  /** Which channels to send through. Defaults to all active channels. */
+  channels?: NotificationChannel[];
+
+  /** Associate with a user for preference + quiet-hours checks */
+  userId?: string;
+
+  /**
+   * Bypass preferences, quiet hours, and opt-outs.
+   * Use for OTP, security alerts, and other critical sends.
+   */
+  force?: boolean;
+
+  /** Schedule delivery at a specific future time */
+  scheduledAt?: Date;
+
+  /** Alternatively delay by a fixed number of milliseconds */
+  delayMs?: number;
+
+  /** Queue priority — defaults to NORMAL */
+  priority?: NotificationPriority;
+}
+
+// sendFromTemplate() options
+export interface SendTemplateOptions extends BaseOptions {
+  /** Key of a Template record in the DB e.g. 'order.confirmed' */
+  templateKey: string;
+
+  /** Handlebars context injected into template slots */
+  data?: Record<string, unknown>;
+}
+
+// sendInline() options
+// Only specify the channels you want — unused ones are ignored.
+export interface SendInlineOptions extends BaseOptions {
+  email?: { subject: string; html: string };
+  sms?: { body: string };
+  push?: { title: string; body: string; data?: Record<string, unknown> };
+}
+
+// send() options — general purpose, accepts either style
+export interface SendNotificationOptions extends BaseOptions {
+  templateKey?: string;
+  data?: Record<string, unknown>;
+  inlineContent?: {
+    email?: { subject: string; html: string };
+    sms?: { body: string };
+    push?: { title: string; body: string; data?: Record<string, unknown> };
+  };
 }

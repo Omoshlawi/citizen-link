@@ -1,188 +1,301 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { Injectable, Logger } from '@nestjs/common';
-import { NotificationChannel } from '../../generated/prisma/enums';
-import {
-  EmailPayload,
-  NotificationJob,
-  NotificationQueue,
-  PushPayload,
-  SendNotificationOptions,
-  SmsPayload,
-} from './notification.interfaces';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { TemplatesService } from '../common/templates/templates.service';
-import { NotificationMetadata } from '../common/templates';
-import { NOTIFICATION_SLOTS } from '../common/templates/template.constants';
 import { PushTokenService } from '../push-token/push-token.service';
-import { UserSettingService } from 'src/common/settings/settings.user.service';
+import { UserSettingService } from '../common/settings/settings.user.service';
+import { NotificationChannel } from '../../generated/prisma/enums';
 import { NOTIFICATION_QUEUES } from './notification.constants';
+import { NOTIFICATION_SLOTS } from '../common/templates/template.constants';
+import { NotificationMetadata } from '../common/templates';
+import {
+  EmailPayload,
+  SmsPayload,
+  PushPayload,
+  NotificationJob,
+  NotificationPriority,
+  SendNotificationOptions,
+  SendTemplateOptions,
+  SendInlineOptions,
+} from './notification.interfaces';
+
+interface ResolvedContent {
+  templateId?: string;
+  channels: Record<string, boolean>;
+  email: { subject: string; html: string } | null;
+  sms: { body: string } | null;
+  push: { title: string; body: string; data?: Record<string, unknown> } | null;
+}
+
+const BASE_JOB_OPTIONS = {
+  attempts: 3,
+  backoff: { type: 'exponential' as const, delay: 5_000 },
+  removeOnComplete: { age: 86_400 },
+  removeOnFail: { age: 86_400 * 7 },
+};
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
-    @InjectQueue(NOTIFICATION_QUEUES.HIGH)
-    private readonly highQueue: Queue,
+    @InjectQueue(NOTIFICATION_QUEUES.HIGH) private readonly highQueue: Queue,
     @InjectQueue(NOTIFICATION_QUEUES.NORMAL)
     private readonly normalQueue: Queue,
-    @InjectQueue(NOTIFICATION_QUEUES.LOW)
-    private readonly lowQueue: Queue,
+    @InjectQueue(NOTIFICATION_QUEUES.LOW) private readonly lowQueue: Queue,
     private readonly prisma: PrismaService,
     private readonly templates: TemplatesService,
-    private readonly preferences: PushTokenService,
+    private readonly pushTokens: PushTokenService,
     private readonly userSettings: UserSettingService,
   ) {}
 
-  private getEffectiveQueue(priority?: NotificationQueue): Queue {
-    switch (priority) {
-      case NotificationQueue.HIGH:
-        return this.highQueue;
-      case NotificationQueue.NORMAL:
-        return this.normalQueue;
-      case NotificationQueue.LOW:
-        return this.lowQueue;
-      default:
-        return this.normalQueue;
+  /**
+   * Send using a DB-managed Handlebars template.
+   * Preferred for all standard notifications.
+   *
+   * @example
+   * await this.notifications.sendFromTemplate({
+   *   templateKey: 'order.confirmed',
+   *   recipient:   { email: user.email, phone: user.phone },
+   *   data:        { orderId: order.id, total: order.total },
+   *   userId:      user.id,
+   * });
+   */
+  async sendFromTemplate(options: SendTemplateOptions): Promise<void> {
+    const resolved = await this.resolveTemplate(
+      options.templateKey,
+      options.data ?? {},
+    );
+    await this.dispatch(resolved, options);
+  }
+
+  /**
+   * Send using inline content — no DB template needed.
+   * Only specify the channels you want — unused channels are ignored.
+   *
+   * @example — SMS only (OTP)
+   * await this.notifications.sendInline({
+   *   recipient: { phone: user.phone },
+   *   sms:       { body: `Your OTP is ${otp}. Valid for 5 minutes.` },
+   *   force:     true,
+   * });
+   *
+   * @example — push only
+   * await this.notifications.sendInline({
+   *   recipient: { pushTokens: [token] },
+   *   push:      { title: 'New message', body: preview },
+   *   userId:    user.id,
+   * });
+   *
+   * @example — all channels
+   * await this.notifications.sendInline({
+   *   recipient: { email: user.email, phone: user.phone },
+   *   email:     { subject: 'Security alert', html },
+   *   sms:       { body: 'New login detected on your account' },
+   *   push:      { title: 'Security alert', body: 'New login detected' },
+   *   force:     true,
+   * });
+   */
+  async sendInline(options: SendInlineOptions): Promise<void> {
+    const resolved = this.resolveInline(options);
+    await this.dispatch(resolved, options);
+  }
+
+  /**
+   * General purpose send — accepts either templateKey or inlineContent.
+   * Prefer sendFromTemplate() or sendInline() for cleaner call sites.
+   */
+  async send(options: SendNotificationOptions): Promise<void> {
+    if (options.templateKey) {
+      return this.sendFromTemplate({
+        ...options,
+        templateKey: options.templateKey,
+      });
+    }
+    if (options.inlineContent) {
+      return this.sendInline({
+        ...options,
+        ...options.inlineContent,
+      });
+    }
+    throw new Error('Either templateKey or inlineContent must be provided');
+  }
+
+  /**
+   * Send the same template to multiple recipients.
+   * Uses addBulk() — one Redis round trip per page.
+   *
+   * @example
+   * await this.notifications.sendBulk({
+   *   templateKey: 'marketing.digest',
+   *   priority:    NotificationPriority.LOW,
+   *   recipients:  users.map(u => ({
+   *     userId:    u.id,
+   *     recipient: { email: u.email, phone: u.phone },
+   *     data:      { firstName: u.firstName },
+   *   })),
+   * });
+   */
+  async sendBulk(options: {
+    templateKey: string;
+    priority?: NotificationPriority;
+    recipients: Array<{
+      userId?: string;
+      recipient: SendNotificationOptions['recipient'];
+      data?: Record<string, unknown>;
+      force?: boolean;
+    }>;
+  }): Promise<void> {
+    const queue = this.resolveQueue(options.priority);
+    for (const r of options.recipients) {
+      const resolved = await this.resolveTemplate(
+        options.templateKey,
+        r.data ?? {},
+      );
+      await this.dispatch(
+        resolved,
+        { ...r, templateKey: options.templateKey, priority: options.priority },
+        queue,
+      );
     }
   }
 
-  async send(options: SendNotificationOptions): Promise<void> {
-    const {
+  private async resolveTemplate(
+    templateKey: string,
+    data: Record<string, unknown>,
+  ): Promise<ResolvedContent> {
+    const { templateId, slots, metadata } = await this.templates.renderAll(
       templateKey,
-      inlineContent,
+      { data },
+      { validate: true },
+    );
+
+    const notifMeta = (metadata ?? {}) as unknown as NotificationMetadata;
+    const channelConfig = notifMeta.channels ?? {
+      email: true,
+      sms: true,
+      push: true,
+    };
+
+    let pushData: Record<string, unknown> | undefined;
+    if (slots[NOTIFICATION_SLOTS.PUSH_DATA]) {
+      try {
+        pushData = JSON.parse(slots[NOTIFICATION_SLOTS.PUSH_DATA]) as Record<
+          string,
+          unknown
+        >;
+      } catch {
+        this.logger.warn(`Invalid push_data JSON in template "${templateKey}"`);
+      }
+    }
+
+    return {
+      templateId,
+      channels: channelConfig,
+      email:
+        channelConfig.email && slots[NOTIFICATION_SLOTS.EMAIL_BODY]
+          ? {
+              subject: slots[NOTIFICATION_SLOTS.EMAIL_SUBJECT] ?? '',
+              html: slots[NOTIFICATION_SLOTS.EMAIL_BODY],
+            }
+          : null,
+      sms:
+        channelConfig.sms && slots[NOTIFICATION_SLOTS.SMS_BODY]
+          ? { body: slots[NOTIFICATION_SLOTS.SMS_BODY] }
+          : null,
+      push:
+        channelConfig.push && slots[NOTIFICATION_SLOTS.PUSH_TITLE]
+          ? {
+              title: slots[NOTIFICATION_SLOTS.PUSH_TITLE],
+              body: slots[NOTIFICATION_SLOTS.PUSH_BODY] ?? '',
+              data: pushData,
+            }
+          : null,
+    };
+  }
+
+  private resolveInline(options: SendInlineOptions): ResolvedContent {
+    return {
+      channels: {
+        email: !!options.email,
+        sms: !!options.sms,
+        push: !!options.push,
+      },
+      email: options.email ?? null,
+      sms: options.sms ?? null,
+      push: options.push ?? null,
+    };
+  }
+
+  private async dispatch(
+    resolved: ResolvedContent,
+    options: Pick<
+      SendNotificationOptions,
+      | 'channels'
+      | 'recipient'
+      | 'userId'
+      | 'force'
+      | 'scheduledAt'
+      | 'delayMs'
+      | 'priority'
+      | 'templateKey'
+    >,
+    queue?: Queue,
+  ): Promise<void> {
+    const {
       channels,
       recipient,
-      data = {},
+      userId,
+      force = false,
       scheduledAt,
       delayMs,
       priority,
-      userId,
-      force = false,
+      templateKey,
     } = options;
-    const queue = this.getEffectiveQueue(priority);
 
-    // 1. Resolve content
-    let resolved: {
-      templateId?: string;
-      channels: Record<string, boolean>;
-      email: { subject: string; html: string } | null;
-      sms: { body: string } | null;
-      push: { title: string; body: string } | null;
-    };
+    const effectiveQueue = queue ?? this.resolveQueue(priority);
 
-    if (templateKey) {
-      // Use the new generic TemplateService
-      const { templateId, slots, metadata } = await this.templates.renderAll(
-        templateKey,
-        { data },
-        { validate: true },
-      );
-
-      // Read channel config from metadata
-      const notifMeta = (metadata ?? {}) as unknown as NotificationMetadata;
-      const channelConfig = notifMeta.channels ?? {
-        email: true,
-        sms: true,
-        push: true,
-      };
-
-      resolved = {
-        templateId,
-        channels: channelConfig,
-        email:
-          channelConfig.email && slots[NOTIFICATION_SLOTS.EMAIL_BODY]
-            ? {
-                subject: slots[NOTIFICATION_SLOTS.EMAIL_SUBJECT] ?? '',
-                html: slots[NOTIFICATION_SLOTS.EMAIL_BODY],
-              }
-            : null,
-        sms:
-          channelConfig.sms && slots[NOTIFICATION_SLOTS.SMS_BODY]
-            ? { body: slots[NOTIFICATION_SLOTS.SMS_BODY] }
-            : null,
-        push:
-          channelConfig.push && slots[NOTIFICATION_SLOTS.PUSH_TITLE]
-            ? {
-                title: slots[NOTIFICATION_SLOTS.PUSH_TITLE],
-                body: slots[NOTIFICATION_SLOTS.PUSH_BODY] ?? '',
-              }
-            : null,
-      };
-    } else if (inlineContent) {
-      resolved = {
-        channels: {
-          email: !!inlineContent.email,
-          sms: !!inlineContent.sms,
-          push: !!inlineContent.push,
-        },
-        email: inlineContent.email ?? null,
-        sms: inlineContent.sms ?? null,
-        push: inlineContent.push ?? null,
-      };
-    } else {
-      throw new Error('Either templateKey or inlineContent must be provided');
-    }
-
-    // ── 2–5. Preferences, quiet hours, queue (unchanged from original) ──────
-    const requestedChannels: NotificationChannel[] =
-      channels ??
-      Object.entries(resolved.channels)
-        .filter(([, v]) => v)
-        .map(([ch]) => ch.toUpperCase() as NotificationChannel);
-
+    // Auto-load push tokens when not provided
     if (
-      requestedChannels.includes(NotificationChannel.PUSH) &&
+      !recipient.pushTokens?.length &&
       userId &&
-      !recipient.pushTokens?.length
+      (channels?.includes(NotificationChannel.PUSH) ?? resolved.channels.push)
     ) {
-      recipient.pushTokens = await this.preferences.getPushTokens(userId);
+      recipient.pushTokens = await this.pushTokens.getPushTokens(userId);
     }
 
-    let allowedChannels = requestedChannels;
-    if (!force && userId) {
-      allowedChannels = await this.userSettings.getAllowedChannels(
-        userId,
-        requestedChannels,
-        templateKey,
+    // Filter channels by preferences + quiet hours
+    const requestedChannels = this.resolveRequestedChannels(channels, resolved);
+    const allowedChannels = await this.filterByPreferences(
+      requestedChannels,
+      userId,
+      force,
+      templateKey,
+    );
+
+    if (!allowedChannels.length) {
+      this.logger.log(
+        `All channels suppressed for user:${userId ?? 'anonymous'}`,
       );
-      const isQuiet = await this.userSettings.isQuietHours(userId);
-      if (isQuiet) {
-        allowedChannels = allowedChannels.filter(
-          (ch) => ch === NotificationChannel.EMAIL,
-        );
-      }
+      return;
     }
 
     const delay = scheduledAt
       ? Math.max(0, scheduledAt.getTime() - Date.now())
       : (delayMs ?? 0);
 
-    const jobOptions = {
-      attempts: 3,
-      backoff: { type: 'exponential' as const, delay: 5_000 },
-      delay,
-      removeOnComplete: { age: 86_400 },
-      removeOnFail: { age: 86_400 * 7 },
-    };
+    // Build jobs and log rows together
+    const bulkJobs: Parameters<Queue['addBulk']>[0] = [];
 
     for (const channel of allowedChannels) {
-      const payload = this.buildPayload(
-        channel,
-        resolved,
-        recipient,
-        inlineContent,
-      );
+      const payload = this.buildPayload(channel, resolved, recipient);
       if (!payload) continue;
 
       const log = await this.prisma.notificationLog.create({
         data: {
           templateId: resolved.templateId,
-          channel: channel as any,
+          channel: channel,
           provider: this.resolveProviderName(channel),
           recipientId: userId,
           to: this.extractTo(channel, recipient),
@@ -190,12 +303,7 @@ export class NotificationsService {
             channel === NotificationChannel.EMAIL
               ? (payload as EmailPayload).subject
               : undefined,
-          body:
-            channel === NotificationChannel.EMAIL
-              ? (payload as EmailPayload).html
-              : channel === NotificationChannel.SMS
-                ? (payload as SmsPayload).body
-                : (payload as PushPayload).body,
+          body: this.extractBody(channel, payload),
           status: 'PENDING',
           scheduledAt,
         },
@@ -207,16 +315,89 @@ export class NotificationsService {
         payload,
         attempt: 0,
       };
-      await queue.add(channel.toLowerCase(), job, jobOptions);
+
+      bulkJobs.push({
+        name: channel.toLowerCase(),
+        data: job,
+        opts: { ...BASE_JOB_OPTIONS, delay },
+      });
+
       this.logger.log(`Queued ${channel} log:${log.id}`);
     }
+
+    // One Redis round trip for all channels
+    if (bulkJobs.length) {
+      await effectiveQueue.addBulk(bulkJobs);
+    }
+
+    // Log skipped channels for audit
+    const skipped = requestedChannels.filter(
+      (ch) => !allowedChannels.includes(ch),
+    );
+    if (skipped.length) {
+      await this.prisma.notificationLog.createMany({
+        data: skipped.map((ch) => ({
+          templateId: resolved.templateId,
+          channel: ch,
+          provider: this.resolveProviderName(ch),
+          recipientId: userId,
+          to: this.extractTo(ch, recipient),
+          body: '',
+          status: 'SKIPPED' as const,
+        })),
+      });
+    }
+  }
+
+  private resolveQueue(priority?: NotificationPriority): Queue {
+    switch (priority) {
+      case NotificationPriority.HIGH:
+        return this.highQueue;
+      case NotificationPriority.LOW:
+        return this.lowQueue;
+      default:
+        return this.normalQueue;
+    }
+  }
+
+  private resolveRequestedChannels(
+    channels: NotificationChannel[] | undefined,
+    resolved: ResolvedContent,
+  ): NotificationChannel[] {
+    return (
+      channels ??
+      Object.entries(resolved.channels)
+        .filter(([, enabled]) => enabled)
+        .map(([ch]) => ch.toUpperCase() as NotificationChannel)
+    );
+  }
+
+  private async filterByPreferences(
+    channels: NotificationChannel[],
+    userId?: string,
+    force?: boolean,
+    templateKey?: string,
+  ): Promise<NotificationChannel[]> {
+    if (force || !userId) return channels;
+
+    const allowed = await this.userSettings.getAllowedChannels(
+      userId,
+      channels,
+      templateKey,
+    );
+
+    const isQuiet = await this.userSettings.isQuietHours(userId);
+    if (isQuiet) {
+      return allowed.filter((ch) => ch === NotificationChannel.EMAIL);
+    }
+
+    return allowed;
   }
 
   private buildPayload(
     channel: NotificationChannel,
-    resolved: any,
+    resolved: ResolvedContent,
     recipient: SendNotificationOptions['recipient'],
-    inline?: SendNotificationOptions['inlineContent'],
   ): EmailPayload | SmsPayload | PushPayload | null {
     switch (channel) {
       case NotificationChannel.EMAIL:
@@ -229,9 +410,7 @@ export class NotificationsService {
           : null;
       case NotificationChannel.PUSH: {
         const token = recipient.pushTokens?.[0];
-        return token && resolved.push
-          ? { to: token, ...resolved.push, data: inline?.push?.data }
-          : null;
+        return token && resolved.push ? { to: token, ...resolved.push } : null;
       }
       default:
         return null;
@@ -239,15 +418,43 @@ export class NotificationsService {
   }
 
   private extractTo(
-    ch: NotificationChannel,
-    r: SendNotificationOptions['recipient'],
+    channel: NotificationChannel,
+    recipient: SendNotificationOptions['recipient'],
   ): string {
-    if (ch === NotificationChannel.EMAIL) return r.email ?? '';
-    if (ch === NotificationChannel.SMS) return r.phone ?? '';
-    return r.pushTokens?.[0] ?? '';
+    switch (channel) {
+      case NotificationChannel.EMAIL:
+        return recipient.email ?? '';
+      case NotificationChannel.SMS:
+        return recipient.phone ?? '';
+      case NotificationChannel.PUSH:
+        return recipient.pushTokens?.[0] ?? '';
+      default:
+        return '';
+    }
   }
 
-  private resolveProviderName(ch: NotificationChannel): string {
-    return { EMAIL: 'sendgrid', SMS: 'twilio', PUSH: 'expo' }[ch] ?? 'unknown';
+  private extractBody(
+    channel: NotificationChannel,
+    payload: EmailPayload | SmsPayload | PushPayload,
+  ): string {
+    switch (channel) {
+      case NotificationChannel.EMAIL:
+        return (payload as EmailPayload).html;
+      case NotificationChannel.SMS:
+        return (payload as SmsPayload).body;
+      case NotificationChannel.PUSH:
+        return (payload as PushPayload).body;
+      default:
+        return '';
+    }
+  }
+
+  private resolveProviderName(channel: NotificationChannel): string {
+    const map: Partial<Record<NotificationChannel, string>> = {
+      [NotificationChannel.EMAIL]: 'sendgrid',
+      [NotificationChannel.SMS]: 'twilio',
+      [NotificationChannel.PUSH]: 'expo',
+    };
+    return map[channel] ?? 'unknown';
   }
 }

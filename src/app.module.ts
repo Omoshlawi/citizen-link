@@ -29,7 +29,10 @@ import { HumanIdModule } from './human-id/human-id.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { MatchingConfig } from './matching/matching.config';
 import { MatchingModule } from './matching/matching.module';
-import { PushProviders } from './notifications/notification.interfaces';
+import {
+  EmailProviders,
+  PushProviders,
+} from './notifications/notification.interfaces';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
 import { PrismaConfig } from './prisma/prisma.config';
@@ -120,7 +123,7 @@ import { VisionModule } from './vision/vision.module';
     NotificationsModule.register({
       global: true,
       options: {
-        emailProviders: [],
+        emailProviders: [EmailProviders.MAILPIT],
         smsProviders: [],
         pushProviders: [PushProviders.EXPO],
       },
