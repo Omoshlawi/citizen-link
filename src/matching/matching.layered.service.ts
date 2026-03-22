@@ -7,7 +7,6 @@ import {
   DocumentType,
   FoundDocumentCase,
   LostDocumentCase,
-  Match,
 } from '../../generated/prisma/client';
 import { MatchTrigger, MatchVerdict } from '../../generated/prisma/enums';
 import { EmbeddingService } from '../embedding/embedding.service';
@@ -365,7 +364,7 @@ export class MatchingLayeredService {
 
         const lostDocumentCaseId = lostDocCase.lostDocumentCase!.id;
         const foundDocumentCaseId = foundDocCase.foundDocumentCase!.id;
-        // ─── Build layer 2 field scores payload ──────────
+        // Build layer 2 field scores payload
         const layer2FieldScores: Layer2FildScoreDto = {
           weightedScore: exactScore,
           threshold:
@@ -384,7 +383,7 @@ export class MatchingLayeredService {
         const vectorScore = candidateDoc_.similarity;
         const finalScore = exactScore;
         const verdict = this.getVerdict(finalScore);
-        // ─── Upsert match ─────────────────────────────────
+        // Upsert match
         return await this.prismaService.match.upsert({
           where: {
             lostDocumentCaseId_foundDocumentCaseId: {
@@ -438,12 +437,42 @@ export class MatchingLayeredService {
             // securityQuestionsAiInteractionId,
             // aiInteractionId,
           },
+          include: {
+            lostDocumentCase: {
+              include: {
+                case: {
+                  include: {
+                    user: true,
+                    document: {
+                      include: {
+                        type: { select: { name: true, id: true, code: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            foundDocumentCase: {
+              include: {
+                case: {
+                  include: {
+                    user: true,
+                    document: {
+                      include: {
+                        type: { select: { name: true, id: true, code: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         });
       },
     );
     const persistResults = await Promise.allSettled(promises);
     let failed = 0;
-    const success: Match[] = [];
+    const success: Awaited<(typeof promises)[number]>[] = [];
     for (const [i, outcome] of persistResults.entries()) {
       const candidate = exactResults[i].candidateDoc;
       // Handle failed

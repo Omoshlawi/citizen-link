@@ -4,12 +4,26 @@ import { Job } from 'bullmq';
 import { DocumentMatchingJobData } from './matching.interface';
 import { MatchingLayeredService } from './matching.layered.service';
 import { Logger } from '@nestjs/common';
-import { Match } from '../../generated/prisma/client';
+import {
+  DocumentCase,
+  FoundDocumentCase,
+  LostDocumentCase,
+  Match,
+  User,
+  Document,
+  DocumentType,
+  NotificationChannel,
+} from '../../generated/prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationPriority } from 'src/notifications/notification.interfaces';
 
 @Processor(DOCUMENT_MATCHING_QUEUE, { concurrency: 5 })
 export class DocumentMatchingProcessor extends WorkerHost {
   private readonly logger = new Logger(DocumentMatchingProcessor.name);
-  constructor(private readonly matchingLayeredService: MatchingLayeredService) {
+  constructor(
+    private readonly matchingLayeredService: MatchingLayeredService,
+    private readonly notificationService: NotificationsService,
+  ) {
     super();
   }
 
@@ -26,12 +40,65 @@ export class DocumentMatchingProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent('completed')
-  onCompleted(job: Job<DocumentMatchingJobData>) {
-    const matches = job.returnvalue as Array<Match>;
+  async onCompleted(job: Job<DocumentMatchingJobData>) {
+    const matches = job.returnvalue as Array<
+      Match & {
+        foundDocumentCase: FoundDocumentCase & {
+          case: DocumentCase & {
+            user: User;
+            document: Document & {
+              type: Pick<DocumentType, 'id' | 'name' | 'code'>;
+            };
+          };
+        };
+        lostDocumentCase: LostDocumentCase & {
+          case: DocumentCase & {
+            user: User;
+            document: Document & {
+              type: Pick<DocumentType, 'id' | 'name' | 'code'>;
+            };
+          };
+        };
+      }
+    >;
     this.logger.log(
-      `Match Job ${job.id} completed for document ${job.data.documentId} | Found ${matches.length} matches | Matches: ${matches.map((m) => m.matchNumber).join(', ')}`,
+      `Match Job ${job.id} completed for document ${job.data.documentId} | Found ${matches.length} matches | Matches: ${matches.length ? matches.map((m) => m.matchNumber).join(', ') : 'None found'}`,
     );
-    // TODO: Notify users of matches
+    //  Notify users of matches if any found
+    if (matches.length > 0) {
+      this.logger.log(`Notify users of matches if any found`);
+      // 1. Trigger notification for owner of the new match
+      const ownerPromises = matches.map(async (match) => {
+        await this.notificationService.sendFromTemplate({
+          channels: [NotificationChannel.EMAIL],
+          priority: NotificationPriority.HIGH,
+          templateKey: 'notification.case.found.matched', // TODO: set template name to system settings and use it to access the template key
+          data: {
+            match,
+          },
+          recipient: {
+            email: match.lostDocumentCase.case.user.email,
+          },
+          userId: match.lostDocumentCase.case.userId,
+        });
+      });
+      // 2. Trigger notification for finder of the new match
+      const founderPromises = matches.map(async (match) => {
+        await this.notificationService.sendFromTemplate({
+          channels: [NotificationChannel.EMAIL],
+          priority: NotificationPriority.HIGH,
+          templateKey: 'notification.case.lost.matched', // TODO: set template name to system settings and use it to access the template key
+          data: {
+            match,
+          },
+          recipient: {
+            email: match.lostDocumentCase.case.user.email,
+          },
+          userId: match.lostDocumentCase.case.userId,
+        });
+      });
+      await Promise.all([...ownerPromises, ...founderPromises]);
+    }
   }
 
   @OnWorkerEvent('failed')

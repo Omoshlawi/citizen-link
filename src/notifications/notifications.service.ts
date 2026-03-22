@@ -28,6 +28,10 @@ interface ResolvedContent {
   push: { title: string; body: string; data?: Record<string, unknown> } | null;
 }
 
+/**
+ * TODO: Should just take the template without validation and compilling then handle it inside the processor
+ */
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -60,7 +64,7 @@ export class NotificationsService {
       options.templateKey,
       options.data ?? {},
     );
-    await this.dispatch(resolved, options);
+    return await this.dispatch(resolved, options);
   }
 
   /**

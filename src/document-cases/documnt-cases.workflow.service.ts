@@ -276,7 +276,6 @@ export class DocumentCasesWorkflowService {
         });
     }
     //5. Notify finder of success verification of the found document
-    // TODO: implement notification
     this.notifications
       .sendFromTemplate({
         channels: [NotificationChannel.EMAIL],
