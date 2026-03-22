@@ -16,6 +16,9 @@ export class DocumentEmbeddingProcessor extends WorkerHost {
     super();
   }
   async process(job: Job<DocumentEmbeddingJob>): Promise<any> {
+    this.logger.log(
+      `Processing - Embedding job ${job.id} for document ${job.data.documentId}`,
+    );
     const { documentId } = job.data;
     await this.embeddingService.embeddDocument(documentId);
   }

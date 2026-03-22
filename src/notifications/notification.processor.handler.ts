@@ -33,6 +33,9 @@ export class NotificationProcessorHandler {
 
   async process(job: Job<NotificationJob>): Promise<void> {
     const { logId, channel, payload } = job.data;
+    this.logger.log(
+      `Processing - Notification job ${job.id} for log ${logId} | Channel: ${channel} | Payload: ${JSON.stringify(payload)}`,
+    );
     // Mark as queued on first attempt
     if (job.attemptsMade === 0) {
       await this.prisma.notificationLog.update({

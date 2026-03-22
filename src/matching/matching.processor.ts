@@ -14,6 +14,9 @@ export class DocumentMatchingProcessor extends WorkerHost {
   }
 
   async process(job: Job<DocumentMatchingJobData>): Promise<any> {
+    this.logger.log(
+      `Processing - Matching job ${job.id} for document ${job.data.documentId} | Trigger: ${job.data.trigger} | User: ${job.data.userId}`,
+    );
     const res = await this.matchingLayeredService.layeredMatching(
       job.data.trigger,
       job.data.documentId,

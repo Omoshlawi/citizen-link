@@ -55,17 +55,11 @@ export class MatchingLayeredService {
     documentId: string,
     userId: string,
   ) {
-    return await this.documentMatchingQueue.add(
+    return await this.documentMatchingQueue.add(documentId, {
+      trigger,
       documentId,
-      {
-        trigger,
-        documentId,
-        userId,
-      },
-      {
-        removeOnComplete: true,
-      },
-    );
+      userId,
+    });
   }
 
   private async getDocumentSearchEmbedding(documentId: string) {

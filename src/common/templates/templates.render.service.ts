@@ -21,7 +21,7 @@ import { CONTRACT_REGISTRY } from './template.constants';
 export class TemplatesRenderService {
   private readonly logger = new Logger(TemplatesRenderService.name);
   // Point to where the CLI copies your assets
-  private readonly baseDir = path.join(process.cwd(), 'dist/src/templates');
+  private readonly baseDir = path.join(process.cwd(), 'dist/assets/templates');
   // Compiled Handlebars cache — keyed by the raw template string
   private readonly _compiled = new Map<string, HandlebarsTemplateDelegate>();
 

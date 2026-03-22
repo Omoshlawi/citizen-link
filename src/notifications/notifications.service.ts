@@ -28,13 +28,6 @@ interface ResolvedContent {
   push: { title: string; body: string; data?: Record<string, unknown> } | null;
 }
 
-const BASE_JOB_OPTIONS = {
-  attempts: 3,
-  backoff: { type: 'exponential' as const, delay: 5_000 },
-  removeOnComplete: { age: 86_400 },
-  removeOnFail: { age: 86_400 * 7 },
-};
-
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -319,7 +312,7 @@ export class NotificationsService {
       bulkJobs.push({
         name: channel.toLowerCase(),
         data: job,
-        opts: { ...BASE_JOB_OPTIONS, delay },
+        opts: { delay },
       });
 
       this.logger.log(`Queued ${channel} log:${log.id}`);

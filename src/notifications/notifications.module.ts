@@ -86,15 +86,30 @@ export class NotificationsModule {
       BullModule.registerQueue(
         {
           name: NOTIFICATION_QUEUES.HIGH,
-          defaultJobOptions: { priority: 1 },
+          defaultJobOptions: {
+            priority: 1,
+            attempts: 3,
+            removeOnComplete: { age: 60 * 60 * 24 },
+            removeOnFail: { age: 60 * 60 * 24 * 7 },
+          },
         },
         {
           name: NOTIFICATION_QUEUES.NORMAL,
-          defaultJobOptions: { priority: 5 },
+          defaultJobOptions: {
+            priority: 5,
+            attempts: 3,
+            removeOnComplete: { age: 60 * 60 * 24 },
+            removeOnFail: { age: 60 * 60 * 24 * 7 },
+          },
         },
         {
           name: NOTIFICATION_QUEUES.LOW,
-          defaultJobOptions: { priority: 10 },
+          defaultJobOptions: {
+            priority: 10,
+            attempts: 3,
+            removeOnComplete: { age: 60 * 60 * 24 },
+            removeOnFail: { age: 60 * 60 * 24 * 7 },
+          },
         },
       ),
       // Register queues with Bull Board dashboard

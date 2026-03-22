@@ -25,12 +25,13 @@ import { DocumentEmbeddingProcessor } from './document.processor';
       name: DOCUMENT_EMBEDDING_QUEUE,
       defaultJobOptions: {
         priority: 5,
-        // attempts: 3,
-        // backoff: {
-        //   type: 'exponential',
-        //    delay: 1000 //
-
-        //  },
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5_000, // 5s → 10s → 20s
+        },
+        removeOnComplete: { age: 60 * 60 * 24 }, // keep 24h
+        removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
       },
     }),
     BullBoardModule.forFeature({
