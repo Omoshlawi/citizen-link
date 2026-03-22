@@ -18,6 +18,7 @@ import {
   QueryTemplateDto,
   QueryTemplateVersionDto,
   RenderTemplateDto,
+  UpdateTemplateByKeyDto,
   UpdateTemplateDto,
 } from './templates.dto';
 import { UserSession } from '../..//auth/auth.types';
@@ -92,7 +93,7 @@ export class TemplatesService implements OnModuleInit {
       },
     );
 
-    return this.update(
+    return this.updateByKey(
       key,
       {
         slots: snapshot.slots as Record<string, string>,
@@ -177,9 +178,9 @@ export class TemplatesService implements OnModuleInit {
     });
   }
 
-  async update(
+  async updateByKey(
     key: string,
-    updateTemplateDto: UpdateTemplateDto,
+    updateTemplateDto: UpdateTemplateByKeyDto,
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {
@@ -217,6 +218,68 @@ export class TemplatesService implements OnModuleInit {
       // Update the live template
       return await tx.template.update({
         where: { key },
+        data: {
+          ...(updateTemplateDto.slots && { slots: updateTemplateDto.slots }),
+          ...(updateTemplateDto.metadata && {
+            metadata: updateTemplateDto.metadata,
+          }),
+          ...(updateTemplateDto.name && { name: updateTemplateDto.name }),
+          ...(updateTemplateDto.description && {
+            description: updateTemplateDto.description,
+          }),
+          version: newVersion,
+        } as Prisma.TemplateUpdateInput,
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+    });
+
+    return updated;
+  }
+  async update(
+    id: string,
+    updateTemplateDto: UpdateTemplateDto,
+    user: UserSession['user'],
+    query: CustomRepresentationQueryDto,
+  ) {
+    const tpl = await this.prismaService.template.findUnique({
+      where: { id, voided: false },
+    });
+    if (!tpl) {
+      throw new BadRequestException(`Template not found: ${id}`);
+    }
+
+    if (updateTemplateDto.slots) {
+      this.templatesRenderService.validateSlots(
+        tpl.type as TemplateType,
+        updateTemplateDto.slots,
+        tpl.key,
+      );
+      // Invalidate compiled cache for changed slots
+      const old = tpl.slots as Record<string, string>;
+      for (const [name, template] of Object.entries(old)) {
+        if (updateTemplateDto.slots[name] !== template)
+          this.templatesRenderService.compiled.delete(template);
+      }
+    }
+
+    const newVersion = tpl.version + 1;
+
+    const updated = await this.prismaService.$transaction(async (tx) => {
+      // Save new version snapshot
+      await tx.templateVersion.create({
+        data: {
+          templateId: tpl.id,
+          version: tpl.version,
+          slots: tpl.slots as Record<string, string>,
+          schema: tpl.schema ?? undefined,
+          metadata: tpl.metadata ?? undefined,
+          changedById: user.id,
+          changeNote: updateTemplateDto.changeNote,
+        },
+      });
+      // Update the live template
+      return await tx.template.update({
+        where: { id: tpl.id },
         data: {
           ...(updateTemplateDto.slots && { slots: updateTemplateDto.slots }),
           ...(updateTemplateDto.metadata && {

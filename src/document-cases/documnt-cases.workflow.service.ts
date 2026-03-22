@@ -4,6 +4,7 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
   MatchTrigger,
+  NotificationChannel,
 } from '../../generated/prisma/client';
 import { UserSession } from '../auth/auth.types';
 import {
@@ -15,6 +16,8 @@ import { Job, Queue } from 'bullmq';
 import { DocumentEmbeddingJob } from './document-cases.interface';
 import { InjectQueue } from '@nestjs/bullmq';
 import { DOCUMENT_EMBEDDING_QUEUE } from './document-cases.constants';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationPriority } from 'src/notifications/notification.interfaces';
 @Injectable()
 export class DocumentCasesWorkflowService {
   private readonly logger = new Logger(DocumentCasesWorkflowService.name);
@@ -24,6 +27,7 @@ export class DocumentCasesWorkflowService {
     private readonly representationService: CustomRepresentationService,
     @InjectQueue(DOCUMENT_EMBEDDING_QUEUE)
     private readonly documentEmbeddingQueue: Queue<DocumentEmbeddingJob>,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async submitLostCase(
@@ -110,7 +114,31 @@ export class DocumentCasesWorkflowService {
         });
     }
     // 5. Notify owner of successfull submission of case and inform them they'll be notified on matches
-    // TODO: implement notification
+    this.notifications
+      .sendFromTemplate({
+        channels: [NotificationChannel.EMAIL],
+        templateKey: 'notification.case.lost.repoted', // TODO: Set used template key to settings and use setting to retrive template
+        data: {
+          case: { ...canSubmit.case, user },
+          caseType: 'Lost',
+        },
+        priority: NotificationPriority.HIGH,
+        recipient: {
+          email: user.email,
+        },
+        userId: user.id,
+      })
+      .then(() => {
+        this.logger.debug(
+          `Notification sent for lost case ${lostCaseId} to user ${user.id}`,
+        );
+      })
+      .catch((e) => {
+        this.logger.error(
+          `Error sending notification for lost case ${lostCaseId} to user ${user.id}`,
+          e,
+        );
+      });
     return lostCase;
   }
 
@@ -184,6 +212,7 @@ export class DocumentCasesWorkflowService {
         case: {
           include: {
             document: true,
+            user: true,
           },
         },
       },
@@ -248,6 +277,31 @@ export class DocumentCasesWorkflowService {
     }
     //5. Notify finder of success verification of the found document
     // TODO: implement notification
+    this.notifications
+      .sendFromTemplate({
+        channels: [NotificationChannel.EMAIL],
+        templateKey: 'notification.case.found.verified', // TODO: Set used template key to settings and use setting to retrive template
+        data: {
+          case: canVerify.case,
+          caseType: 'Found',
+        },
+        priority: NotificationPriority.HIGH,
+        recipient: {
+          email: canVerify.case?.user?.email,
+        },
+        userId: canVerify.case?.user?.id,
+      })
+      .then(() => {
+        this.logger.debug(
+          `Notification sent for found case ${foundCaseId} to user ${canVerify.case?.user?.id}`,
+        );
+      })
+      .catch((e) => {
+        this.logger.error(
+          `Error sending notification for found case ${foundCaseId} to user ${canVerify.case?.user?.id}`,
+          e,
+        );
+      });
     return foundCase;
   }
 

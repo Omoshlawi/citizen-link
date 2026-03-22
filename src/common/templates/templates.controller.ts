@@ -19,6 +19,7 @@ import {
   QueryTemplateVersionResponseDto,
   RenderTemplateDto,
   TemplateVersionResponseDto,
+  UpdateTemplateByKeyDto,
   UpdateTemplateDto,
 } from './templates.dto';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
@@ -66,18 +67,36 @@ export class TemplatesController {
     return this.templatesService.create(createTemplateDto, user, query);
   }
 
-  @Patch(':key')
-  @ApiOperation({ summary: 'Update Template' })
+  @Patch('key/:key')
+  @ApiOperation({ summary: 'Update Template by key' })
+  @ApiOkResponse({ type: GetTemplateResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ templates: ['update'] })
+  updateByKey(
+    @Param('key') key: string,
+    @Body() updateTemplateDto: UpdateTemplateByKeyDto,
+    @Query() query: QueryTemplateDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.templatesService.updateByKey(
+      key,
+      updateTemplateDto,
+      user,
+      query,
+    );
+  }
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update Template by id' })
   @ApiOkResponse({ type: GetTemplateResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ templates: ['update'] })
   update(
-    @Param('key') key: string,
+    @Param('id') id: string,
     @Body() updateTemplateDto: UpdateTemplateDto,
     @Query() query: QueryTemplateDto,
     @Session() { user }: UserSession,
   ) {
-    return this.templatesService.update(key, updateTemplateDto, user, query);
+    return this.templatesService.update(id, updateTemplateDto, user, query);
   }
 
   @Get(':key/versions')

@@ -44,8 +44,9 @@ import { VisionModule } from './vision/vision.module';
 
 @Module({
   imports: [
-    PromptsModule,
     ConfigifyModule.forRootAsync({}),
+    PromptsModule,
+    QueueModule,
     PrismaModule.forRootAsync({
       global: true,
       useFactory: (config: PrismaConfig) => {
@@ -58,6 +59,14 @@ import { VisionModule } from './vision/vision.module';
     QueryBuilderModule.register({ global: true }),
     ScheduleModule.forRoot(),
     AuthModule.forRoot(),
+    NotificationsModule.register({
+      global: true,
+      options: {
+        emailProviders: [EmailProviders.MAILPIT],
+        smsProviders: [],
+        pushProviders: [PushProviders.EXPO],
+      },
+    }),
     AddressHierarchyModule,
     AddressModule,
     AddressLocalesModule,
@@ -106,19 +115,10 @@ import { VisionModule } from './vision/vision.module';
     }),
     InvoiceModule,
     VisionModule,
-    QueueModule,
-    NotificationsModule.register({
-      global: true,
-      options: {
-        emailProviders: [EmailProviders.MAILPIT],
-        smsProviders: [],
-        pushProviders: [PushProviders.EXPO],
-      },
-    }),
+
     SettingsModule,
     TemplatesModule,
     PushTokenModule,
-    QueueModule,
   ],
   controllers: [AppController],
   providers: [

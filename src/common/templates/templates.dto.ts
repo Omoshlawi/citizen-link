@@ -57,6 +57,9 @@ export class CreateTemplateDto extends createZodDto(TemplateShema) {}
 export class RenderTemplateDto extends createZodDto(RenderTemplateSchema) {}
 
 export class UpdateTemplateDto extends createZodDto(
+  TemplateShema.extend({ changeNote: z.string().optional() }).partial(),
+) {}
+export class UpdateTemplateByKeyDto extends createZodDto(
   TemplateShema.omit({ key: true })
     .extend({ changeNote: z.string().optional() })
     .partial(),
