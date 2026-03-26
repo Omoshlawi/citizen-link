@@ -1,121 +1,176 @@
 [
   {
+    "key": "notification.case.lost.reported",
+    "type": "notification",
+    "name": "Lost Case Reported",
+    "description": "Sent to owner when they report a lost document.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Lost Document Case #{{case.caseNumber}} Reported" },
+      "email_body": { "source": "file", "path": "mail/document-case-reported.hbs" },
+      "sms_body": { "source": "text", "text": "Citizen Link: Your lost document case #{{case.caseNumber}} ({{case.document.type.name}}) has been reported. We are now searching for matches." },
+      "push_title": { "source": "text", "text": "Report Received #{{case.caseNumber}}" },
+      "push_body": { "source": "text", "text": "We are searching for matches for your {{case.document.type.name}} case." }
+    },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
+    "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+  },
+  {
+    "key": "notification.case.found.verified",
+    "type": "notification",
+    "name": "Found Case Verified",
+    "description": "Sent to finder when their found report is verified by staff.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Found Document Case #{{case.caseNumber}} Verified" },
+      "email_body": { "source": "file", "path": "mail/document-case-reported.hbs" },
+      "sms_body": { "source": "text", "text": "Citizen Link: Your found document case #{{case.caseNumber}} ({{case.document.type.name}}) has been verified. We are now matching it with lost cases." },
+      "push_title": { "source": "text", "text": "Report Verified #{{case.caseNumber}}" },
+      "push_body": { "source": "text", "text": "Your report for {{case.document.type.name}} has been verified." }
+    },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
+    "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+  },
+  {
+    "key": "notification.case.found.matched",
+    "type": "notification",
+    "name": "Lost Owner Match Found",
+    "description": "Sent to the owner of a lost document when a match is found.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Match Found! Case #{{match.lostDocumentCase.case.caseNumber}}" },
+      "email_body": { "source": "file", "path": "mail/document-match-found.hbs" },
+      "sms_body": { "source": "text", "text": "Citizen Link: Match found for your lost case #{{match.lostDocumentCase.case.caseNumber}} ({{match.lostDocumentCase.case.document.type.name}}). Visit citizenlink.app to see details." },
+      "push_title": { "source": "text", "text": "Match Found! #{{match.lostDocumentCase.case.caseNumber}}" },
+      "push_body": { "source": "text", "text": "A potential match for your {{match.lostDocumentCase.case.document.type.name}} has been located." }
+    },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
+    "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+  },
+  {
+    "key": "notification.case.lost.matched",
+    "type": "notification",
+    "name": "Found Finder Match Found",
+    "description": "Sent to the finder of a document when a match is found with a lost case.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Match Found for Case #{{match.foundDocumentCase.case.caseNumber}}" },
+      "email_body": { "source": "file", "path": "mail/document-match-found.hbs" },
+      "sms_body": { "source": "text", "text": "Citizen Link: Match found for found case #{{match.foundDocumentCase.case.caseNumber}} ({{match.foundDocumentCase.case.document.type.name}}). Visit citizenlink.app to see details." },
+      "push_title": { "source": "text", "text": "Match Found! #{{match.foundDocumentCase.case.caseNumber}}" },
+      "push_body": { "source": "text", "text": "A potential match for the {{match.foundDocumentCase.case.document.type.name}} you found has been located." }
+    },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
+    "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+  },
+  {
     "key": "prompt.chatbot.guide",
     "type": "prompt",
     "name": "Chatbot Guide",
-    "description": "Chatbot guide prompt",
+    "description": "Guidance rules for the AI chatbot assistant.",
     "engine": "handlebars",
-    "slots": {
-      "user": {
-        "source": "file",
-        "path": "prompts/chatbot-guide.hbs"
-      },
-      "system": {
-        "source": "text",
-        "text": "You are a helpful assistant."
-      }
-    },
-    "schema": {
-      "required": ["user"],
-      "optional": ["system"]
-    },
-    "metadata": {
-      "model": "gemma3:4b",
-      "temperature": 0.2,
-      "max_tokens": 4096,
-      "top_p": 0.2
-    }
+    "slots": { "user": { "source": "file", "path": "prompts/chatbot-guide.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
   },
   {
-    "key": "notification.document.matched",
-    "type": "notification",
-    "name": "Document Matched",
-    "description": "Document matched notification",
+    "key": "prompt.claim.verification",
+    "type": "prompt",
+    "name": "Claim Verification",
+    "description": "Prompt for verifying validity of a field claim.",
     "engine": "handlebars",
-    "slots": {
-      "email_subject": {
-        "source": "text",
-        "text": "Document Case #{{caseNumber}} Matched"
-      },
-      "email_body": {
-        "source": "file",
-        "path": "mail/document-match-found.hbs"
-      },
-      "sms_body": {
-        "source": "text",
-        "text": "Document Matched"
-      },
-      "push_title": {
-        "source": "text",
-        "text": "Document Matched"
-      },
-      "push_body": {
-        "source": "text",
-        "text": "Document Matched"
-      }
-    },
-    "schema": {
-      "required": [],
-      "optional": [
-        "email_subject",
-        "email_body",
-        "sms_body",
-        "push_title",
-        "push_body"
-      ]
-    },
-    "metadata": {
-      "channels": {
-        "email": true,
-        "sms": true,
-        "push": true
-      }
-    }
+    "slots": { "user": { "source": "file", "path": "prompts/claim-verification.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
   },
   {
-    "key": "notification.case.repoted",
-    "type": "notification",
-    "name": "Document Case Reported",
-    "description": "Document Case Reported",
+    "key": "prompt.document.data.extraction",
+    "type": "prompt",
+    "name": "Document Data Extraction",
+    "description": "Extract structured data from document raw text.",
     "engine": "handlebars",
-    "slots": {
-      "email_subject": {
-        "source": "text",
-        "text": "Document Case #{{caseNumber}} Matched"
-      },
-      "email_body": {
-        "source": "file",
-        "path": "mail/document-case-reported.hbs"
-      },
-      "sms_body": {
-        "source": "text",
-        "text": "Document Matched"
-      },
-      "push_title": {
-        "source": "text",
-        "text": "Document Matched"
-      },
-      "push_body": {
-        "source": "text",
-        "text": "Document Matched"
-      }
-    },
-    "schema": {
-      "required": [],
-      "optional": [
-        "email_subject",
-        "email_body",
-        "sms_body",
-        "push_title",
-        "push_body"
-      ]
-    },
-    "metadata": {
-      "channels": {
-        "email": true,
-        "sms": true,
-        "push": true
-      }
-    }
+    "slots": { "user": { "source": "file", "path": "prompts/document-data-extraction.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
+  },
+  {
+    "key": "prompt.document.matching",
+    "type": "prompt",
+    "name": "Document Matching",
+    "description": "Evaluate match levels between lost and found cases.",
+    "engine": "handlebars",
+    "slots": { "user": { "source": "file", "path": "prompts/document-matching.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
+  },
+  {
+    "key": "prompt.field.confidence.scoring",
+    "type": "prompt",
+    "name": "Field Confidence Scoring",
+    "description": "Score AI confidence in extracted fields.",
+    "engine": "handlebars",
+    "slots": { "user": { "source": "file", "path": "prompts/field-confidence-scoring.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
+  },
+  {
+    "key": "prompt.image.quality.analysis",
+    "type": "prompt",
+    "name": "Image Quality Analysis",
+    "description": "Check if an uploaded image is clear and contains a valid document.",
+    "engine": "handlebars",
+    "slots": { "user": { "source": "file", "path": "prompts/image-quality-analysis.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
+  },
+  {
+    "key": "prompt.match.verification",
+    "type": "prompt",
+    "name": "Match Verification",
+    "description": "Verify high-level match between cases.",
+    "engine": "handlebars",
+    "slots": { "user": { "source": "file", "path": "prompts/match-verification.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
+  },
+  {
+    "key": "prompt.security.questions",
+    "type": "prompt",
+    "name": "Security Questions Generator",
+    "description": "Generate security questions based on matched data.",
+    "engine": "handlebars",
+    "slots": { "user": { "source": "file", "path": "prompts/security-questions.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
+  },
+  {
+    "key": "prompt.text.extraction",
+    "type": "prompt",
+    "name": "Text Extraction",
+    "description": "Extract text from OCR vision results.",
+    "engine": "handlebars",
+    "slots": { "user": { "source": "file", "path": "prompts/text-extraction.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
+  },
+  {
+    "key": "prompt.vision.extraction.structured",
+    "type": "prompt",
+    "name": "Structured Vision Extraction",
+    "description": "Directly extract structured fields from images.",
+    "engine": "handlebars",
+    "slots": { "user": { "source": "file", "path": "prompts/vision-extraction-structured.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
+  },
+  {
+    "key": "prompt.vision.extraction.unstructured",
+    "type": "prompt",
+    "name": "Unstructured Vision Extraction",
+    "description": "Extract unstructured text from images.",
+    "engine": "handlebars",
+    "slots": { "user": { "source": "file", "path": "prompts/vision-extraction-unstructured.hbs" } },
+    "schema": { "required": ["user"], "optional": ["system"] },
+    "metadata": {}
   }
 ]

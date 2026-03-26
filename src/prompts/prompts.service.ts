@@ -14,33 +14,35 @@ import { MatchedField } from '../matching/matching.interface';
 export class PromptsService {
   constructor(private templatesService: TemplatesService) {}
 
-  getDocumentDataExtractionPrompt(
+  async getDocumentDataExtractionPrompt(
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
   ) {
-    return this.templatesService.renderFile(
-      'prompts',
-      'document-data-extraction',
+    const { rendered } = await this.templatesService.renderSlot(
+      'prompt.document.data.extraction',
+      'user',
       {
         documentTypes,
       },
     );
+    return rendered;
   }
 
-  getImageAnalysisPrompt(
+  async getImageAnalysisPrompt(
     supportedDocumentTypes: Array<
       Pick<DocumentType, 'id' | 'name' | 'category'>
     >,
   ) {
-    return this.templatesService.renderFile(
-      'prompts',
-      'image-quality-analysis',
+    const { rendered } = await this.templatesService.renderSlot(
+      'prompt.image.quality.analysis',
+      'user',
       {
         supportedDocumentTypes,
       },
     );
+    return rendered;
   }
 
-  getMatchVerificationPrompt(
+  async getMatchVerificationPrompt(
     foundCase: DocumentCase & {
       document: Document & {
         type: DocumentType;
@@ -61,16 +63,21 @@ export class PromptsService {
     const lostTags = (lostCase.tags as Array<string>).length
       ? (lostCase.tags as Array<string>).join(', ')
       : null;
-    return this.templatesService.renderFile('prompts', 'match-verification', {
-      found: foundCase,
-      lost: lostCase,
-      foundTags,
-      lostTags,
-      matchedFields,
-    });
+    const { rendered } = await this.templatesService.renderSlot(
+      'prompt.match.verification',
+      'user',
+      {
+        found: foundCase,
+        lost: lostCase,
+        foundTags,
+        lostTags,
+        matchedFields,
+      },
+    );
+    return rendered;
   }
 
-  getSecurityQuestionsPrompt(
+  async getSecurityQuestionsPrompt(
     foundCase: DocumentCase & {
       document: Document & {
         type: DocumentType;
@@ -91,42 +98,58 @@ export class PromptsService {
     const lostTags = (lostCase.tags as Array<string>).length
       ? (lostCase.tags as Array<string>).join(', ')
       : null;
-    return this.templatesService.renderFile('prompts', 'security-questions', {
-      found: foundCase,
-      lost: lostCase,
-      foundTags,
-      lostTags,
-      maxSecurityQuestions,
-    });
+    const { rendered } = await this.templatesService.renderSlot(
+      'prompt.security.questions',
+      'user',
+      {
+        found: foundCase,
+        lost: lostCase,
+        foundTags,
+        lostTags,
+        maxSecurityQuestions,
+      },
+    );
+    return rendered;
   }
 
-  getChatPromptMessage(
+  async getChatPromptMessage(
     userQuery: string,
     supportedDocumentTypes: Array<string>,
   ) {
-    return this.templatesService.renderFile('prompts', 'chatbot-guide', {
-      userQuery,
-      supportedDocumentTypes,
-    });
+    const { rendered } = await this.templatesService.renderSlot(
+      'prompt.chatbot.guide',
+      'user',
+      {
+        userQuery,
+        supportedDocumentTypes,
+      },
+    );
+    return rendered;
   }
 
-  getVisionExtractionPrompt(
+  async getVisionExtractionPrompt(
     output: 'structured' | 'unstructured' = 'structured',
   ) {
-    return this.templatesService.renderFile(
-      'prompts',
-      `vision-extraction-${output}`,
+    const { rendered } = await this.templatesService.renderSlot(
+      `prompt.vision.extraction.${output}`,
+      'user',
       {},
     );
+    return rendered;
   }
 
-  getTextExtractionPrompt(
+  async getTextExtractionPrompt(
     visionOutput: z.infer<typeof VisionExtractionOutputSchema>,
     documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
   ) {
-    return this.templatesService.renderFile('prompts', 'text-extraction', {
-      visionOutput: JSON.stringify(visionOutput, null, 2),
-      documentTypes,
-    });
+    const { rendered } = await this.templatesService.renderSlot(
+      'prompt.text.extraction',
+      'user',
+      {
+        visionOutput: JSON.stringify(visionOutput, null, 2),
+        documentTypes,
+      },
+    );
+    return rendered;
   }
 }

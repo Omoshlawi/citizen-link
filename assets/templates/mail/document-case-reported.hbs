@@ -1,6 +1,15 @@
-<h1>Hi {{name}},</h1><br>
-<p>Your document case <strong>#{{caseNumber}}</strong> has been matched.</p>
-<p>You can view your document here: {{link}} and if yours claim it</p>
-<p>Thank you for using our service.</p>
-<p>Best regards,</p>
-<p>Citizen Link Team</p>
+<div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto;">
+  <h2 style="color: #6366f1;">Case Reported Successfully</h2>
+  <p>Hello {{case.user.name}},</p>
+  <p>Your <strong>{{caseType}}</strong> document report has been received and is now being processed.</p>
+  <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+    <p style="margin: 0;"><strong>Case Number:</strong> #{{case.caseNumber}}</p>
+    <p style="margin: 0;"><strong>Document Type:</strong> {{case.document.type.name}}</p>
+    <p style="margin: 0;"><strong>Current Status:</strong> {{case.status}}</p>
+  </div>
+  <p>Our system is actively searching for a match. We will notify you immediately once your document is located or matched with a finder.</p>
+  <p>Thank you for using Citizen Link to help track your essential documents.</p>
+  <p>Best regards,<br><strong>Citizen Link Team</strong></p>
+  <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;" />
+  <p style="font-size: 12px; color: #666;">This is an automated notification. For inquiries, please contact info@citizenlink.app</p>
+</div>

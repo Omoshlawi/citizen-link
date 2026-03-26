@@ -92,9 +92,9 @@ export class DocumentMatchingProcessor extends WorkerHost {
             match,
           },
           recipient: {
-            email: match.lostDocumentCase.case.user.email,
+            email: match.foundDocumentCase.case.user.email,
           },
-          userId: match.lostDocumentCase.case.userId,
+          userId: match.foundDocumentCase.case.userId,
         });
       });
       await Promise.all([...ownerPromises, ...founderPromises]);

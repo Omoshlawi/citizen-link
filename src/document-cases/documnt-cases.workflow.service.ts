@@ -117,7 +117,7 @@ export class DocumentCasesWorkflowService {
     this.notifications
       .sendFromTemplate({
         channels: [NotificationChannel.EMAIL],
-        templateKey: 'notification.case.lost.repoted', // TODO: Set used template key to settings and use setting to retrive template
+        templateKey: 'notification.case.lost.reported', // TODO: Set used template key to settings and use setting to retrive template
         data: {
           case: { ...canSubmit.case, user },
           caseType: 'Lost',
