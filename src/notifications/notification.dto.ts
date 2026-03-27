@@ -94,6 +94,8 @@ export class GetNotificationLogResponseDto implements NotificationLog {
   createdAt: Date;
   @ApiProperty()
   updatedAt: Date;
+  @ApiProperty()
+  voided: boolean;
   @ApiProperty({ nullable: true })
   userId: string | null;
 }

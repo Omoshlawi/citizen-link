@@ -18,6 +18,39 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       # Best practice: ensures the DB uses the exact volume path
       - PGDATA=/var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    container_name: citizen_link_redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      sh -c "
+        echo 'user default off' > /tmp/redis.acl &&
+        echo \"user $${REDIS_USERNAME} on >$${REDIS_PASSWORD} ~* &* +@all\" >> /tmp/redis.acl &&
+        redis-server --aclfile /tmp/redis.acl
+      "
+    ports:
+      - '6379:6379'
+    env_file:
+      - .env
+    environment:
+      - REDIS_USERNAME=${REDIS_USERNAME}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -u redis://$${REDIS_USERNAME}:$${REDIS_PASSWORD}@localhost:6379 ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   minio:
     container_name: citizen_link_minio
     image: minio/minio:latest
@@ -33,14 +66,24 @@ services:
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:9000/minio/health/live']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   app:
     container_name: citizen_link_app
     build: .
     restart: unless-stopped
     depends_on:
-      - db
-      - minio
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     ports:
       - '2000:2000'
     env_file:
@@ -48,9 +91,11 @@ services:
     environment:
       # App Config
       - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
       # Database Config
       - DATABASE_URL=${DATABASE_URL}
-      - PORT=${PORT}
+      # Redis Config
+      - REDIS_DB_URL=${REDIS_DB_URL}
       # Better Auth Config
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL}
@@ -65,9 +110,18 @@ services:
       - S3_ENDPOINT=${S3_ENDPOINT}
       - S3_BUCKET_TMP=${S3_BUCKET_TMP}
       - S3_BUCKET_CASES=${S3_BUCKET_CASES}
+      - S3_MAX_FILE_SIZE=${S3_MAX_FILE_SIZE}
+      # SMTP / Email Config
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_FROM=${SMTP_FROM}
+      # Expo Push Config
+      - EXPO_ACCESS_TOKEN=${EXPO_ACCESS_TOKEN}
       # Embedding Config
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
       - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
+      - EMBEDDING_IS_OPENAI=${EMBEDDING_IS_OPENAI}
       # OpenAI Config
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL}
@@ -80,9 +134,17 @@ services:
       - TEXT_EXTRACTION_AI_BASE_URL=${TEXT_EXTRACTION_AI_BASE_URL}
       - TEXT_EXTRACTION_AI_MODEL=${TEXT_EXTRACTION_AI_MODEL}
       - TEXT_EXTRACTION_AI_API_KEY=${TEXT_EXTRACTION_AI_API_KEY}
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:2000/api || exit 1']
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 volumes:
   db_data:
+    driver: local
+  redis_data:
     driver: local
   minio_data:
     driver: local

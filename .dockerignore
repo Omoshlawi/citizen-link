@@ -8,5 +8,8 @@ dist
 coverage
 test
 *.log
-.env
-
+.env*
+docs/
+*.md
+*.spec.ts
+*.test.ts

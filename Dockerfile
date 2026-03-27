@@ -19,6 +19,7 @@
     # (The placeholder URL is fine here as it's only for the binary generation)
     ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
     RUN pnpm db generate && pnpm run build
+
     
     # --- STAGE 2: Runtime ---
     FROM node:22-alpine
@@ -48,5 +49,8 @@
     
     # Match this with your docker-compose app port (2000)
     EXPOSE 2000
+
+    HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget -qO- http://localhost:2000/api || exit 1
     
     ENTRYPOINT ["./docker-entrypoint.sh"]

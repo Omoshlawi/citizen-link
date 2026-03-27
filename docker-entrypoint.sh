@@ -10,8 +10,16 @@ fi
 
 echo "🔁 Running Prisma migrations against: $DATABASE_URL"
 
-until npx prisma migrate deploy; do
-  echo "⚠️ Prisma migrate deploy failed (database not ready yet?). Retrying in 5 seconds..."
+MAX_RETRIES=10
+RETRY_COUNT=0
+
+until node_modules/.bin/prisma migrate deploy; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
+    echo "❌ Prisma migrate deploy failed after $MAX_RETRIES attempts. Exiting."
+    exit 1
+  fi
+  echo "⚠️ Prisma migrate deploy failed (attempt $RETRY_COUNT/$MAX_RETRIES). Retrying in 5 seconds..."
   sleep 5
 done
 
@@ -32,4 +40,3 @@ fi
 
 echo "🚀 Starting NestJS application..."
 exec node dist/src/main.js
-
