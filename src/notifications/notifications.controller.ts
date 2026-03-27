@@ -119,6 +119,9 @@ export class NotificationsController {
       priority: dto.priority,
       recipient: dto.recipient,
       userId: user.id,
+      eventTitle: dto.eventTitle,
+      eventBody: dto.eventBody,
+      eventDescription: dto.eventDescription,
     });
   }
 }

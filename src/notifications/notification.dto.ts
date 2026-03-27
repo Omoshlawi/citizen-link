@@ -43,6 +43,9 @@ export const TestNotificationSchema = z.object({
     userId: z.string().optional(),
     data: z.record(z.string(), z.any()).optional(),
   }),
+  eventTitle: z.string().nonempty(),
+  eventBody: z.string().nonempty(),
+  eventDescription: z.string().nonempty(),
 });
 
 export class TestNotificationDto extends createZodDto(TestNotificationSchema) {}

@@ -185,5 +185,18 @@
     },
     "schema": { "required": ["email_subject", "email_body"], "optional": [] },
     "metadata": { "channels": { "email": true, "sms": false, "push": false } }
+  },
+  {
+    "key": "auth.password.reset",
+    "type": "notification",
+    "name": "Password Reset",
+    "description": "Sent to users when they request a password reset.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Action Required: Reset Your Password — Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/auth-password-reset.hbs" }
+    },
+    "schema": { "required": ["email_subject", "email_body"], "optional": [] },
+    "metadata": { "channels": { "email": true, "sms": false, "push": false } }
   }
 ]

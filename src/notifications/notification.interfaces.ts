@@ -325,4 +325,7 @@ export interface SendNotificationOptions extends BaseOptions {
     sms?: { body: string };
     push?: { title: string; body: string; data?: Record<string, unknown> };
   };
+  eventTitle: string;
+  eventBody: string;
+  eventDescription: string;
 }

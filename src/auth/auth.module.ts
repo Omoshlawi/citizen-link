@@ -133,11 +133,25 @@ export class AuthModule {
             hooks,
             emailAndPassword: {
               enabled: true,
-              // eslint-disable-next-line @typescript-eslint/require-await
-              async sendResetPassword({ token }, _) {
-                // http://localhost:8090/api/auth/reset-password/4IlzTEQRdCSm4B1fy4YqrVUF?callbackURL=%2Freset-password
-                console.log('Token ---------', token);
-                console.log('Url ---------', `/reset-password?token=${token}`);
+              async sendResetPassword({ user, token }, _) {
+                const deepLink = `citizenlinkapp://auth/reset-password?token=${token}`;
+                const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+                await notificationDispatch.sendFromTemplate({
+                  templateKey: 'auth.password.reset',
+                  recipient: { email: user.email },
+                  data: {
+                    user,
+                    deepLink,
+                    resetUrl,
+                    year: new Date().getFullYear(),
+                  },
+                  userId: user.id,
+                  priority: NotificationPriority.HIGH,
+                  force: true,
+                  eventTitle: 'Password Reset Requested',
+                  eventBody: `A password reset email has been sent to ${user.email}.`,
+                  eventDescription: `Password reset requested for user ${user.email} (id: ${user.id}).`,
+                });
               },
               requireEmailVerification: true,
             },
