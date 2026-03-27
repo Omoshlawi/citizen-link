@@ -17,7 +17,9 @@ export class NotificationConfig {
   @Value('SMTP_PASSWORD')
   smtpPassword?: string;
 
-  @Value('SMTP_FROM', { default: '"No Reply" <noreply@example.com>' })
+  // No default — a missing SMTP_FROM triggers a startup warning in EmailChannelModule.
+  // Set this to your actual sender address in production.
+  @Value('SMTP_FROM')
   smtpFrom?: string;
 
   @Value('SMTP_NAME', { default: 'No Reply' })

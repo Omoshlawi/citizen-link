@@ -1,24 +1,30 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Job, Queue } from 'bullmq';
+import {
+  NotificationChannel,
+  NotificationStatus,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushTokenService } from '../push-token/push-token.service';
 import { NotificationContentResolver } from './notification.content.resolver';
 import { EmailChannelService } from './channels/email/email.channel.service';
 import { SmsChannelService } from './channels/sms/sms.channel.service';
 import { PushChannelService } from './channels/push/push.channel.service';
+import { NOTIFICATION_QUEUES } from './notification.constants';
 import {
   EmailPayload,
   NotificationJob,
   ProviderResult,
   PushPayload,
+  PushReceiptJob,
   SmsPayload,
 } from './notification.interfaces';
-import { Job } from 'bullmq';
-import {
-  NotificationChannel,
-  NotificationStatus,
-} from '../../generated/prisma/enums';
+
+// Error codes that mean the token is permanently invalid
+const PERMANENT_PUSH_ERRORS = new Set(['DeviceNotRegistered', 'InvalidCredentials']);
 
 @Injectable()
 export class NotificationProcessorHandler {
@@ -31,6 +37,8 @@ export class NotificationProcessorHandler {
     private readonly smsChannel: SmsChannelService,
     private readonly pushChannel: PushChannelService,
     private readonly pushToken: PushTokenService,
+    @InjectQueue(NOTIFICATION_QUEUES.PUSH_RECEIPT)
+    private readonly receiptQueue: Queue,
   ) {}
 
   async process(job: Job<NotificationJob>): Promise<void> {
@@ -49,14 +57,8 @@ export class NotificationProcessorHandler {
     }
 
     try {
-      // Auto-load push tokens when not present in recipient
-      if (
-        channel === NotificationChannel.PUSH &&
-        !recipient.pushTokens?.length &&
-        userId
-      ) {
-        recipient.pushTokens = await this.pushToken.getPushTokens(userId);
-      }
+      // Push tokens are resolved at dispatch time by NotificationDispatchService.
+      // By the time this runs, recipient.pushTokens is already populated if the userId is known.
 
       // Resolve template/inline source → channel-specific payload
       const payload = await this.contentResolver.resolve(
@@ -100,14 +102,9 @@ export class NotificationProcessorHandler {
           break;
         case NotificationChannel.PUSH:
           result = await this.pushChannel.send(payload as PushPayload);
-          // Deactivate invalid Expo tokens automatically
-          if (
-            !result.success &&
-            result.error?.includes('DeviceNotRegistered')
-          ) {
-            await this.pushToken.deactivatePushToken(
-              (payload as PushPayload).to,
-            );
+          // Deactivate permanently invalid tokens immediately (Phase 1 error)
+          if (!result.success && result.errorCode && PERMANENT_PUSH_ERRORS.has(result.errorCode)) {
+            await this.pushToken.deactivatePushToken((payload as PushPayload).to);
           }
           break;
         default:
@@ -115,6 +112,11 @@ export class NotificationProcessorHandler {
       }
 
       if (result.success) {
+        const metadata =
+          channel === NotificationChannel.PUSH && result.messageId
+            ? { receiptId: result.messageId }
+            : undefined;
+
         await this.prisma.notificationLog.update({
           where: { id: logId },
           data: {
@@ -123,8 +125,23 @@ export class NotificationProcessorHandler {
             lastError: null,
             provider: result.providerName ?? 'unknown',
             attempts: job.attemptsMade + 1,
+            ...(metadata && { metadata }),
           },
         });
+
+        // Phase-2: schedule a receipt check ~15 minutes later to confirm actual device delivery
+        if (channel === NotificationChannel.PUSH && result.messageId) {
+          await this.receiptQueue.add(
+            'check-receipt',
+            {
+              logId,
+              receiptId: result.messageId,
+              token: (payload as PushPayload).to,
+            } satisfies PushReceiptJob,
+            { delay: 15 * 60 * 1000 },
+          );
+        }
+
         this.logger.log(`[${channel}] Delivered log:${logId} via ${result.providerName ?? 'unknown'}`);
       } else {
         throw new Error(result.error ?? 'Provider returned failure');
@@ -135,7 +152,7 @@ export class NotificationProcessorHandler {
       );
       await this.prisma.notificationLog.update({
         where: { id: logId },
-        data: { lastError: err.message, attempts: job.attemptsMade + 1 },
+        data: { lastError: String(err.message).slice(0, 500), attempts: job.attemptsMade + 1 },
       });
       // Re-throw so BullMQ triggers retry/backoff
       throw err;
@@ -146,7 +163,7 @@ export class NotificationProcessorHandler {
     if (job.attemptsMade >= (job.opts.attempts ?? 3)) {
       await this.prisma.notificationLog.update({
         where: { id: job.data.logId },
-        data: { status: NotificationStatus.FAILED, lastError: err.message },
+        data: { status: NotificationStatus.FAILED, lastError: err.message.slice(0, 500) },
       });
       this.logger.error(
         `[${job.data.channel}] Permanently failed log:${job.data.logId} after ${job.attemptsMade} attempts`,

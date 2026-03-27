@@ -5,11 +5,31 @@ import {
   PushPayload,
 } from '../../notification.interfaces';
 
+type ReceiptMap = Map<string, ProviderResult>;
+
 @Injectable()
 export class PushChannelService {
   private readonly logger = new Logger(PushChannelService.name);
 
   constructor(private readonly providers: IPushProvider[]) {}
+
+  /**
+   * Phase-2: Check delivery receipts for previously sent push notifications.
+   * Delegates to the first provider that supports receipt checking (currently Expo only).
+   * Call this ~15 minutes after send via a delayed BullMQ job.
+   */
+  async checkReceipts(receiptIds: string[]): Promise<ReceiptMap> {
+    const provider = this.providers.find(
+      (p) => typeof p.checkReceipts === 'function',
+    );
+    if (!provider?.checkReceipts) {
+      this.logger.warn(
+        'No push provider supports receipt checking — skipping phase-2 verification.',
+      );
+      return new Map();
+    }
+    return provider.checkReceipts(receiptIds);
+  }
 
   async send(payload: PushPayload): Promise<ProviderResult> {
     if (!this.providers?.length) {

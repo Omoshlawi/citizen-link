@@ -114,6 +114,15 @@ export interface IPushProvider {
   readonly name: string;
   send(payload: PushPayload): Promise<ProviderResult>;
   sendBatch?(payloads: PushPayload[]): Promise<ProviderResult[]>;
+  /** Phase-2 receipt check — called ~15 min after send to confirm actual device delivery. */
+  checkReceipts?(receiptIds: string[]): Promise<Map<string, ProviderResult>>;
+}
+
+// RECEIPT CHECK JOB (Phase-2 Expo push delivery confirmation)
+export interface PushReceiptJob {
+  logId: string;
+  receiptId: string;
+  token: string; // push token — needed to deactivate on permanent error
 }
 
 // SEND OPTIONS

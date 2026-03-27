@@ -64,7 +64,7 @@ import { VisionModule } from './vision/vision.module';
       global: true,
       channels: {
         email: { providers: [EmailProviders.MAILPIT] },
-        sms: { providers: [] as SmsProviders[] },
+        sms: { providers: [SmsProviders.AFRICASTALK, SmsProviders.TWILIO] },
         push: { providers: [PushProviders.EXPO] },
       },
     }),

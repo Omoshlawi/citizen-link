@@ -58,6 +58,9 @@ export class NotificationContentResolver {
 
     const isQuiet = await this.userSettings.isQuietHours(userId);
     if (isQuiet) {
+      // Intentional: email is allowed during quiet hours because it is non-intrusive
+      // (no sound/vibration). SMS and push are suppressed to avoid disturbing the user.
+      // Use force: true on critical sends (OTP, security alerts) to bypass this entirely.
       return allowed.filter((ch) => ch === NotificationChannel.EMAIL);
     }
 

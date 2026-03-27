@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
+import { PushTokenService } from '../push-token/push-token.service';
 import { NotificationChannel } from '../../generated/prisma/enums';
 import { NOTIFICATION_QUEUES } from './notification.constants';
 import { NotificationContentResolver } from './notification.content.resolver';
@@ -39,6 +40,7 @@ export class NotificationDispatchService {
     @InjectQueue(NOTIFICATION_QUEUES.LOW) private readonly lowQueue: Queue,
     private readonly prisma: PrismaService,
     private readonly contentResolver: NotificationContentResolver,
+    private readonly pushToken: PushTokenService,
   ) {}
 
   /**
@@ -146,23 +148,94 @@ export class NotificationDispatchService {
     }>;
   }): Promise<void> {
     const queue = this.resolveQueue(options.priority);
-    for (const r of options.recipients) {
-      await this.enqueue(
-        {
-          source: {
-            type: 'template',
-            templateKey: options.templateKey,
-            data: r.data ?? {},
+    const requestedChannels = [
+      NotificationChannel.EMAIL,
+      NotificationChannel.SMS,
+      NotificationChannel.PUSH,
+    ];
+
+    // Step 1: Resolve allowed channels and pre-load push tokens for all recipients in parallel
+    const resolved = await Promise.all(
+      options.recipients.map(async (r) => {
+        const allowedChannels =
+          await this.contentResolver.filterAllowedChannels(
+            requestedChannels,
+            r.userId,
+            r.force,
+            options.templateKey,
+          );
+        const recipient = { ...r.recipient };
+        if (
+          allowedChannels.includes(NotificationChannel.PUSH) &&
+          !recipient.pushTokens?.length &&
+          r.userId
+        ) {
+          recipient.pushTokens = await this.pushToken.getPushTokens(r.userId);
+        }
+        return { r, recipient, allowedChannels };
+      }),
+    );
+
+    // Step 2: Build (logCreateData, jobData) pairs for every channel of every recipient
+    type LogCreateData = Parameters<
+      typeof this.prisma.notificationLog.create
+    >[0]['data'];
+    type Pair = {
+      logData: LogCreateData;
+      jobData: Omit<NotificationJob, 'logId'>;
+    };
+
+    const pairs: Pair[] = [];
+    for (const { r, recipient, allowedChannels } of resolved) {
+      if (!allowedChannels.length) continue;
+      for (const channel of allowedChannels) {
+        pairs.push({
+          logData: {
+            channel,
+            provider: this.resolveProviderName(channel),
+            recipientId: r.userId,
+            userId: r.userId, // FK — required for ownership checks
+            to: this.extractTo(channel, recipient),
+            body: '',
+            status: 'PENDING',
           },
-          recipient: r.recipient,
-          userId: r.userId,
-          force: r.force,
-          priority: options.priority,
-          templateKey: options.templateKey,
-        },
-        queue,
-      );
+          jobData: {
+            channel,
+            source: {
+              type: 'template',
+              templateKey: options.templateKey,
+              data: r.data ?? {},
+            },
+            recipient,
+            userId: r.userId,
+            force: r.force ?? false,
+            attempt: 0,
+          },
+        });
+      }
     }
+
+    if (!pairs.length) return;
+
+    // Step 3: Create all logs atomically in a single transaction
+    const logs = await this.prisma.$transaction(
+      pairs.map(({ logData }) =>
+        this.prisma.notificationLog.create({ data: logData }),
+      ),
+    );
+
+    // Step 4: Enqueue all jobs in a single addBulk call
+    await queue.addBulk(
+      logs.map((log, i) => ({
+        name: pairs[i].jobData.channel.toLowerCase(),
+        data: { ...pairs[i].jobData, logId: log.id } as NotificationJob,
+        opts: {},
+      })),
+    );
+
+    this.logger.log(
+      `Bulk enqueued ${logs.length} jobs for template:${options.templateKey} across ${options.recipients.length} recipients`,
+    );
   }
 
   private async enqueue(options: EnqueueOptions, queue?: Queue): Promise<void> {
@@ -202,6 +275,17 @@ export class NotificationDispatchService {
       return;
     }
 
+    // Pre-load push tokens at dispatch time so the processor worker avoids an extra DB round-trip.
+    // Tokens are fresh at enqueue time; any that become stale will be deactivated on send failure.
+    const resolvedRecipient = { ...recipient };
+    if (
+      allowedChannels.includes(NotificationChannel.PUSH) &&
+      !resolvedRecipient.pushTokens?.length &&
+      userId
+    ) {
+      resolvedRecipient.pushTokens = await this.pushToken.getPushTokens(userId);
+    }
+
     const delay = scheduledAt
       ? Math.max(0, scheduledAt.getTime() - Date.now())
       : (delayMs ?? 0);
@@ -214,6 +298,7 @@ export class NotificationDispatchService {
           channel,
           provider: this.resolveProviderName(channel),
           recipientId: userId,
+          userId, // FK — required for ownership checks in NotificationsService
           to: this.extractTo(channel, recipient),
           body: '',
           status: 'PENDING',
@@ -225,7 +310,7 @@ export class NotificationDispatchService {
         logId: log.id,
         channel,
         source,
-        recipient,
+        recipient: resolvedRecipient,
         userId,
         force,
         attempt: 0,

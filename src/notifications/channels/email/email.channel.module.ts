@@ -1,4 +1,4 @@
-import { DynamicModule, Module, Type } from '@nestjs/common';
+import { DynamicModule, Logger, Module, Type } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import { NotificationConfig } from '../../notification.config';
@@ -22,23 +22,32 @@ export class EmailChannelModule {
       imports: [
         MailerModule.forRootAsync({
           inject: [NotificationConfig],
-          useFactory: (config: NotificationConfig) => ({
-            transport: {
-              host: config.smtpHost,
-              port: config.smtpPort,
-              // auth: {
-              //   user: config.smtpUser,
-              //   pass: config.smtpPassword,
-              // },
-            },
-            defaults: {
-              from: config.smtpFrom,
-              name: config.smtpName,
-            },
-            template: {
-              adapter: new HandlebarsAdapter(),
-            },
-          }),
+          useFactory: (config: NotificationConfig) => {
+            const smtpFrom = config.smtpFrom ?? 'CitizenLink <no-reply@localhost>';
+            if (!config.smtpFrom) {
+              new Logger('EmailChannelModule').warn(
+                'SMTP_FROM is not configured — defaulting to "CitizenLink <no-reply@localhost>". ' +
+                  'Set SMTP_FROM in your environment for production.',
+              );
+            }
+            return {
+              transport: {
+                host: config.smtpHost,
+                port: config.smtpPort,
+                // auth: {
+                //   user: config.smtpUser,
+                //   pass: config.smtpPassword,
+                // },
+              },
+              defaults: {
+                from: smtpFrom,
+                name: config.smtpName,
+              },
+              template: {
+                adapter: new HandlebarsAdapter(),
+              },
+            };
+          },
         }),
       ],
       providers: [

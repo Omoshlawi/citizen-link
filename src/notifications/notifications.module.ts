@@ -11,6 +11,7 @@ import {
   NotificationNormalProcessor,
 } from './notification.processor';
 import { NotificationProcessorHandler } from './notification.processor.handler';
+import { NotificationReceiptProcessor } from './notification.receipt.processor';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationDispatchService } from './notifications.dispatch.service';
@@ -39,6 +40,7 @@ export class NotificationsModule {
         NotificationContentResolver,
         NotificationProcessorHandler,
         ...this.registerProcessors(),
+        NotificationReceiptProcessor,
       ],
       controllers: [NotificationsController],
       exports: [NotificationDispatchService],
@@ -75,11 +77,22 @@ export class NotificationsModule {
             removeOnFail: { age: 60 * 60 * 24 * 7 },
           },
         },
+        {
+          // Delayed receipt-check jobs run ~15 minutes after a successful push send.
+          // Keep failed receipts for 7 days to aid debugging; completed ones for 1 day.
+          name: NOTIFICATION_QUEUES.PUSH_RECEIPT,
+          defaultJobOptions: {
+            attempts: 2,
+            removeOnComplete: { age: 60 * 60 * 24 },
+            removeOnFail: { age: 60 * 60 * 24 * 7 },
+          },
+        },
       ),
       BullBoardModule.forFeature(
         { name: NOTIFICATION_QUEUES.HIGH, adapter: BullMQAdapter },
         { name: NOTIFICATION_QUEUES.NORMAL, adapter: BullMQAdapter },
         { name: NOTIFICATION_QUEUES.LOW, adapter: BullMQAdapter },
+        { name: NOTIFICATION_QUEUES.PUSH_RECEIPT, adapter: BullMQAdapter },
       ),
     ];
   }
