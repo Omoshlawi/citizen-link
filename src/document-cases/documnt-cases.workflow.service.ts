@@ -16,7 +16,7 @@ import { Job, Queue } from 'bullmq';
 import { DocumentEmbeddingJob } from './document-cases.interface';
 import { InjectQueue } from '@nestjs/bullmq';
 import { DOCUMENT_EMBEDDING_QUEUE } from './document-cases.constants';
-import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { NotificationPriority } from 'src/notifications/notification.interfaces';
 @Injectable()
 export class DocumentCasesWorkflowService {
@@ -27,7 +27,7 @@ export class DocumentCasesWorkflowService {
     private readonly representationService: CustomRepresentationService,
     @InjectQueue(DOCUMENT_EMBEDDING_QUEUE)
     private readonly documentEmbeddingQueue: Queue<DocumentEmbeddingJob>,
-    private readonly notifications: NotificationsService,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async submitLostCase(

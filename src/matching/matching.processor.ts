@@ -14,7 +14,7 @@ import {
   DocumentType,
   NotificationChannel,
 } from '../../generated/prisma/client';
-import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { NotificationPriority } from 'src/notifications/notification.interfaces';
 
 @Processor(DOCUMENT_MATCHING_QUEUE, { concurrency: 5 })
@@ -22,7 +22,7 @@ export class DocumentMatchingProcessor extends WorkerHost {
   private readonly logger = new Logger(DocumentMatchingProcessor.name);
   constructor(
     private readonly matchingLayeredService: MatchingLayeredService,
-    private readonly notificationService: NotificationsService,
+    private readonly notificationService: NotificationDispatchService,
   ) {
     super();
   }

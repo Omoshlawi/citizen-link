@@ -90,6 +90,11 @@ export class AuthModule {
             database: prismaAdapter(prisma, {
               provider: 'postgresql',
             }),
+            user: {
+              changeEmail: {
+                enabled: true,
+              },
+            },
             plugins: [
               username(),
               admin(adminConfig),

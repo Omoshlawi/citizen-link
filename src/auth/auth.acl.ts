@@ -23,6 +23,7 @@ export const adminPluginAcl = createAccessControl({
   claim: ['verify', 'reject', 'delete', 'review-dispute'],
   extraction: ['debug'],
   templates: ['create', 'update', 'delete', 'restore'],
+  notification: ['delete', 'test'],
 });
 
 const adminRole = adminPluginAcl.newRole({
@@ -41,6 +42,7 @@ const adminRole = adminPluginAcl.newRole({
   claim: ['verify', 'reject', 'delete', 'review-dispute'],
   extraction: ['debug'],
   templates: ['create', 'update', 'delete', 'restore'],
+  notification: ['delete', 'test'],
   ...adminAc.statements,
 });
 

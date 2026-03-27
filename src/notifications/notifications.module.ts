@@ -26,6 +26,7 @@ import {
 import { NotificationProcessorHandler } from './notification.processor.handler';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
+import { NotificationDispatchService } from './notifications.dispatch.service';
 import {
   AfricasTalkingProvider,
   ExpoPushProvider,
@@ -50,6 +51,7 @@ export class NotificationsModule {
         },
         ...this.getNotificationProviderClasses(options.options),
         NotificationsService,
+        NotificationDispatchService,
         ...this.registerProcessors(),
       ],
       controllers: [NotificationsController],
@@ -77,7 +79,7 @@ export class NotificationsModule {
           }),
         }),
       ],
-      exports: [NotificationsService],
+      exports: [NotificationDispatchService],
     };
   }
 
