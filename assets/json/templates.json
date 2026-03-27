@@ -198,5 +198,31 @@
     },
     "schema": { "required": ["email_subject", "email_body"], "optional": [] },
     "metadata": { "channels": { "email": true, "sms": false, "push": false } }
+  },
+  {
+    "key": "auth.email.change",
+    "type": "notification",
+    "name": "Change Email Verification",
+    "description": "Sent to users when they request an email address change.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Action Required: Verify Your New Email Address — Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/auth-change-email-verification.hbs" }
+    },
+    "schema": { "required": ["email_subject", "email_body"], "optional": [] },
+    "metadata": { "channels": { "email": true, "sms": false, "push": false } }
+  },
+  {
+    "key": "auth.email.change.alert",
+    "type": "notification",
+    "name": "Change Email Security Alert",
+    "description": "Sent to the current email address when an email change is requested, as a security notice.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Security Notice: Email Address Change Requested — Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/auth-change-email-alert.hbs" }
+    },
+    "schema": { "required": ["email_subject", "email_body"], "optional": [] },
+    "metadata": { "channels": { "email": true, "sms": false, "push": false } }
   }
 ]

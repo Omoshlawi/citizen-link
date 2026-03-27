@@ -96,6 +96,38 @@ export class AuthModule {
             user: {
               changeEmail: {
                 enabled: true,
+                async sendChangeEmailVerification(
+                  { user, newEmail, token },
+                  _,
+                ) {
+                  const deepLink = `citizenlinkapp://change-email-verify?token=${token}`;
+                  const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/change-email-verify?token=${token}`;
+                  const year = new Date().getFullYear();
+                  // 1. Verification email → new address (proves ownership)
+                  await notificationDispatch.sendFromTemplate({
+                    templateKey: 'auth.email.change',
+                    recipient: { email: newEmail },
+                    data: { user, newEmail, deepLink, verificationUrl, year },
+                    userId: user.id,
+                    priority: NotificationPriority.HIGH,
+                    force: true,
+                    eventTitle: 'Email Change Requested',
+                    eventBody: `A verification email has been sent to ${newEmail} to confirm the email address change.`,
+                    eventDescription: `Email change requested by user ${user.email} (id: ${user.id}) to new address ${newEmail}.`,
+                  });
+                  // 2. Security alert → old address (notifies the account owner)
+                  await notificationDispatch.sendFromTemplate({
+                    templateKey: 'auth.email.change.alert',
+                    recipient: { email: user.email },
+                    data: { user, newEmail, year },
+                    userId: user.id,
+                    priority: NotificationPriority.HIGH,
+                    force: true,
+                    eventTitle: 'Email Change Security Alert',
+                    eventBody: `A security notice has been sent to ${user.email} regarding the email address change request.`,
+                    eventDescription: `Security alert sent to old address ${user.email} for email change to ${newEmail} (user id: ${user.id}).`,
+                  });
+                },
               },
             },
             plugins: [
