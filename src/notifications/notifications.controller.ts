@@ -12,7 +12,11 @@ import { Session } from '@thallesp/nestjs-better-auth';
 import { UserSession } from '../auth/auth.types';
 import { RequireSystemPermission } from '../auth/auth.decorators';
 import { ApiErrorsResponse } from '../app.decorators';
-import { DeleteQueryDto, OriginalUrl } from '../common/query-builder';
+import {
+  CustomRepresentationQueryDto,
+  DeleteQueryDto,
+  OriginalUrl,
+} from '../common/query-builder';
 import { NotificationsService } from './notifications.service';
 import { NotificationDispatchService } from './notifications.dispatch.service';
 import {
@@ -60,6 +64,19 @@ export class NotificationsController {
     @Query() query: DeleteQueryDto,
   ) {
     return this.notificationsService.remove(id, user, query);
+  }
+
+  @Post(':id/restore')
+  @RequireSystemPermission({ notification: ['delete'] })
+  @ApiOperation({ summary: 'Restore Notification Log' })
+  @ApiOkResponse({ type: GetNotificationLogResponseDto })
+  @ApiErrorsResponse()
+  restore(
+    @Param('id') id: string,
+    @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
+  ) {
+    return this.notificationsService.restore(id, user, query);
   }
 
   @Post('test')

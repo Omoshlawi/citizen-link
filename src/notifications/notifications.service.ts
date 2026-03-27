@@ -6,7 +6,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UserSession } from '../auth/auth.types';
 import { isSuperUser } from '../app.utils';
-import { DeleteQueryDto, PaginationService } from '../common/query-builder';
+import {
+  CustomRepresentationQueryDto,
+  DeleteQueryDto,
+  PaginationService,
+} from '../common/query-builder';
 import { CustomRepresentationService } from '../common/query-builder/representation.service';
 import { SortService } from '../common/query-builder/sort.service';
 import { QueryNotificationLogDto } from './notification.dto';
@@ -30,6 +34,7 @@ export class NotificationsService {
     const dbQuery: Prisma.NotificationLogWhereInput = {
       AND: [
         {
+          voided: query?.includeVoided ? undefined : false,
           userId: isAdmin ? (query?.userId ?? undefined) : user.id,
           channel: query?.channel,
           status: query?.status,
@@ -84,8 +89,37 @@ export class NotificationsService {
     if (!isAdmin) {
       throw new ForbiddenException('Access denied');
     }
-    return this.prisma.notificationLog.delete({
+    if (query?.purge) {
+      return this.prisma.notificationLog.delete({
+        where: { id },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
+    }
+    return this.prisma.notificationLog.update({
       where: { id },
+      data: { voided: true },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
+
+  async restore(
+    id: string,
+    user: UserSession['user'],
+    query: CustomRepresentationQueryDto,
+  ) {
+    const isAdmin = isSuperUser(user);
+    const log = await this.prisma.notificationLog.findUnique({
+      where: { id },
+    });
+    if (!log) {
+      throw new NotFoundException(`Notification log ${id} not found`);
+    }
+    if (!isAdmin) {
+      throw new ForbiddenException('Access denied');
+    }
+    return this.prisma.notificationLog.update({
+      where: { id },
+      data: { voided: false },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
   }

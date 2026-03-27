@@ -189,6 +189,38 @@ export class NotificationDispatchService {
     for (const { r, recipient, allowedChannels } of resolved) {
       if (!allowedChannels.length) continue;
       for (const channel of allowedChannels) {
+        // Fan out one job per push token so each device gets its own log entry and retry lifecycle
+        if (channel === NotificationChannel.PUSH) {
+          const tokens = recipient.pushTokens ?? [];
+          if (!tokens.length) continue;
+          for (const token of tokens) {
+            pairs.push({
+              logData: {
+                channel,
+                provider: this.resolveProviderName(channel),
+                recipientId: r.userId,
+                userId: r.userId,
+                to: token,
+                body: '',
+                status: 'PENDING',
+              },
+              jobData: {
+                channel,
+                source: {
+                  type: 'template',
+                  templateKey: options.templateKey,
+                  data: r.data ?? {},
+                },
+                recipient: { ...recipient, pushTokens: [token] },
+                userId: r.userId,
+                force: r.force ?? false,
+                attempt: 0,
+              },
+            });
+          }
+          continue;
+        }
+
         pairs.push({
           logData: {
             channel,
@@ -293,6 +325,47 @@ export class NotificationDispatchService {
     const bulkJobs: Parameters<Queue['addBulk']>[0] = [];
 
     for (const channel of allowedChannels) {
+      // Fan out one job per push token so each device gets its own log entry and retry lifecycle
+      if (channel === NotificationChannel.PUSH) {
+        const tokens = resolvedRecipient.pushTokens ?? [];
+        if (!tokens.length) {
+          this.logger.log(
+            `Skipping PUSH — no tokens for user:${userId ?? 'anonymous'}`,
+          );
+          continue;
+        }
+        for (const token of tokens) {
+          const tokenRecipient = { ...resolvedRecipient, pushTokens: [token] };
+          const log = await this.prisma.notificationLog.create({
+            data: {
+              channel,
+              provider: this.resolveProviderName(channel),
+              recipientId: userId,
+              userId,
+              to: token,
+              body: '',
+              status: 'PENDING',
+              scheduledAt,
+            },
+          });
+          bulkJobs.push({
+            name: channel.toLowerCase(),
+            data: {
+              logId: log.id,
+              channel,
+              source,
+              recipient: tokenRecipient,
+              userId,
+              force,
+              attempt: 0,
+            } satisfies NotificationJob,
+            opts: { delay },
+          });
+          this.logger.log(`Queued ${channel} log:${log.id} → token:${token}`);
+        }
+        continue;
+      }
+
       const log = await this.prisma.notificationLog.create({
         data: {
           channel,

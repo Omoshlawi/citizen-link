@@ -53,6 +53,10 @@ export const QueryNotificationLogSchema = QueryBuilderSchema.extend({
   userId: z.string().optional(),
   from: z.iso.datetime().optional(),
   to: z.iso.datetime().optional(),
+  includeVoided: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional()
+    .default(false),
 }).partial();
 
 export class QueryNotificationLogDto extends createZodDto(
