@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
 import { NotificationDispatchService } from './notifications.dispatch.service';
@@ -21,16 +24,30 @@ describe('NotificationDispatchService', () => {
 
   beforeEach(async () => {
     prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          email: 'auto@example.com',
+          phoneNumber: '+254700000000',
+        }),
+      },
+      notificationEvent: {
+        create: jest.fn().mockResolvedValue({ id: 'event-1' }),
+      },
       notificationLog: {
         create: jest.fn().mockResolvedValue({ id: 'log-1' }),
       },
-      $transaction: jest.fn().mockImplementation(async (ops: any[]) =>
-        Promise.all(ops),
-      ),
+      template: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'tmpl-1' }),
+      },
+      $transaction: jest
+        .fn()
+        .mockImplementation(async (ops: any[]) => Promise.all(ops)),
     } as any;
 
     contentResolver = {
-      filterAllowedChannels: jest.fn().mockResolvedValue([NotificationChannel.EMAIL]),
+      filterAllowedChannels: jest
+        .fn()
+        .mockResolvedValue([NotificationChannel.EMAIL]),
     } as any;
 
     pushToken = {
@@ -47,13 +64,21 @@ describe('NotificationDispatchService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationContentResolver, useValue: contentResolver },
         { provide: PushTokenService, useValue: pushToken },
-        { provide: getQueueToken(NOTIFICATION_QUEUES.HIGH), useValue: highQueue },
-        { provide: getQueueToken(NOTIFICATION_QUEUES.NORMAL), useValue: normalQueue },
+        {
+          provide: getQueueToken(NOTIFICATION_QUEUES.HIGH),
+          useValue: highQueue,
+        },
+        {
+          provide: getQueueToken(NOTIFICATION_QUEUES.NORMAL),
+          useValue: normalQueue,
+        },
         { provide: getQueueToken(NOTIFICATION_QUEUES.LOW), useValue: lowQueue },
       ],
     }).compile();
 
-    service = module.get<NotificationDispatchService>(NotificationDispatchService);
+    service = module.get<NotificationDispatchService>(
+      NotificationDispatchService,
+    );
   });
 
   describe('sendFromTemplate()', () => {
@@ -61,6 +86,7 @@ describe('NotificationDispatchService', () => {
       await service.sendFromTemplate({
         templateKey: 'welcome',
         recipient: { email: 'user@example.com' },
+        userId: 'user-1',
       });
 
       expect(prisma.notificationLog.create).toHaveBeenCalledWith(
@@ -72,9 +98,7 @@ describe('NotificationDispatchService', () => {
         }),
       );
       expect(normalQueue.addBulk).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ name: 'email' }),
-        ]),
+        expect.arrayContaining([expect.objectContaining({ name: 'email' })]),
       );
     });
 
@@ -84,6 +108,7 @@ describe('NotificationDispatchService', () => {
         recipient: { phone: '+254712345678' },
         priority: NotificationPriority.HIGH,
         force: true,
+        userId: 'user-1',
       });
 
       expect(highQueue.addBulk).toHaveBeenCalled();
@@ -102,6 +127,7 @@ describe('NotificationDispatchService', () => {
         recipient: { email: 'a@b.com', phone: '+254700000000' },
         email: { subject: 'Hi', html: '<p>Hi</p>' },
         sms: { body: 'Hi there' },
+        userId: 'user-1',
       });
 
       expect(prisma.notificationLog.create).toHaveBeenCalledTimes(2);
@@ -119,6 +145,7 @@ describe('NotificationDispatchService', () => {
       await service.sendInline({
         recipient: { email: 'a@b.com' },
         email: { subject: 'Hi', html: '<p>Hi</p>' },
+        userId: 'user-1',
       });
 
       expect(prisma.notificationLog.create).not.toHaveBeenCalled();
@@ -128,7 +155,9 @@ describe('NotificationDispatchService', () => {
 
   describe('enqueue() — push token pre-loading', () => {
     it('loads push tokens from DB when PUSH is allowed and none are on the recipient', async () => {
-      contentResolver.filterAllowedChannels.mockResolvedValue([NotificationChannel.PUSH]);
+      contentResolver.filterAllowedChannels.mockResolvedValue([
+        NotificationChannel.PUSH,
+      ]);
 
       await service.sendFromTemplate({
         templateKey: 'alert',
@@ -143,7 +172,9 @@ describe('NotificationDispatchService', () => {
     });
 
     it('skips token loading when pushTokens are already provided', async () => {
-      contentResolver.filterAllowedChannels.mockResolvedValue([NotificationChannel.PUSH]);
+      contentResolver.filterAllowedChannels.mockResolvedValue([
+        NotificationChannel.PUSH,
+      ]);
 
       await service.sendFromTemplate({
         templateKey: 'alert',
@@ -157,7 +188,9 @@ describe('NotificationDispatchService', () => {
 
   describe('sendBulk()', () => {
     it('creates all logs in a transaction and enqueues a single addBulk call', async () => {
-      contentResolver.filterAllowedChannels.mockResolvedValue([NotificationChannel.EMAIL]);
+      contentResolver.filterAllowedChannels.mockResolvedValue([
+        NotificationChannel.EMAIL,
+      ]);
       (prisma.notificationLog.create as jest.Mock)
         .mockResolvedValueOnce({ id: 'log-1' })
         .mockResolvedValueOnce({ id: 'log-2' });

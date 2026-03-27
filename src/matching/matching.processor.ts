@@ -76,10 +76,10 @@ export class DocumentMatchingProcessor extends WorkerHost {
           data: {
             match,
           },
-          recipient: {
-            email: match.lostDocumentCase.case.user.email,
-          },
           userId: match.lostDocumentCase.case.userId,
+          eventTitle: 'Match Found',
+          eventBody: `A potential match was found for your lost ${match.lostDocumentCase.case.document.type.name} (No. ${match.lostDocumentCase.case.document.documentNumber}).`,
+          eventDescription: `Match ${match.matchNumber} — lost case ${match.lostDocumentCase.id} matched to found document ${match.foundDocumentCase.case.document.documentNumber}`,
         });
       });
       // 2. Trigger notification for finder of the new match
@@ -91,10 +91,10 @@ export class DocumentMatchingProcessor extends WorkerHost {
           data: {
             match,
           },
-          recipient: {
-            email: match.foundDocumentCase.case.user.email,
-          },
           userId: match.foundDocumentCase.case.userId,
+          eventTitle: 'Match Found',
+          eventBody: `The ${match.foundDocumentCase.case.document.type.name} (No. ${match.foundDocumentCase.case.document.documentNumber}) you found has been matched to a lost report`,
+          eventDescription: `Match ${match.matchNumber} — found case ${match.foundDocumentCase.id} matched to lost document ${match.lostDocumentCase.case.document.documentNumber}`,
         });
       });
       await Promise.all([...ownerPromises, ...founderPromises]);

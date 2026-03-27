@@ -108,8 +108,25 @@ CREATE TABLE "template_versions" (
 );
 
 -- CreateTable
+CREATE TABLE "notification_events" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "templateId" TEXT,
+    "title" TEXT NOT NULL,
+    "body" TEXT NOT NULL,
+    "description" TEXT,
+    "readAt" TIMESTAMP(3),
+    "voided" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "notification_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "notification_logs" (
     "id" TEXT NOT NULL,
+    "eventId" TEXT,
     "templateId" TEXT,
     "channel" "NotificationChannel" NOT NULL,
     "provider" TEXT NOT NULL,
@@ -155,6 +172,15 @@ CREATE INDEX "template_versions_templateId_idx" ON "template_versions"("template
 CREATE UNIQUE INDEX "template_versions_templateId_version_key" ON "template_versions"("templateId", "version");
 
 -- CreateIndex
+CREATE INDEX "notification_events_userId_idx" ON "notification_events"("userId");
+
+-- CreateIndex
+CREATE INDEX "notification_events_createdAt_idx" ON "notification_events"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "notification_logs_eventId_idx" ON "notification_logs"("eventId");
+
+-- CreateIndex
 CREATE INDEX "notification_logs_recipientId_idx" ON "notification_logs"("recipientId");
 
 -- CreateIndex
@@ -183,6 +209,15 @@ ALTER TABLE "template_versions" ADD CONSTRAINT "template_versions_templateId_fke
 
 -- AddForeignKey
 ALTER TABLE "template_versions" ADD CONSTRAINT "template_versions_changedById_fkey" FOREIGN KEY ("changedById") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notification_events" ADD CONSTRAINT "notification_events_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notification_events" ADD CONSTRAINT "notification_events_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notification_logs" ADD CONSTRAINT "notification_logs_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "notification_events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "notification_logs" ADD CONSTRAINT "notification_logs_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;

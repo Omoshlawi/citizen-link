@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -18,15 +22,18 @@ import {
 
 interface EnqueueOptions {
   source: NotificationJobSource;
-  recipient: NotificationRecipient;
+  recipient?: NotificationRecipient;
   channels?: NotificationChannel[];
-  userId?: string;
+  userId: string;
   force?: boolean;
   scheduledAt?: Date;
   delayMs?: number;
   priority?: NotificationPriority;
   /** Passed to preference filtering only */
   templateKey?: string;
+  eventTitle?: string;
+  eventBody?: string;
+  eventDescription?: string;
 }
 
 @Injectable()
@@ -44,16 +51,51 @@ export class NotificationDispatchService {
   ) {}
 
   /**
-   * Send using a DB-managed Handlebars template.
-   * Preferred for all standard notifications.
+   * Send a notification using a DB-managed Handlebars template.
    *
-   * @example
+   * This is the **preferred method** for all standard notifications.
+   * Content is resolved from the `Template` table at job-processing time,
+   * so template edits take effect immediately for queued-but-unprocessed jobs.
+   *
+   * ## What happens internally
+   * 1. Channels are filtered against user preferences, quiet hours, and template
+   *    `metadata.channels` overrides (unless `force: true`).
+   * 2. One `NotificationEvent` is created as the umbrella inbox record for the user.
+   * 3. One `NotificationLog` is created per allowed channel; for `PUSH`, one log
+   *    per push token so each device has an independent retry lifecycle.
+   * 4. All jobs are enqueued in a single `addBulk` call to the appropriate priority queue.
+   *
+   * ## Event inbox fields
+   * Supply `eventTitle` / `eventBody` for a human-friendly inbox entry.
+   * If omitted the title falls back to `templateKey` and body to `""`.
+   * `eventDescription` is internal/admin context and is never shown to end users.
+   *
+   * @example — case confirmation
+   * ```typescript
    * await this.notifications.sendFromTemplate({
-   *   templateKey: 'order.confirmed',
-   *   recipient:   { email: user.email, phone: user.phone },
-   *   data:        { orderId: order.id, total: order.total },
-   *   userId:      user.id,
+   *   templateKey:      'case.confirmed',
+   *   recipient:        { email: user.email, phone: user.phone },
+   *   data:             { caseId: doc.id, caseRef: doc.referenceNumber },
+   *   userId:           user.id,
+   *   eventTitle:       'Case Confirmed',
+   *   eventBody:        `Case ${doc.referenceNumber} has been confirmed.`,
+   *   eventDescription: `Notify finder of confirmation of case ${doc.id}`,
    * });
+   * ```
+   *
+   * @example — OTP (force-sent, high priority)
+   * ```typescript
+   * await this.notifications.sendFromTemplate({
+   *   templateKey: 'auth.otp',
+   *   recipient:   { phone: user.phone },
+   *   data:        { otp, expiresInMinutes: 5 },
+   *   userId:      user.id,
+   *   force:       true,
+   *   priority:    NotificationPriority.HIGH,
+   *   eventTitle:  'OTP Code',
+   *   eventBody:   'Your one-time password has been sent.',
+   * });
+   * ```
    */
   async sendFromTemplate(options: SendTemplateOptions): Promise<void> {
     return this.enqueue({
@@ -70,19 +112,51 @@ export class NotificationDispatchService {
       delayMs: options.delayMs,
       priority: options.priority,
       templateKey: options.templateKey,
+      eventTitle: options.eventTitle,
+      eventBody: options.eventBody,
+      eventDescription: options.eventDescription,
     });
   }
 
   /**
-   * Send using inline content — no DB template needed.
-   * Only specify the channels you want — unused channels are ignored.
+   * Send a notification using inline content — no DB template needed.
    *
-   * @example — SMS only (OTP)
+   * Use this when content is constructed in code rather than managed in the
+   * `Template` table (e.g. OTP codes, dynamic alerts, one-off system messages).
+   * Only specify the channel objects you want — omitted channels are skipped entirely.
+   *
+   * ## What happens internally
+   * Same pipeline as `sendFromTemplate`: preference filtering → `NotificationEvent`
+   * creation → per-channel/per-token `NotificationLog` rows → `addBulk` enqueue.
+   *
+   * ## Event inbox fields
+   * If `eventTitle` / `eventBody` are omitted, they are derived automatically:
+   * - `eventTitle` → `push.title` → `email.subject` → `sms.body` (first 80 chars) → `"Notification"`
+   * - `eventBody` → `push.body` → `email.subject` → `sms.body` → `""`
+   *
+   * @example — SMS OTP (force, high priority)
+   * ```typescript
    * await this.notifications.sendInline({
-   *   recipient: { phone: user.phone },
-   *   sms:       { body: `Your OTP is ${otp}. Valid for 5 minutes.` },
-   *   force:     true,
+   *   recipient:  { phone: user.phone },
+   *   sms:        { body: `Your OTP is ${otp}. Valid for 5 minutes.` },
+   *   userId:     user.id,
+   *   force:      true,
+   *   priority:   NotificationPriority.HIGH,
+   *   eventTitle: 'OTP Code',
+   *   eventBody:  'Your one-time password has been sent.',
    * });
+   * ```
+   *
+   * @example — email + push (scheduled 1 hour from now)
+   * ```typescript
+   * await this.notifications.sendInline({
+   *   recipient: { email: user.email, pushTokens: user.pushTokens },
+   *   userId:    user.id,
+   *   email:     { subject: 'Reminder', html: reminderHtml },
+   *   push:      { title: 'Reminder', body: 'You have a pending action.' },
+   *   delayMs:   60 * 60 * 1000,
+   * });
+   * ```
    */
   async sendInline(options: SendInlineOptions): Promise<void> {
     return this.enqueue({
@@ -99,12 +173,33 @@ export class NotificationDispatchService {
       scheduledAt: options.scheduledAt,
       delayMs: options.delayMs,
       priority: options.priority,
+      eventTitle: options.eventTitle,
+      eventBody: options.eventBody,
+      eventDescription: options.eventDescription,
     });
   }
 
   /**
-   * General purpose send — accepts either templateKey or inlineContent.
-   * Prefer sendFromTemplate() or sendInline() for cleaner call sites.
+   * General-purpose send — accepts either a template key or inline content.
+   *
+   * This is a convenience wrapper that delegates to `sendFromTemplate()` when
+   * `templateKey` is set, or to `sendInline()` when `inlineContent` is set.
+   * Exactly one of the two must be provided; both or neither throws.
+   *
+   * **Prefer `sendFromTemplate()` or `sendInline()` at call sites** — they have
+   * narrower types that make the intent obvious and reduce the risk of passing
+   * both options accidentally.
+   *
+   * @throws {Error} if neither `templateKey` nor `inlineContent` is provided.
+   *
+   * @example
+   * ```typescript
+   * // Template-based
+   * await this.notifications.send({ templateKey: 'case.matched', recipient, userId, data });
+   *
+   * // Inline
+   * await this.notifications.send({ inlineContent: { sms: { body: 'Hi!' } }, recipient });
+   * ```
    */
   async send(options: SendNotificationOptions): Promise<void> {
     if (options.templateKey) {
@@ -123,19 +218,53 @@ export class NotificationDispatchService {
   }
 
   /**
-   * Send the same template to multiple recipients.
-   * Uses addBulk() — one Redis round trip per page.
+   * Send the same template to multiple recipients in one efficient operation.
    *
-   * @example
+   * Uses a single `addBulk()` call per priority queue, minimising Redis round-trips
+   * regardless of recipient count. Ideal for marketing digests, batch reminders, and
+   * any scenario where the same template is fanned out to a large audience.
+   *
+   * ## What happens internally
+   * 1. **Channel filtering + push-token pre-load** — resolved in parallel for all
+   *    recipients (`Promise.all`), respecting each user's own preferences.
+   * 2. **Event + log creation** — one `NotificationEvent` per recipient (in parallel),
+   *    then all `NotificationLog` rows created atomically in a `$transaction`.
+   * 3. **Bulk enqueue** — all jobs added to the queue in one `addBulk` call.
+   *
+   * ## PUSH fan-out
+   * For recipients with multiple devices, one log + one job is created per push token
+   * so each device has its own independent retry lifecycle.
+   *
+   * ## Limitations
+   * - Template-only: inline content is not supported for bulk sends.
+   * - All recipients share the same `priority` queue.
+   * - Individual `force` flags per recipient are supported.
+   *
+   * @example — weekly digest
+   * ```typescript
    * await this.notifications.sendBulk({
    *   templateKey: 'marketing.digest',
    *   priority:    NotificationPriority.LOW,
    *   recipients:  users.map(u => ({
    *     userId:    u.id,
    *     recipient: { email: u.email, phone: u.phone },
-   *     data:      { firstName: u.firstName },
+   *     data:      { firstName: u.firstName, digestItems: u.digest },
    *   })),
    * });
+   * ```
+   *
+   * @example — security alert (force, high priority)
+   * ```typescript
+   * await this.notifications.sendBulk({
+   *   templateKey: 'security.alert',
+   *   priority:    NotificationPriority.HIGH,
+   *   recipients:  affectedUsers.map(u => ({
+   *     userId:    u.id,
+   *     recipient: { email: u.email },
+   *     force:     true,
+   *   })),
+   * });
+   * ```
    */
   async sendBulk(options: {
     templateKey: string;
@@ -249,11 +378,42 @@ export class NotificationDispatchService {
 
     if (!pairs.length) return;
 
-    // Step 3: Create all logs atomically in a single transaction
+    // Step 3: Create one NotificationEvent per recipient, then all logs atomically
+    const eventByUserId = new Map<string, string>();
+    const templateId = await this.resolveTemplateId(options.templateKey);
+    await Promise.all(
+      resolved
+        .filter(({ r }) => !!r.userId)
+        .map(async ({ r }) => {
+          const event = await this.prisma.notificationEvent.create({
+            data: {
+              userId: r.userId!,
+              templateId,
+              title: options.templateKey,
+              body: '',
+            },
+          });
+          eventByUserId.set(r.userId!, event.id);
+        }),
+    );
+
     const logs = await this.prisma.$transaction(
-      pairs.map(({ logData }) =>
-        this.prisma.notificationLog.create({ data: logData }),
-      ),
+      pairs.map(({ logData }) => {
+        const userId = logData.userId as string | undefined;
+        const eventId = userId ? eventByUserId.get(userId) : undefined;
+        return this.prisma.notificationLog.create({
+          data: {
+            ...(eventId ? { eventId } : {}),
+            channel: logData.channel,
+            provider: logData.provider,
+            recipientId: userId,
+            userId,
+            to: logData.to,
+            body: logData.body,
+            status: logData.status,
+          },
+        });
+      }),
     );
 
     // Step 4: Enqueue all jobs in a single addBulk call
@@ -281,6 +441,9 @@ export class NotificationDispatchService {
       delayMs,
       priority,
       templateKey,
+      eventTitle,
+      eventBody,
+      eventDescription,
     } = options;
 
     const effectiveQueue = queue ?? this.resolveQueue(priority);
@@ -301,19 +464,37 @@ export class NotificationDispatchService {
     );
 
     if (!allowedChannels.length) {
-      this.logger.log(
-        `All channels suppressed for user:${userId ?? 'anonymous'}`,
-      );
+      this.logger.log(`All channels suppressed for user:${userId}`);
       return;
     }
 
-    // Pre-load push tokens at dispatch time so the processor worker avoids an extra DB round-trip.
-    // Tokens are fresh at enqueue time; any that become stale will be deactivated on send failure.
-    const resolvedRecipient = { ...recipient };
+    // Resolve recipient — start from whatever the caller provided (or empty) and fill in
+    // any missing contact fields from the user record so callers don't have to pre-load them.
+    const resolvedRecipient: NotificationRecipient = { ...recipient };
+
+    const needsEmail =
+      allowedChannels.includes(NotificationChannel.EMAIL) &&
+      !resolvedRecipient.email;
+    const needsPhone =
+      allowedChannels.includes(NotificationChannel.SMS) &&
+      !resolvedRecipient.phone;
+
+    if (needsEmail || needsPhone) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, phoneNumber: true },
+      });
+      if (user) {
+        if (needsEmail) resolvedRecipient.email = user.email;
+        if (needsPhone) resolvedRecipient.phone = user.phoneNumber ?? undefined;
+      }
+    }
+
+    // Pre-load push tokens when PUSH is active and none are provided.
+    // Tokens are fresh at enqueue time; stale ones are deactivated on send failure.
     if (
       allowedChannels.includes(NotificationChannel.PUSH) &&
-      !resolvedRecipient.pushTokens?.length &&
-      userId
+      !resolvedRecipient.pushTokens?.length
     ) {
       resolvedRecipient.pushTokens = await this.pushToken.getPushTokens(userId);
     }
@@ -322,6 +503,36 @@ export class NotificationDispatchService {
       ? Math.max(0, scheduledAt.getTime() - Date.now())
       : (delayMs ?? 0);
 
+    // Resolve event title/body from options or fall back to source content
+    const resolvedTitle =
+      eventTitle ??
+      (source.type === 'inline'
+        ? (source.push?.title ??
+          source.email?.subject ??
+          source.sms?.body?.slice(0, 80))
+        : templateKey) ??
+      'Notification';
+    const resolvedBody =
+      eventBody ??
+      (source.type === 'inline'
+        ? (source.push?.body ?? source.email?.subject ?? source.sms?.body ?? '')
+        : '') ??
+      '';
+
+    // Create one NotificationEvent to represent this logical notification
+    const event = await this.prisma.notificationEvent.create({
+      data: {
+        userId,
+        templateId:
+          source.type === 'template'
+            ? await this.resolveTemplateId(source.templateKey)
+            : undefined,
+        title: resolvedTitle,
+        body: resolvedBody,
+        description: eventDescription,
+      },
+    });
+
     const bulkJobs: Parameters<Queue['addBulk']>[0] = [];
 
     for (const channel of allowedChannels) {
@@ -329,15 +540,14 @@ export class NotificationDispatchService {
       if (channel === NotificationChannel.PUSH) {
         const tokens = resolvedRecipient.pushTokens ?? [];
         if (!tokens.length) {
-          this.logger.log(
-            `Skipping PUSH — no tokens for user:${userId ?? 'anonymous'}`,
-          );
+          this.logger.log(`Skipping PUSH — no tokens for user:${userId}`);
           continue;
         }
         for (const token of tokens) {
           const tokenRecipient = { ...resolvedRecipient, pushTokens: [token] };
           const log = await this.prisma.notificationLog.create({
             data: {
+              eventId: event.id,
               channel,
               provider: this.resolveProviderName(channel),
               recipientId: userId,
@@ -368,11 +578,12 @@ export class NotificationDispatchService {
 
       const log = await this.prisma.notificationLog.create({
         data: {
+          eventId: event.id,
           channel,
           provider: this.resolveProviderName(channel),
           recipientId: userId,
           userId, // FK — required for ownership checks in NotificationsService
-          to: this.extractTo(channel, recipient),
+          to: this.extractTo(channel, resolvedRecipient),
           body: '',
           status: 'PENDING',
           scheduledAt,
@@ -401,6 +612,16 @@ export class NotificationDispatchService {
     if (bulkJobs.length) {
       await effectiveQueue.addBulk(bulkJobs);
     }
+  }
+
+  private async resolveTemplateId(
+    templateKey: string,
+  ): Promise<string | undefined> {
+    const template = await this.prisma.template.findUnique({
+      where: { key: templateKey },
+      select: { id: true },
+    });
+    return template?.id;
   }
 
   private resolveQueue(priority?: NotificationPriority): Queue {

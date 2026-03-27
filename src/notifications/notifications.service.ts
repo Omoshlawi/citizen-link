@@ -14,7 +14,21 @@ import {
 import { CustomRepresentationService } from '../common/query-builder/representation.service';
 import { SortService } from '../common/query-builder/sort.service';
 import { QueryNotificationLogDto } from './notification.dto';
+import { NotificationChannel, NotificationStatus } from '../../generated/prisma/enums';
 import { Prisma } from '../../generated/prisma/client';
+
+type EventStatus = 'SENT' | 'FAILED' | 'PENDING' | 'PARTIAL';
+
+function deriveEventStatus(
+  logs: { status: NotificationStatus }[],
+): EventStatus {
+  if (!logs.length) return 'PENDING';
+  const statuses = logs.map((l) => l.status);
+  if (statuses.every((s) => s === 'SENT')) return 'SENT';
+  if (statuses.every((s) => s === 'FAILED' || s === 'SKIPPED')) return 'FAILED';
+  if (statuses.some((s) => s === 'SENT')) return 'PARTIAL';
+  return 'PENDING';
+}
 
 @Injectable()
 export class NotificationsService {
@@ -31,31 +45,34 @@ export class NotificationsService {
     originalUrl: string,
   ) {
     const isAdmin = isSuperUser(user);
-    const dbQuery: Prisma.NotificationLogWhereInput = {
-      AND: [
-        {
-          voided: query?.includeVoided ? undefined : false,
-          userId: isAdmin ? (query?.userId ?? undefined) : user.id,
-          channel: query?.channel,
-          status: query?.status,
-          createdAt: {
-            gte: query?.from,
-            lte: query?.to,
-          },
-        },
-      ],
+    const dbQuery: Prisma.NotificationEventWhereInput = {
+      voided: query?.includeVoided ? undefined : false,
+      userId: isAdmin ? (query?.userId ?? undefined) : user.id,
+      createdAt: {
+        gte: query?.from,
+        lte: query?.to,
+      },
     };
-    const totalCount = await this.prisma.notificationLog.count({
+
+    const totalCount = await this.prisma.notificationEvent.count({
       where: dbQuery,
     });
-    const data = await this.prisma.notificationLog.findMany({
+
+    const events = await this.prisma.notificationEvent.findMany({
       where: dbQuery,
       ...this.paginationService.buildSafePaginationQuery(query, totalCount),
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
       ...this.sortService.buildSortQuery(query?.orderBy),
+      include: {
+        logs: {
+          select: { status: true, channel: true, sentAt: true },
+        },
+      },
     });
+
+    const results = events.map((event) => this.formatEvent(event));
+
     return {
-      results: data,
+      results,
       ...this.paginationService.buildPaginationControls(
         totalCount,
         originalUrl,
@@ -64,63 +81,157 @@ export class NotificationsService {
     };
   }
 
+  async getUnreadCount(user: UserSession['user']): Promise<{ count: number }> {
+    const count = await this.prisma.notificationEvent.count({
+      where: {
+        userId: user.id,
+        readAt: null,
+        voided: false,
+      },
+    });
+    return { count };
+  }
+
   async findOne(id: string, user: UserSession['user']) {
     const isAdmin = isSuperUser(user);
-    const log = await this.prisma.notificationLog.findUnique({
+    const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
+      include: {
+        logs: {
+          select: {
+            id: true,
+            channel: true,
+            status: true,
+            provider: true,
+            to: true,
+            sentAt: true,
+            attempts: true,
+            lastError: true,
+          },
+        },
+      },
     });
-    if (!log) {
-      throw new NotFoundException(`Notification log ${id} not found`);
+    if (!event) {
+      throw new NotFoundException(`Notification event ${id} not found`);
     }
-    if (!isAdmin && log.userId !== user.id) {
+    if (!isAdmin && event.userId !== user.id) {
       throw new ForbiddenException('Access denied');
     }
-    return log;
+    return this.formatEvent(event);
+  }
+
+  async getEventLogs(id: string, user: UserSession['user']) {
+    const isAdmin = isSuperUser(user);
+    const event = await this.prisma.notificationEvent.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    if (!event) {
+      throw new NotFoundException(`Notification event ${id} not found`);
+    }
+    if (!isAdmin && event.userId !== user.id) {
+      throw new ForbiddenException('Access denied');
+    }
+    return this.prisma.notificationLog.findMany({
+      where: { eventId: id, voided: false },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async markRead(id: string, user: UserSession['user']) {
+    const isAdmin = isSuperUser(user);
+    const event = await this.prisma.notificationEvent.findUnique({
+      where: { id },
+    });
+    if (!event) {
+      throw new NotFoundException(`Notification event ${id} not found`);
+    }
+    if (!isAdmin && event.userId !== user.id) {
+      throw new ForbiddenException('Access denied');
+    }
+    if (event.readAt) return this.formatEvent({ ...event, logs: [] });
+    const updated = await this.prisma.notificationEvent.update({
+      where: { id },
+      data: { readAt: new Date() },
+      include: { logs: { select: { status: true, channel: true, sentAt: true } } },
+    });
+    return this.formatEvent(updated);
   }
 
   async remove(id: string, user: UserSession['user'], query: DeleteQueryDto) {
     const isAdmin = isSuperUser(user);
-    const log = await this.prisma.notificationLog.findUnique({
+    const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
     });
-    if (!log) {
-      throw new NotFoundException(`Notification log ${id} not found`);
+    if (!event) {
+      throw new NotFoundException(`Notification event ${id} not found`);
     }
-    if (!isAdmin) {
+    if (!isAdmin && event.userId !== user.id) {
       throw new ForbiddenException('Access denied');
     }
     if (query?.purge) {
-      return this.prisma.notificationLog.delete({
-        where: { id },
-        ...this.representationService.buildCustomRepresentationQuery(query?.v),
-      });
+      return this.prisma.notificationEvent.delete({ where: { id } });
     }
-    return this.prisma.notificationLog.update({
+    return this.prisma.notificationEvent.update({
       where: { id },
       data: { voided: true },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
   }
 
-  async restore(
-    id: string,
-    user: UserSession['user'],
-    query: CustomRepresentationQueryDto,
-  ) {
+  async restore(id: string, user: UserSession['user'], _query: CustomRepresentationQueryDto) {
     const isAdmin = isSuperUser(user);
-    const log = await this.prisma.notificationLog.findUnique({
+    const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
     });
-    if (!log) {
-      throw new NotFoundException(`Notification log ${id} not found`);
+    if (!event) {
+      throw new NotFoundException(`Notification event ${id} not found`);
     }
     if (!isAdmin) {
       throw new ForbiddenException('Access denied');
     }
-    return this.prisma.notificationLog.update({
+    return this.prisma.notificationEvent.update({
       where: { id },
       data: { voided: false },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
+  }
+
+  private formatEvent(
+    event: {
+      id: string;
+      title: string;
+      body: string;
+      description?: string | null;
+      readAt: Date | null;
+      voided: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+      userId: string;
+      templateId: string | null;
+      logs: { status: NotificationStatus; channel: NotificationChannel; sentAt?: Date | null }[];
+    },
+  ) {
+    const status = deriveEventStatus(event.logs);
+    const channelsSent = [
+      ...new Set(
+        event.logs
+          .filter((l) => l.status === 'SENT')
+          .map((l) => l.channel),
+      ),
+    ];
+    return {
+      id: event.id,
+      title: event.title,
+      body: event.body,
+      description: event.description ?? null,
+      readAt: event.readAt,
+      voided: event.voided,
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
+      userId: event.userId,
+      templateId: event.templateId,
+      status,
+      channelsSent,
+      logCount: event.logs.length,
+    };
   }
 }

@@ -131,6 +131,7 @@ export class NotificationContentResolver {
           title: slots[NOTIFICATION_SLOTS.PUSH_TITLE],
           body: slots[NOTIFICATION_SLOTS.PUSH_BODY] ?? '',
           data: pushData,
+          channelId: slots[NOTIFICATION_SLOTS.PUSH_CHANNEL] ?? 'default-v2',
         };
       }
       default:
@@ -154,7 +155,9 @@ export class NotificationContentResolver {
           : null;
       case NotificationChannel.PUSH: {
         const token = recipient.pushTokens?.[0];
-        return token && source.push ? { to: token, ...source.push } : null;
+        return token && source.push
+          ? { to: token, channelId: 'default-v2', ...source.push }
+          : null;
       }
       default:
         return null;

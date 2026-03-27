@@ -31,7 +31,8 @@ model User {
   // relationshipd
   sessions       Session[]
   accounts       Account[]
-  notifications  NotificationLog[]
+  notifications       NotificationLog[]
+  notificationEvents  NotificationEvent[]
   messages       Message[]
   ratings        Rating[]
   cases          DocumentCase[]
@@ -1146,8 +1147,9 @@ model Template {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  versions         TemplateVersion[]
-  notificationLogs NotificationLog[]
+  versions           TemplateVersion[]
+  notificationLogs   NotificationLog[]
+  notificationEvents NotificationEvent[]
 
   @@map("templates")
 }
@@ -1173,8 +1175,32 @@ model TemplateVersion {
 }
 
 // -------------Notification models ---------
+
+// One logical notification per user — groups all channel/device deliveries together
+model NotificationEvent {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId String?
+  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  title       String  // short human-friendly title shown in the inbox e.g. "Document Verified"
+  body        String  // user-facing message body e.g. "Document ABCD passed verification"
+  description String? // internal/admin context e.g. "Notify finder of successful verification of document ABC"
+  readAt      DateTime?
+  voided     Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  logs       NotificationLog[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("notification_events")
+}
+
 model NotificationLog {
   id          String              @id @default(uuid())
+  eventId     String?
+  event       NotificationEvent?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   templateId  String?
   template    Template?           @relation(fields: [templateId], references: [id], onDelete: Cascade)
   channel     NotificationChannel
@@ -1196,6 +1222,7 @@ model NotificationLog {
   userId      String?
   voided      Boolean             @default(false)
 
+  @@index([eventId])
   @@index([recipientId])
   @@index([status])
   @@index([channel])

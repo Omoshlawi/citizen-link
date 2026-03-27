@@ -123,10 +123,10 @@ export class DocumentCasesWorkflowService {
           caseType: 'Lost',
         },
         priority: NotificationPriority.HIGH,
-        recipient: {
-          email: user.email,
-        },
         userId: user.id,
+        eventTitle: 'Report Received',
+        eventBody: `Your lost document (No. ${canSubmit.case?.document?.documentNumber}) has been registered. You'll be notified when a match is found.`,
+        eventDescription: `Lost case ${lostCaseId} submitted by user ${user.id} — document ${canSubmit.case?.document?.id}`,
       })
       .then(() => {
         this.logger.debug(
@@ -211,7 +211,11 @@ export class DocumentCasesWorkflowService {
       include: {
         case: {
           include: {
-            document: true,
+            document: {
+              include: {
+                type: true,
+              },
+            },
             user: true,
           },
         },
@@ -285,10 +289,10 @@ export class DocumentCasesWorkflowService {
           caseType: 'Found',
         },
         priority: NotificationPriority.HIGH,
-        recipient: {
-          email: canVerify.case?.user?.email,
-        },
-        userId: canVerify.case?.user?.id,
+        userId: canVerify.case?.user?.id ?? '',
+        eventTitle: `${canVerify.case?.document?.type?.name ?? 'Document'} Verified`,
+        eventBody: `Your found ${canVerify.case?.document?.type?.name ?? 'document'} (No. ${canVerify.case?.document?.documentNumber}) has been verified. The rightful owner will be contacted.`,
+        eventDescription: `Found case ${foundCaseId} verified — document ${canVerify.case?.document?.id} submitted by user ${canVerify.case?.user?.id}`,
       })
       .then(() => {
         this.logger.debug(

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 jest.mock('@thallesp/nestjs-better-auth', () => ({
   Session: jest.fn(() => () => {}),
 }));
@@ -8,7 +10,15 @@ import { NotificationsService } from './notifications.service';
 import { NotificationDispatchService } from './notifications.dispatch.service';
 
 const mockNotificationsService = {
-  findAll: jest.fn().mockResolvedValue({ results: [], totalCount: 0, totalPages: 0, currentPage: 1, pageSize: 10, next: null, prev: null }),
+  findAll: jest.fn().mockResolvedValue({
+    results: [],
+    totalCount: 0,
+    totalPages: 0,
+    currentPage: 1,
+    pageSize: 10,
+    next: null,
+    prev: null,
+  }),
   findOne: jest.fn().mockResolvedValue({ id: 'log-1' }),
   remove: jest.fn().mockResolvedValue({ id: 'log-1' }),
 };
@@ -40,25 +50,36 @@ describe('NotificationsController', () => {
   it('findAll() delegates to NotificationsService', async () => {
     const user = { id: 'u1', role: 'user' } as any;
     await controller.findAll({} as any, { user } as any, '/api/notifications');
-    expect(mockNotificationsService.findAll).toHaveBeenCalledWith({}, user, '/api/notifications');
+    expect(mockNotificationsService.findAll).toHaveBeenCalledWith(
+      {},
+      user,
+      '/api/notifications',
+    );
   });
 
   it('findOne() delegates to NotificationsService', async () => {
     const user = { id: 'u1', role: 'user' } as any;
     await controller.findOne('log-1', { user } as any);
-    expect(mockNotificationsService.findOne).toHaveBeenCalledWith('log-1', user);
+    expect(mockNotificationsService.findOne).toHaveBeenCalledWith(
+      'log-1',
+      user,
+    );
   });
 
-  it('testNotification() delegates to NotificationDispatchService.send()', async () => {
+  it('testNotification() delegates to NotificationDispatchService.send() with the caller userId', async () => {
     const dto = {
       templateKey: 'test.template',
       channels: [],
       priority: undefined,
       recipient: { email: 'test@example.com' },
     } as any;
-    await controller.testNotification(dto);
+    const session = { user: { id: 'admin-1', role: 'admin' } } as any;
+    await controller.testNotification(dto, session);
     expect(mockDispatchService.send).toHaveBeenCalledWith(
-      expect.objectContaining({ templateKey: 'test.template' }),
+      expect.objectContaining({
+        templateKey: 'test.template',
+        userId: 'admin-1',
+      }),
     );
   });
 });

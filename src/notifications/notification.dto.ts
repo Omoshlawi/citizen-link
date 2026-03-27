@@ -63,9 +63,57 @@ export class QueryNotificationLogDto extends createZodDto(
   QueryNotificationLogSchema,
 ) {}
 
+export class NotificationEventResponseDto {
+  @ApiProperty()
+  id: string;
+  @ApiProperty()
+  title: string;
+  @ApiProperty()
+  body: string;
+  @ApiProperty({ nullable: true })
+  description: string | null;
+  @ApiProperty({ nullable: true })
+  readAt: Date | null;
+  @ApiProperty()
+  voided: boolean;
+  @ApiProperty()
+  createdAt: Date;
+  @ApiProperty()
+  updatedAt: Date;
+  @ApiProperty()
+  userId: string;
+  @ApiProperty({ nullable: true })
+  templateId: string | null;
+  @ApiProperty({ enum: ['SENT', 'FAILED', 'PENDING', 'PARTIAL'] })
+  status: 'SENT' | 'FAILED' | 'PENDING' | 'PARTIAL';
+  @ApiProperty({ enum: NotificationChannel, isArray: true })
+  channelsSent: NotificationChannel[];
+  @ApiProperty()
+  logCount: number;
+}
+
+export class QueryNotificationEventResponseDto {
+  @ApiProperty({ isArray: true, type: NotificationEventResponseDto })
+  results: NotificationEventResponseDto[];
+  @ApiProperty()
+  totalCount: number;
+  @ApiProperty()
+  totalPages: number;
+  @ApiProperty()
+  currentPage: number;
+  @ApiProperty()
+  pageSize: number;
+  @ApiProperty()
+  next: string | null;
+  @ApiProperty()
+  prev: string | null;
+}
+
 export class GetNotificationLogResponseDto implements NotificationLog {
   @ApiProperty()
   id: string;
+  @ApiProperty({ nullable: true })
+  eventId: string | null;
   @ApiProperty({ nullable: true })
   templateId: string | null;
   @ApiProperty({ enum: NotificationChannel })
