@@ -2,8 +2,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EmailDispatcher, PushDispatcher, SmsDispatcher } from './dispatchers';
-import { UserSettingService } from '../common/settings/settings.user.service';
+import { PushTokenService } from '../push-token/push-token.service';
+import { NotificationContentResolver } from './notification.content.resolver';
+import { EmailChannelService } from './channels/email/email.channel.service';
+import { SmsChannelService } from './channels/sms/sms.channel.service';
+import { PushChannelService } from './channels/push/push.channel.service';
 import {
   EmailPayload,
   NotificationJob,
@@ -16,7 +19,6 @@ import {
   NotificationChannel,
   NotificationStatus,
 } from '../../generated/prisma/enums';
-import { PushTokenService } from '../push-token/push-token.service';
 
 @Injectable()
 export class NotificationProcessorHandler {
@@ -24,44 +26,80 @@ export class NotificationProcessorHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly email: EmailDispatcher,
-    private readonly sms: SmsDispatcher,
-    private readonly push: PushDispatcher,
+    private readonly contentResolver: NotificationContentResolver,
+    private readonly emailChannel: EmailChannelService,
+    private readonly smsChannel: SmsChannelService,
+    private readonly pushChannel: PushChannelService,
     private readonly pushToken: PushTokenService,
-    private readonly userSettings: UserSettingService,
   ) {}
 
   async process(job: Job<NotificationJob>): Promise<void> {
-    const { logId, channel, payload } = job.data;
+    const { logId, channel, source, recipient, userId } = job.data;
+
     this.logger.log(
-      `Processing - Notification job ${job.id} for log ${logId} | Channel: ${channel} | Payload: ${JSON.stringify(payload)}`,
+      `Processing job ${job.id} | log:${logId} | channel:${channel}`,
     );
+
     // Mark as queued on first attempt
     if (job.attemptsMade === 0) {
       await this.prisma.notificationLog.update({
         where: { id: logId },
-        data: { status: 'QUEUED', attempts: { increment: 1 } },
+        data: { status: 'QUEUED' },
       });
     }
 
     try {
+      // Auto-load push tokens when not present in recipient
+      if (
+        channel === NotificationChannel.PUSH &&
+        !recipient.pushTokens?.length &&
+        userId
+      ) {
+        recipient.pushTokens = await this.pushToken.getPushTokens(userId);
+      }
+
+      // Resolve template/inline source → channel-specific payload
+      const payload = await this.contentResolver.resolve(
+        source,
+        channel,
+        recipient,
+      );
+
+      // No content for this channel — mark SKIPPED and stop
+      if (!payload) {
+        await this.prisma.notificationLog.update({
+          where: { id: logId },
+          data: { status: 'SKIPPED' },
+        });
+        this.logger.log(
+          `[${channel}] Skipped log:${logId} — no content for channel`,
+        );
+        return;
+      }
+
+      // Persist resolved body on the log before attempting send
+      const body =
+        channel === NotificationChannel.EMAIL
+          ? (payload as EmailPayload).html
+          : (payload as SmsPayload | PushPayload).body;
+
+      await this.prisma.notificationLog.update({
+        where: { id: logId },
+        data: { body },
+      });
+
+      // Deliver via the appropriate channel service
       let result: ProviderResult;
 
       switch (channel) {
         case NotificationChannel.EMAIL:
-          result = await this.email.dispatch(
-            job.data as NotificationJob<EmailPayload>,
-          );
+          result = await this.emailChannel.send(payload as EmailPayload);
           break;
         case NotificationChannel.SMS:
-          result = await this.sms.dispatch(
-            job.data as NotificationJob<SmsPayload>,
-          );
+          result = await this.smsChannel.send(payload as SmsPayload);
           break;
         case NotificationChannel.PUSH:
-          result = await this.push.dispatch(
-            job.data as NotificationJob<PushPayload>,
-          );
+          result = await this.pushChannel.send(payload as PushPayload);
           // Deactivate invalid Expo tokens automatically
           if (
             !result.success &&
@@ -73,7 +111,7 @@ export class NotificationProcessorHandler {
           }
           break;
         default:
-          throw new Error(`Unknown channel: ${channel as any}`);
+          throw new Error(`Unknown channel: ${channel as string}`);
       }
 
       if (result.success) {
@@ -83,9 +121,11 @@ export class NotificationProcessorHandler {
             status: NotificationStatus.SENT,
             sentAt: new Date(),
             lastError: null,
+            provider: result.providerName ?? 'unknown',
+            attempts: job.attemptsMade + 1,
           },
         });
-        this.logger.log(`[${channel}] Delivered log:${logId}`);
+        this.logger.log(`[${channel}] Delivered log:${logId} via ${result.providerName ?? 'unknown'}`);
       } else {
         throw new Error(result.error ?? 'Provider returned failure');
       }
@@ -95,7 +135,7 @@ export class NotificationProcessorHandler {
       );
       await this.prisma.notificationLog.update({
         where: { id: logId },
-        data: { lastError: err.message, attempts: { increment: 1 } },
+        data: { lastError: err.message, attempts: job.attemptsMade + 1 },
       });
       // Re-throw so BullMQ triggers retry/backoff
       throw err;

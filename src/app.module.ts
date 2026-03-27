@@ -30,6 +30,7 @@ import { MatchingModule } from './matching/matching.module';
 import {
   EmailProviders,
   PushProviders,
+  SmsProviders,
 } from './notifications/notification.interfaces';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
@@ -61,10 +62,10 @@ import { VisionModule } from './vision/vision.module';
     AuthModule.forRoot(),
     NotificationsModule.register({
       global: true,
-      options: {
-        emailProviders: [EmailProviders.MAILPIT],
-        smsProviders: [],
-        pushProviders: [PushProviders.EXPO],
+      channels: {
+        email: { providers: [EmailProviders.MAILPIT] },
+        sms: { providers: [] as SmsProviders[] },
+        push: { providers: [PushProviders.EXPO] },
       },
     }),
     AddressHierarchyModule,

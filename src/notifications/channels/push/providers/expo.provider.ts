@@ -5,12 +5,12 @@ import {
   ExpoPushReceiptId,
   ExpoPushTicket,
 } from 'expo-server-sdk';
-import { NotificationConfig } from '../notification.config';
+import { NotificationConfig } from '../../../notification.config';
 import {
   IPushProvider,
   ProviderResult,
   PushPayload,
-} from '../notification.interfaces';
+} from '../../../notification.interfaces';
 
 /**
  *  Expo delivery model
@@ -66,11 +66,9 @@ export class ExpoPushProvider implements IPushProvider {
   }
 
   // Expo recommends batching — you can send up to 100 messages per HTTP request.
-  // The PushDispatcher calls this when a user has multiple devices.
+  // The PushChannelService calls this when a user has multiple devices.
   async sendBatch(payloads: PushPayload[]): Promise<ProviderResult[]> {
     // Step 1: Separate valid Expo tokens from invalid ones
-    // Expo.isExpoPushToken() checks the token format — starts with 'ExponentPushToken['
-    // An invalid token never reaches Expo's servers — fail fast locally.
     const valid: PushPayload[] = [];
     const invalid: PushPayload[] = [];
 
@@ -83,7 +81,6 @@ export class ExpoPushProvider implements IPushProvider {
       }
     }
 
-    // Results array — will be filled in the same order as input payloads
     const invalidResults: ProviderResult[] = invalid.map(() => ({
       success: false,
       error: 'InvalidToken',
@@ -103,13 +100,10 @@ export class ExpoPushProvider implements IPushProvider {
       sound: p.sound ?? 'default',
       channelId: p.channelId, // Android notification channel ID
       priority: 'high', // 'default' | 'normal' | 'high'
-      // 'high' wakes the device even in Doze mode (Android) / background (iOS)
     }));
 
     try {
       // ── Step 3: Chunk and send ───────────────────────────────────────────
-      // Expo limits 100 messages per request — chunkPushNotifications splits
-      // your array automatically so you never exceed the limit.
       const chunks = this.expo.chunkPushNotifications(messages);
       const tickets: ExpoPushTicket[] = [];
 
@@ -119,18 +113,14 @@ export class ExpoPushProvider implements IPushProvider {
       }
 
       // ── Step 4: Map tickets to ProviderResult ────────────────────────────
-      // One ticket per message, in the same order as messages[]
       const validResults: ProviderResult[] = tickets.map((ticket) => {
         if (ticket.status === 'ok') {
-          // Phase 1 success — Expo accepted the message and will forward to APNs/FCM
-          // ticket.id is the receipt ID for Phase 2 (delivery confirmation)
           return {
             success: true,
             messageId: ticket.id,
           };
         }
 
-        // Phase 1 error — Expo rejected the message before forwarding
         const errTicket = ticket;
         const errorCode = errTicket.details?.error ?? 'UnknownError';
         const isPermanent = INVALID_TOKEN_ERRORS.has(errorCode);
@@ -145,16 +135,13 @@ export class ExpoPushProvider implements IPushProvider {
           errorCode,
           raw: {
             isPermanent,
-            // The processor checks isPermanent to decide whether to deactivate the token
             details: errTicket.details,
           },
         };
       });
 
-      // Return results in original input order: valid results first, then invalid
       return [...validResults, ...invalidResults];
     } catch (err: unknown) {
-      // Network error, Expo outage, etc. — all valid tokens fail together
       this.logger.error(
         `Expo batch send failed: ${(err as Error).message}`,
         (err as Error).stack,
@@ -164,7 +151,7 @@ export class ExpoPushProvider implements IPushProvider {
           success: false,
           error: (err as Error).message,
           errorCode: 'EXPO_NETWORK_ERROR',
-          raw: { isPermanent: false }, // worth retrying
+          raw: { isPermanent: false },
         })),
         ...invalidResults,
       ];
@@ -172,14 +159,6 @@ export class ExpoPushProvider implements IPushProvider {
   }
 
   // Phase 2: Receipt checking (optional)
-  // Call this from a scheduled job ~15-30 minutes after sending to confirm
-  // actual device delivery. receiptIds come from Phase 1 ticket.id values.
-  //
-  // @example
-  // const receiptIds = logs
-  //   .filter(l => l.status === 'SENT' && l.provider === 'expo')
-  //   .map(l => l.messageId);
-  // const results = await this.expoProvider.checkReceipts(receiptIds);
   async checkReceipts(
     receiptIds: ExpoPushReceiptId[],
   ): Promise<Map<ExpoPushReceiptId, ProviderResult>> {

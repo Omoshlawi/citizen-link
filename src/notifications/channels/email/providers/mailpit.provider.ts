@@ -6,7 +6,7 @@ import {
   EmailPayload,
   IEmailProvider,
   ProviderResult,
-} from '../notification.interfaces';
+} from '../../../notification.interfaces';
 import { SentMessageInfo } from 'nodemailer';
 
 @Injectable()
@@ -32,7 +32,9 @@ export class EmailMailpitProvider implements IEmailProvider {
             contentType: a.contentType,
           })) ?? [],
       });
-      this.logger.log(`Mailpit send success to ${payload.to}: ${result}`);
+      this.logger.log(
+        `Mailpit send success to ${payload.to} | messageId:${result.messageId as string}`,
+      );
       return {
         success: true,
         messageId: result.messageId as string,

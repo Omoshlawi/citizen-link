@@ -22,4 +22,22 @@ export class NotificationConfig {
 
   @Value('SMTP_NAME', { default: 'No Reply' })
   smtpName?: string;
+
+  @Value('TWILIO_ACCOUNT_SID')
+  twilioAccountSid?: string;
+
+  @Value('TWILIO_AUTH_TOKEN')
+  twilioAuthToken?: string;
+
+  @Value('TWILIO_FROM_NUMBER')
+  twilioFromNumber?: string;
+
+  @Value('AFRICASTALKING_API_KEY')
+  africastalkingApiKey?: string;
+
+  @Value('AFRICASTALKING_USERNAME')
+  africastalkingUsername?: string;
+
+  @Value('AFRICASTALKING_SENDER_ID')
+  africastalkingSenderId?: string;
 }

@@ -26,15 +26,13 @@ export enum PushProviders {
   //   MOCK = 'mock',
 }
 
-export type NotificationOptions = {
-  emailProviders: EmailProviders[];
-  smsProviders: SmsProviders[];
-  pushProviders: PushProviders[];
-};
-
 export type NotificationModuleOptions = {
   global?: boolean;
-  options: NotificationOptions;
+  channels: {
+    email: { providers: EmailProviders[] };
+    sms: { providers: SmsProviders[] };
+    push: { providers: PushProviders[] };
+  };
 };
 
 // PAYLOADS
@@ -71,10 +69,22 @@ export interface PushPayload {
 
 // QUEUE JOB
 
-export interface NotificationJob<T = EmailPayload | SmsPayload | PushPayload> {
+export type NotificationJobSource =
+  | { type: 'template'; templateKey: string; data: Record<string, unknown> }
+  | {
+      type: 'inline';
+      email?: { subject: string; html: string };
+      sms?: { body: string };
+      push?: { title: string; body: string; data?: Record<string, unknown> };
+    };
+
+export interface NotificationJob {
   logId: string;
   channel: NotificationChannel;
-  payload: T;
+  source: NotificationJobSource;
+  recipient: NotificationRecipient;
+  userId?: string;
+  force?: boolean;
   attempt: number;
 }
 
@@ -85,15 +95,15 @@ export interface ProviderResult {
   error?: string; // human-readable error if success is false
   raw?: unknown; // raw provider response — useful for debugging
   errorCode?: string; // provider-specific error code
+  providerName?: string; // set by channel service on success
 }
 
-// Channel dispatcher interface
-export interface IChannelDispatcher {
-  readonly channel: NotificationChannel;
-  dispatch(job: NotificationJob): Promise<ProviderResult>;
-}
+// PROVIDER INTERFACES
 
-export type DispatcherRegistry = Map<NotificationChannel, IChannelDispatcher>;
+export interface IEmailProvider {
+  readonly name: string;
+  send(payload: EmailPayload): Promise<ProviderResult>;
+}
 
 export interface ISmsProvider {
   readonly name: string;
@@ -118,23 +128,6 @@ export enum NotificationPriority {
   HIGH = 'high',
   NORMAL = 'normal',
   LOW = 'low',
-}
-// PROVIDER INTERFACES
-
-export interface IEmailProvider {
-  readonly name: string;
-  send(payload: EmailPayload): Promise<ProviderResult>;
-}
-
-export interface ISmsProvider {
-  readonly name: string;
-  send(payload: SmsPayload): Promise<ProviderResult>;
-}
-
-export interface IPushProvider {
-  readonly name: string;
-  send(payload: PushPayload): Promise<ProviderResult>;
-  sendBatch?(payloads: PushPayload[]): Promise<ProviderResult[]>;
 }
 
 // SHARED BASE OPTIONS

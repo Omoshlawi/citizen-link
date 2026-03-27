@@ -1,23 +1,10 @@
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullModule } from '@nestjs/bullmq';
-import { DynamicModule, Global, Module, Type } from '@nestjs/common';
+import { DynamicModule, Global, Module } from '@nestjs/common';
 import { TemplatesModule } from '../common/templates';
-import { EmailDispatcher, PushDispatcher, SmsDispatcher } from './dispatchers';
-import {
-  NOTIFICATION_OPTIONS_TOKEN,
-  NOTIFICATION_QUEUES,
-} from './notification.constants';
-import {
-  EmailProviders,
-  IEmailProvider,
-  IPushProvider,
-  ISmsProvider,
-  NotificationModuleOptions,
-  NotificationOptions,
-  PushProviders,
-  SmsProviders,
-} from './notification.interfaces';
+import { NOTIFICATION_QUEUES } from './notification.constants';
+import { NotificationModuleOptions } from './notification.interfaces';
 import {
   NotificationHighProcessor,
   NotificationLowProcessor,
@@ -27,15 +14,10 @@ import { NotificationProcessorHandler } from './notification.processor.handler';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationDispatchService } from './notifications.dispatch.service';
-import {
-  AfricasTalkingProvider,
-  ExpoPushProvider,
-  TwilioProvider,
-} from './service-providers';
-import { EmailMailpitProvider } from './service-providers/email.mailpit.provider';
-import { MailerModule } from '@nestjs-modules/mailer';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
-import { NotificationConfig } from './notification.config';
+import { NotificationContentResolver } from './notification.content.resolver';
+import { EmailChannelModule } from './channels/email/email.channel.module';
+import { SmsChannelModule } from './channels/sms/sms.channel.module';
+import { PushChannelModule } from './channels/push/push.channel.module';
 
 @Global()
 @Module({})
@@ -44,48 +26,27 @@ export class NotificationsModule {
     return {
       global: options.global,
       module: NotificationsModule,
+      imports: [
+        EmailChannelModule.register(options.channels.email),
+        SmsChannelModule.register(options.channels.sms),
+        PushChannelModule.register(options.channels.push),
+        ...this.registerQueues(),
+        TemplatesModule,
+      ],
       providers: [
-        {
-          provide: NOTIFICATION_OPTIONS_TOKEN,
-          useValue: options.options,
-        },
-        ...this.getNotificationProviderClasses(options.options),
         NotificationsService,
         NotificationDispatchService,
+        NotificationContentResolver,
+        NotificationProcessorHandler,
         ...this.registerProcessors(),
       ],
       controllers: [NotificationsController],
-      imports: [
-        ...this.registerQueues(),
-        TemplatesModule,
-        MailerModule.forRootAsync({
-          inject: [NotificationConfig],
-          useFactory: (config: NotificationConfig) => ({
-            transport: {
-              host: config.smtpHost,
-              port: config.smtpPort,
-              // auth: {
-              //   user: config.smtpUser,
-              //   pass: config.smtpPassword,
-              // },
-            },
-            defaults: {
-              from: config.smtpFrom,
-              name: config.smtpName,
-            },
-            template: {
-              adapter: new HandlebarsAdapter(),
-            },
-          }),
-        }),
-      ],
       exports: [NotificationDispatchService],
     };
   }
 
   private static registerQueues() {
     return [
-      // Notifications owns its own queue registrations
       BullModule.registerQueue(
         {
           name: NOTIFICATION_QUEUES.HIGH,
@@ -115,9 +76,6 @@ export class NotificationsModule {
           },
         },
       ),
-      // Register queues with Bull Board dashboard
-      // BullBoardModule.forRoot() already ran in QueueModule,
-      // forFeature() just adds this module's queues to the existing board.
       BullBoardModule.forFeature(
         { name: NOTIFICATION_QUEUES.HIGH, adapter: BullMQAdapter },
         { name: NOTIFICATION_QUEUES.NORMAL, adapter: BullMQAdapter },
@@ -128,52 +86,9 @@ export class NotificationsModule {
 
   private static registerProcessors() {
     return [
-      NotificationProcessorHandler, // shared logic
       NotificationHighProcessor, // concurrency: 10
       NotificationNormalProcessor, // concurrency: 5
       NotificationLowProcessor, // concurrency: 2
-    ];
-  }
-
-  private static getNotificationProviderClasses(options: NotificationOptions) {
-    const emailProviderMap: Record<EmailProviders, Type<IEmailProvider>> = {
-      [EmailProviders.MAILPIT]: EmailMailpitProvider,
-    };
-    const smsProviderMap: Record<SmsProviders, Type<ISmsProvider>> = {
-      [SmsProviders.TWILIO]: TwilioProvider,
-      [SmsProviders.AFRICASTALK]: AfricasTalkingProvider,
-    };
-    const pushProviderMap: Record<PushProviders, Type<IPushProvider>> = {
-      [PushProviders.EXPO]: ExpoPushProvider,
-    };
-
-    const emailProviderClasses: Array<Type<IEmailProvider>> =
-      options.emailProviders.map((p) => emailProviderMap[p]).filter(Boolean);
-    const smsProviderClasses: Array<Type<ISmsProvider>> = options.smsProviders
-      .map((p) => smsProviderMap[p])
-      .filter(Boolean);
-    const pushProviderClasses: Array<Type<IPushProvider>> =
-      options.pushProviders.map((p) => pushProviderMap[p]).filter(Boolean);
-
-    return [
-      ...emailProviderClasses,
-      ...smsProviderClasses,
-      ...pushProviderClasses,
-      {
-        provide: EmailDispatcher,
-        useFactory: (...p: IEmailProvider[]) => new EmailDispatcher(p),
-        inject: emailProviderClasses,
-      },
-      {
-        provide: SmsDispatcher,
-        useFactory: (...p: ISmsProvider[]) => new SmsDispatcher(p),
-        inject: smsProviderClasses,
-      },
-      {
-        provide: PushDispatcher,
-        useFactory: (...p: IPushProvider[]) => new PushDispatcher(p),
-        inject: pushProviderClasses,
-      },
     ];
   }
 }
