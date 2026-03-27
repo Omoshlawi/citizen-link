@@ -291,6 +291,12 @@ export interface SendTemplateOptions extends BaseOptions {
 
   /** Handlebars context variables injected into template slots at render time. */
   data?: Record<string, unknown>;
+
+  // Required on template-based sends — there is no channel content to fall back on
+  // for deriving inbox copy, so these must always be provided explicitly.
+  eventTitle: string;
+  eventBody: string;
+  eventDescription: string;
 }
 
 /**

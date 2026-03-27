@@ -172,5 +172,18 @@
     "slots": { "user": { "source": "file", "path": "prompts/vision-extraction-unstructured.hbs" } },
     "schema": { "required": ["user"], "optional": ["system"] },
     "metadata": {}
+  },
+  {
+    "key": "auth.email.verification",
+    "type": "notification",
+    "name": "Email Verification",
+    "description": "Sent on sign-up to verify the user's email address.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Verify your email — Welcome to Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/auth-email-verification.hbs" }
+    },
+    "schema": { "required": ["email_subject", "email_body"], "optional": [] },
+    "metadata": { "channels": { "email": true, "sms": false, "push": false } }
   }
 ]

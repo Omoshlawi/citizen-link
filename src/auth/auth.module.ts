@@ -23,6 +23,8 @@ import {
   twoFactor,
   phoneNumber,
 } from 'better-auth/plugins';
+import { NotificationPriority } from '../notifications/notification.interfaces';
+import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { adminConfig } from './auth.contants';
@@ -55,6 +57,7 @@ export class AuthModule {
         discover: DiscoveryService,
         reflector: Reflector,
         metadataScanner: MetadataScanner,
+        notificationDispatch: NotificationDispatchService,
       ) {
         const providers = discover
           .getProviders()
@@ -136,14 +139,27 @@ export class AuthModule {
                 console.log('Token ---------', token);
                 console.log('Url ---------', `/reset-password?token=${token}`);
               },
-              requireEmailVerification: false,
+              requireEmailVerification: true,
             },
             emailVerification: {
-              // eslint-disable-next-line @typescript-eslint/require-await
-              async sendVerificationEmail({ token, url }, _) {
-                console.log('Token ---------', token);
-                console.log('URL ---------', url);
-                console.log('Url ---------', `/verify-email?token=${token}`);
+              async sendVerificationEmail({ user, token, url }, _) {
+                const deepLink = `citizenlinkapp://auth/verify-email?token=${token}`;
+                await notificationDispatch.sendFromTemplate({
+                  templateKey: 'auth.email.verification',
+                  recipient: { email: user.email },
+                  data: {
+                    user,
+                    deepLink,
+                    verificationUrl: url,
+                    year: new Date().getFullYear(),
+                  },
+                  userId: user.id,
+                  priority: NotificationPriority.HIGH,
+                  force: true,
+                  eventTitle: 'Verify Your Email',
+                  eventBody: `A verification email has been sent to ${user.email}. Please verify your email address to activate your account.`,
+                  eventDescription: `Email verification triggered for new user ${user.email} (id: ${user.id}) on sign-up.`,
+                });
               },
               autoSignInAfterVerification: true,
               sendOnSignUp: true,
@@ -151,7 +167,13 @@ export class AuthModule {
           }),
         };
       },
-      inject: [PrismaService, DiscoveryService, Reflector, MetadataScanner],
+      inject: [
+        PrismaService,
+        DiscoveryService,
+        Reflector,
+        MetadataScanner,
+        NotificationDispatchService,
+      ],
     });
   }
 }
