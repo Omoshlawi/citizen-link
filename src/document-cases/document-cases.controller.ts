@@ -54,8 +54,8 @@ export class DocumentCasesController {
   }
 
   @Post('lost')
-  @ApiOperation({ summary: 'Report Lost Document Case' })
-  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiOperation({ summary: 'Report Lost Document Case (manual entry)' })
+  @ApiCreatedResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   reportLostDocumentCase(
     @Body() createLostDocumentCaseDto: CreateLostDocumentCaseDto,
@@ -64,6 +64,24 @@ export class DocumentCasesController {
   ) {
     return this.documentCasesService.reportLostDocumentCaseMannual(
       createLostDocumentCaseDto,
+      query,
+      user,
+    );
+  }
+
+  @Post('lost/scan')
+  @ApiOperation({
+    summary: 'Report Lost Document Case via scan (async AI extraction)',
+  })
+  @ApiCreatedResponse({ type: GetDocumentCaseResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  reportLostDocumentCaseScanned(
+    @Body() createFoundDocumentCaseDto: CreateFoundDocumentCaseDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.reportLostDocumentCaseScanned(
+      createFoundDocumentCaseDto,
       query,
       user,
     );

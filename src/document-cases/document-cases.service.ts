@@ -168,6 +168,7 @@ export class DocumentCasesService {
         images,
         userId: user.id,
         caseType: 'FOUND',
+        caseNumber,
       })
       .then((job) => {
         this.logger.debug(
@@ -233,15 +234,16 @@ export class DocumentCasesService {
         images,
         userId: user.id,
         caseType: 'LOST',
+        caseNumber,
       })
       .then((job) => {
         this.logger.debug(
-          `Queued vision job ${job.id} for lost scan case ${documentCase.id}`,
+          `Queued vision job ${job.id} for lost scan case ${caseNumber}`,
         );
       })
       .catch((e) => {
         this.logger.error(
-          `Failed to queue vision job for lost scan case ${documentCase.id}`,
+          `Failed to queue vision job for lost scan case ${caseNumber}`,
           e,
         );
       });

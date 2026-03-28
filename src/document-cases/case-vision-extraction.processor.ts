@@ -1,6 +1,10 @@
-import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
+import {
+  InjectQueue,
+  OnWorkerEvent,
+  Processor,
+  WorkerHost,
+} from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue, UnrecoverableError } from 'bullmq';
 import {
   AIExtractionInteractionType,
@@ -9,13 +13,12 @@ import {
 import { NotificationPriority } from '../notifications/notification.interfaces';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { DocumentCasesCreateService } from './document-cases.create.service';
 import {
   CASE_TEXT_EXTRACTION_QUEUE,
   CASE_VISION_EXTRACTION_QUEUE,
 } from './document-cases.constants';
+import { DocumentCasesCreateService } from './document-cases.create.service';
 import { CaseExtractionJob } from './document-cases.interface';
-import { UserSession } from '../auth/auth.types';
 
 type UserRow = {
   id: string;
@@ -44,10 +47,10 @@ export class CaseVisionExtractionProcessor extends WorkerHost {
   }
 
   async process(job: Job<CaseExtractionJob>): Promise<void> {
-    const { caseId, documentId, extractionId, images, userId, caseType } =
+    const { caseId, extractionId, images, userId, caseType, caseNumber } =
       job.data;
     this.logger.log(
-      `Processing vision extraction job ${job.id ?? 'unknown'} for case ${caseId}`,
+      `Processing vision extraction job ${job.id ?? 'unknown'} for case ${caseNumber}`,
     );
 
     let user: UserRow | null = null;
@@ -93,7 +96,7 @@ export class CaseVisionExtractionProcessor extends WorkerHost {
       await this.textQueue.add('extract-text', job.data);
 
       this.logger.log(
-        `Vision job ${job.id ?? 'unknown'} completed for case ${caseId} — text job queued`,
+        `Vision job ${job.id ?? 'unknown'} completed for case ${caseNumber} — text job queued`,
       );
     } catch (error: unknown) {
       const isPermanent =
@@ -130,7 +133,7 @@ export class CaseVisionExtractionProcessor extends WorkerHost {
             priority: NotificationPriority.NORMAL,
             eventTitle: 'Document Scan Unsuccessful',
             eventBody: `We were unable to scan your ${documentCase?.document?.type?.name ?? 'document'} images for case #${documentCase?.caseNumber ?? caseId}. Please open your case to review and try again.`,
-            eventDescription: `Vision extraction failed permanently for ${caseType} case ${caseId} (extraction ${extractionId}): ${String(error instanceof Error ? error.message : error)}`,
+            eventDescription: `Vision extraction failed permanently for ${caseType} case ${caseNumber} (extraction ${extractionId}): ${String(error instanceof Error ? error.message : error)}`,
           })
           .catch((e: unknown) =>
             this.logger.error(
@@ -146,14 +149,14 @@ export class CaseVisionExtractionProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job<CaseExtractionJob>, error: Error) {
-    const { caseId, extractionId } = job.data;
+    const { extractionId, caseNumber } = job.data;
     const isPermanent =
       error instanceof UnrecoverableError ||
       job.attemptsMade >= (job.opts.attempts ?? 3);
 
     if (isPermanent) {
       this.logger.error(
-        `[#Attempt ${job.attemptsMade}] Vision job ${job.id ?? 'unknown'} permanently failed for case ${caseId}`,
+        `[#Attempt ${job.attemptsMade}] Vision job ${job.id ?? 'unknown'} permanently failed for case ${caseNumber}`,
         error,
       );
       void this.prismaService.aIExtraction
@@ -169,7 +172,7 @@ export class CaseVisionExtractionProcessor extends WorkerHost {
         );
     } else {
       this.logger.warn(
-        `[#Attempt ${job.attemptsMade}] Vision job ${job.id ?? 'unknown'} failed for case ${caseId} — retrying`,
+        `[#Attempt ${job.attemptsMade}] Vision job ${job.id ?? 'unknown'} failed for case ${caseNumber} — retrying`,
         error,
       );
     }

@@ -45,9 +45,9 @@ export class CaseTextExtractionProcessor extends WorkerHost {
   }
 
   async process(job: Job<CaseExtractionJob>): Promise<void> {
-    const { caseId, extractionId, userId, caseType } = job.data;
+    const { caseId, extractionId, userId, caseType, caseNumber } = job.data;
     this.logger.log(
-      `Processing text extraction job ${job.id ?? 'unknown'} for case ${caseId}`,
+      `Processing text extraction job ${job.id ?? 'unknown'} for case ${caseNumber}`,
     );
 
     let user: UserRow | null = null;
@@ -103,9 +103,8 @@ export class CaseTextExtractionProcessor extends WorkerHost {
         );
       }
 
-      const visionOutput =
-        visionInteraction.aiInteraction
-          .parsedResponse as unknown as VisionExtractionOutputDto;
+      const visionOutput = visionInteraction.aiInteraction
+        .parsedResponse as unknown as VisionExtractionOutputDto;
 
       // Run text step
       await this.documentCasesCreateService.runTextStep(
@@ -118,7 +117,7 @@ export class CaseTextExtractionProcessor extends WorkerHost {
       await this.postProcessingQueue.add('post-process', job.data);
 
       this.logger.log(
-        `Text job ${job.id ?? 'unknown'} completed for case ${caseId} — post-processing queued`,
+        `Text job ${job.id ?? 'unknown'} completed for case ${caseNumber} — post-processing queued`,
       );
     } catch (error: unknown) {
       const isPermanent =
@@ -155,7 +154,7 @@ export class CaseTextExtractionProcessor extends WorkerHost {
             priority: NotificationPriority.NORMAL,
             eventTitle: 'Document Scan Unsuccessful',
             eventBody: `We were unable to process your ${documentCase?.document?.type?.name ?? 'document'} images for case #${documentCase?.caseNumber ?? job.data.caseId}. Please open your case to review and try again.`,
-            eventDescription: `Text extraction failed permanently for ${caseType} case ${caseId} (extraction ${extractionId}): ${String(error instanceof Error ? error.message : error)}`,
+            eventDescription: `Text extraction failed permanently for ${caseType} case ${caseNumber} (extraction ${extractionId}): ${String(error instanceof Error ? error.message : error)}`,
           })
           .catch((e: unknown) =>
             this.logger.error(
@@ -171,14 +170,14 @@ export class CaseTextExtractionProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job<CaseExtractionJob>, error: Error) {
-    const { caseId, extractionId } = job.data;
+    const { extractionId, caseNumber } = job.data;
     const isPermanent =
       error instanceof UnrecoverableError ||
       job.attemptsMade >= (job.opts.attempts ?? 3);
 
     if (isPermanent) {
       this.logger.error(
-        `[#Attempt ${job.attemptsMade}] Text job ${job.id ?? 'unknown'} permanently failed for case ${caseId}`,
+        `[#Attempt ${job.attemptsMade}] Text job ${job.id ?? 'unknown'} permanently failed for case ${caseNumber}`,
         error,
       );
       void this.prismaService.aIExtraction
@@ -194,7 +193,7 @@ export class CaseTextExtractionProcessor extends WorkerHost {
         );
     } else {
       this.logger.warn(
-        `[#Attempt ${job.attemptsMade}] Text job ${job.id ?? 'unknown'} failed for case ${caseId} — retrying`,
+        `[#Attempt ${job.attemptsMade}] Text job ${job.id ?? 'unknown'} failed for case ${caseNumber} — retrying`,
         error,
       );
     }

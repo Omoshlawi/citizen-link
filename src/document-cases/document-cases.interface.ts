@@ -16,4 +16,5 @@ export interface CaseExtractionJob {
   images: string[];
   userId: string;
   caseType: CaseType;
+  caseNumber: string;
 }

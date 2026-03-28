@@ -39,10 +39,17 @@ export class CasePostProcessingProcessor extends WorkerHost {
   }
 
   async process(job: Job<CaseExtractionJob>): Promise<void> {
-    const { caseId, documentId, extractionId, images, userId, caseType } =
-      job.data;
+    const {
+      caseId,
+      documentId,
+      extractionId,
+      images,
+      userId,
+      caseType,
+      caseNumber,
+    } = job.data;
     this.logger.log(
-      `Processing post-processing job ${job.id ?? 'unknown'} for case ${caseId}`,
+      `Processing post-processing job ${job.id ?? 'unknown'} for case ${caseNumber}`,
     );
 
     let user: UserRow | null = null;
@@ -86,9 +93,8 @@ export class CasePostProcessingProcessor extends WorkerHost {
         );
       }
 
-      const documentData =
-        textInteraction.aiInteraction
-          .parsedResponse as unknown as TextExtractionOutputDto;
+      const documentData = textInteraction.aiInteraction
+        .parsedResponse as unknown as TextExtractionOutputDto;
 
       if (!documentData) {
         throw new UnrecoverableError(
@@ -117,7 +123,8 @@ export class CasePostProcessingProcessor extends WorkerHost {
           extractionStatus: ExtractionStatus.COMPLETED,
           currentStep: null,
           ocrConfidence: documentData.quality?.ocrConfidence ?? null,
-          extractionConfidence: documentData.quality?.extractionConfidence ?? null,
+          extractionConfidence:
+            documentData.quality?.extractionConfidence ?? null,
           documentTypeCode: documentData.documentType?.code ?? null,
           warnings: documentData.quality?.warnings ?? [],
         },
@@ -152,12 +159,12 @@ export class CasePostProcessingProcessor extends WorkerHost {
           priority: NotificationPriority.NORMAL,
           eventTitle: 'Document Details Extracted',
           eventBody: `Details extracted from your ${documentCase?.document?.type?.name ?? 'document'} images — please review case #${documentCase?.caseNumber ?? caseId} to confirm they are correct.`,
-          eventDescription: `Background AI extraction completed for ${caseType} case ${caseId} (document ${documentId}, extraction ${extractionId})`,
+          eventDescription: `Background AI extraction completed for ${caseType} case ${caseNumber} (document ${documentId}, extraction ${extractionId})`,
         });
       }
 
       this.logger.log(
-        `Post-processing job ${job.id ?? 'unknown'} completed for case ${caseId}`,
+        `Post-processing job ${job.id ?? 'unknown'} completed for case ${caseNumber}`,
       );
     } catch (error: unknown) {
       const isPermanent =
@@ -194,7 +201,7 @@ export class CasePostProcessingProcessor extends WorkerHost {
             priority: NotificationPriority.NORMAL,
             eventTitle: 'Document Scan Unsuccessful',
             eventBody: `We were unable to finalise processing your ${documentCase?.document?.type?.name ?? 'document'} images for case #${documentCase?.caseNumber ?? caseId}. Please open your case to review and try again.`,
-            eventDescription: `Post-processing failed permanently for ${caseType} case ${caseId} (extraction ${extractionId}): ${String(error instanceof Error ? error.message : error)}`,
+            eventDescription: `Post-processing failed permanently for ${caseType} case ${caseNumber} (extraction ${extractionId}): ${String(error instanceof Error ? error.message : error)}`,
           })
           .catch((e: unknown) =>
             this.logger.error(
@@ -210,14 +217,14 @@ export class CasePostProcessingProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job<CaseExtractionJob>, error: Error) {
-    const { caseId, extractionId } = job.data;
+    const { caseNumber, extractionId } = job.data;
     const isPermanent =
       error instanceof UnrecoverableError ||
       job.attemptsMade >= (job.opts.attempts ?? 3);
 
     if (isPermanent) {
       this.logger.error(
-        `[#Attempt ${job.attemptsMade}] Post-processing job ${job.id ?? 'unknown'} permanently failed for case ${caseId}`,
+        `[#Attempt ${job.attemptsMade}] Post-processing job ${job.id ?? 'unknown'} permanently failed for case ${caseNumber}`,
         error,
       );
       void this.prismaService.aIExtraction
@@ -233,7 +240,7 @@ export class CasePostProcessingProcessor extends WorkerHost {
         );
     } else {
       this.logger.warn(
-        `[#Attempt ${job.attemptsMade}] Post-processing job ${job.id ?? 'unknown'} failed for case ${caseId} — retrying`,
+        `[#Attempt ${job.attemptsMade}] Post-processing job ${job.id ?? 'unknown'} failed for case ${caseNumber} — retrying`,
         error,
       );
     }
