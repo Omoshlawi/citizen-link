@@ -1,6 +1,13 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../common/query-builder';
+import dayjs from 'dayjs';
 import z from 'zod';
+
+const pastOrTodayDate = z.iso
+  .date()
+  .refine((val) => !dayjs(val).isAfter(dayjs(), 'day'), {
+    message: 'Date cannot be in the future',
+  });
 import {
   CaseDocumentSchema,
   GetCaseDocumentResponseDto,
@@ -79,7 +86,7 @@ export const DocumentCaseSchema = z.object({
 export const FoundDocumentCaseSchema = z.object({
   typeId: z.uuid(),
   addressId: z.uuid(),
-  eventDate: z.iso.date(),
+  eventDate: pastOrTodayDate,
   tags: z.string().min(1).array().optional(),
   description: z.string().optional(),
   images: z.string().nonempty().array().nonempty().max(2),

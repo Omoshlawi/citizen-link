@@ -1,6 +1,13 @@
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../common/query-builder';
+import dayjs from 'dayjs';
 import z from 'zod';
+
+const pastOrTodayDate = z.iso
+  .date()
+  .refine((val) => !dayjs(val).isAfter(dayjs(), 'day'), {
+    message: 'Date cannot be in the future',
+  });
 import { ApiProperty } from '@nestjs/swagger';
 import { Document, DocumentField } from '../../generated/prisma/client';
 import { JsonValue } from '@prisma/client/runtime/client';
@@ -46,7 +53,7 @@ export const CaseDocumentSchema = z.object({
   issuer: z.string().optional(),
   surname: z.string().min(1, 'Surname required').optional(),
   givenNames: z.string().min(1, 'GivenNames required').optional(),
-  dateOfBirth: z.iso.date().optional(), // Owner's date of birth
+  dateOfBirth: pastOrTodayDate.optional(), // Owner's date of birth
   placeOfBirth: z.string().optional(), // Owner's place of birth
   placeOfIssue: z.string().optional(),
   gender: z.enum(['Male', 'Female', 'Unknown']).optional(), // Owner's gender
