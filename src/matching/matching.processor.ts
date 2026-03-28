@@ -12,7 +12,6 @@ import {
   User,
   Document,
   DocumentType,
-  NotificationChannel,
 } from '../../generated/prisma/client';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { NotificationPriority } from 'src/notifications/notification.interfaces';
@@ -70,7 +69,6 @@ export class DocumentMatchingProcessor extends WorkerHost {
       // 1. Trigger notification for owner of the new match
       const ownerPromises = matches.map(async (match) => {
         await this.notificationService.sendFromTemplate({
-          channels: [NotificationChannel.EMAIL],
           priority: NotificationPriority.HIGH,
           templateKey: 'notification.case.found.matched', // TODO: set template name to system settings and use it to access the template key
           data: {
@@ -85,7 +83,6 @@ export class DocumentMatchingProcessor extends WorkerHost {
       // 2. Trigger notification for finder of the new match
       const founderPromises = matches.map(async (match) => {
         await this.notificationService.sendFromTemplate({
-          channels: [NotificationChannel.EMAIL],
           priority: NotificationPriority.HIGH,
           templateKey: 'notification.case.lost.matched', // TODO: set template name to system settings and use it to access the template key
           data: {

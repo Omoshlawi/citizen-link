@@ -48,7 +48,21 @@ export class NotificationContentResolver {
     force?: boolean,
     templateKey?: string,
   ): Promise<NotificationChannel[]> {
-    if (force || !userId) return channels;
+    const ctx = templateKey ? `template:${templateKey} ` : '';
+
+    if (!userId) {
+      this.logger.debug(
+        `${ctx}Skipping preference filter — no userId; passing all channels: [${channels.join(', ')}]`,
+      );
+      return channels;
+    }
+
+    if (force) {
+      this.logger.debug(
+        `${ctx}force=true — bypassing quiet hours + preferences for user:${userId}; passing all channels: [${channels.join(', ')}]`,
+      );
+      return channels;
+    }
 
     const allowed = await this.userSettings.getAllowedChannels(
       userId,
@@ -56,12 +70,40 @@ export class NotificationContentResolver {
       templateKey,
     );
 
+    const removedByPrefs = channels.filter((ch) => !allowed.includes(ch));
+    if (removedByPrefs.length) {
+      this.logger.debug(
+        `${ctx}user:${userId} preference filter removed [${removedByPrefs.join(', ')}]; remaining: [${allowed.join(', ')}]`,
+      );
+    }
+
     const isQuiet = await this.userSettings.isQuietHours(userId);
     if (isQuiet) {
       // Intentional: email is allowed during quiet hours because it is non-intrusive
       // (no sound/vibration). SMS and push are suppressed to avoid disturbing the user.
       // Use force: true on critical sends (OTP, security alerts) to bypass this entirely.
-      return allowed.filter((ch) => ch === NotificationChannel.EMAIL);
+      const afterQuiet = allowed.filter(
+        (ch) => ch === NotificationChannel.EMAIL,
+      );
+      const suppressedByQuiet = allowed.filter(
+        (ch) => ch !== NotificationChannel.EMAIL,
+      );
+      if (suppressedByQuiet.length) {
+        this.logger.debug(
+          `${ctx}user:${userId} quiet hours active — suppressed [${suppressedByQuiet.join(', ')}]; allowed: [${afterQuiet.join(', ')}]`,
+        );
+      } else {
+        this.logger.debug(
+          `${ctx}user:${userId} quiet hours active — no additional channels suppressed; allowed: [${afterQuiet.join(', ')}]`,
+        );
+      }
+      return afterQuiet;
+    }
+
+    if (!removedByPrefs.length) {
+      this.logger.debug(
+        `${ctx}user:${userId} all requested channels allowed: [${allowed.join(', ')}]`,
+      );
     }
 
     return allowed;
@@ -107,7 +149,10 @@ export class NotificationContentResolver {
           !recipient.phone
         )
           return null;
-        return { to: recipient.phone, body: slots[NOTIFICATION_SLOTS.SMS_BODY] };
+        return {
+          to: recipient.phone,
+          body: slots[NOTIFICATION_SLOTS.SMS_BODY],
+        };
       }
       case NotificationChannel.PUSH: {
         if (!channelConfig.push || !slots[NOTIFICATION_SLOTS.PUSH_TITLE])

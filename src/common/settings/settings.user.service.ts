@@ -63,7 +63,8 @@ export class UserSettingService {
         key: { startsWith: `${prefix}.` },
       },
     });
-    const obj = SettingsUtils.nestSettings(rows, prefix);
+    // nestie() returns undefined for empty input; fall back to {} so schema defaults apply cleanly
+    const obj = SettingsUtils.nestSettings(rows, prefix) ?? {};
 
     // Parse through the schema — missing keys hit schema defaults, extras are stripped
     const result = schema.safeParse(obj);

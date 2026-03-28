@@ -5,3 +5,11 @@ export interface DocumentEmbeddingJob {
   trigger: MatchTrigger;
   userId: string;
 }
+
+export interface LostCaseExtractionJob {
+  caseId: string;
+  documentId: string;
+  extractionId: string;
+  images: string[];
+  userId: string;
+}

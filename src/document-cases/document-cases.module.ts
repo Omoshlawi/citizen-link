@@ -14,10 +14,14 @@ import { MatchingConfig } from '../matching/matching.config';
 import { EmbeddingModule } from '../embedding/embedding.module';
 import { EmbeddingConfig } from '../embedding/embedding.config';
 import { BullModule } from '@nestjs/bullmq';
-import { DOCUMENT_EMBEDDING_QUEUE } from './document-cases.constants';
+import {
+  DOCUMENT_EMBEDDING_QUEUE,
+  LOST_CASE_EXTRACTION_QUEUE,
+} from './document-cases.constants';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { DocumentEmbeddingProcessor } from './document.processor';
+import { LostCaseExtractionProcessor } from './lost-case-extraction.processor';
 
 @Module({
   imports: [
@@ -34,8 +38,25 @@ import { DocumentEmbeddingProcessor } from './document.processor';
         removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
       },
     }),
+    BullModule.registerQueue({
+      name: LOST_CASE_EXTRACTION_QUEUE,
+      defaultJobOptions: {
+        priority: 3,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 10_000, // 10s → 20s → 40s
+        },
+        removeOnComplete: { age: 60 * 60 * 24 }, // keep 24h
+        removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
+      },
+    }),
     BullBoardModule.forFeature({
       name: DOCUMENT_EMBEDDING_QUEUE,
+      adapter: BullMQAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: LOST_CASE_EXTRACTION_QUEUE,
       adapter: BullMQAdapter,
     }),
     EmbeddingModule.registerAsync({
@@ -89,6 +110,7 @@ import { DocumentEmbeddingProcessor } from './document.processor';
   controllers: [DocumentCasesController],
   providers: [
     DocumentEmbeddingProcessor,
+    LostCaseExtractionProcessor,
     DocumentCasesService,
     DocumentCasesCreateService,
     DocumentCasesQueryService,

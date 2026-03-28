@@ -209,6 +209,7 @@ export class AuthModule {
               },
               autoSignInAfterVerification: true,
               sendOnSignUp: true,
+              sendOnSignIn: true,
             },
           }),
         };

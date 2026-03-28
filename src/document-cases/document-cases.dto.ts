@@ -86,7 +86,10 @@ export const FoundDocumentCaseSchema = z.object({
 
 export const LostDocumentCaseSchema = FoundDocumentCaseSchema.merge(
   CaseDocumentSchema,
-).omit({ images: true });
+).extend({
+  // Images are optional for REST lost-case creation (triggers background extraction)
+  images: z.string().nonempty().array().nonempty().max(2).optional(),
+});
 
 export class QueryDocumentCaseDto extends createZodDto(
   QueryDocumentCaseSchema,

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Found Document Report Verified — Citizen Link</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:'Inter', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#003b5a; border-radius:12px 12px 0 0; padding:28px 40px;">
+              <p style="margin:0; font-size:22px; font-weight:700; color:#ffffff; letter-spacing:-0.3px;">Citizen Link</p>
+              <p style="margin:6px 0 0; font-size:12px; color:#a8cfe0; letter-spacing:0.8px; text-transform:uppercase;">Trusted Civic Services</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#ffffff; padding:40px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+              <p style="margin:0 0 8px; font-size:15px; color:#475569;">Hello {{case.user.name}},</p>
+              <h1 style="margin:0 0 20px; font-size:22px; font-weight:700; color:#003b5a; line-height:1.3;">
+                Your Found Document Report Has Been Verified
+              </h1>
+              <p style="margin:0 0 24px; font-size:15px; color:#475569; line-height:1.7;">
+                Thank you for taking the time to report a found <strong>{{case.document.type.name}}</strong>. Our team has reviewed your submission and it has been officially verified. We are now working to reunite this document with its rightful owner.
+              </p>
+
+              <!-- Case card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 10px; font-size:11px; font-weight:600; color:#006397; letter-spacing:0.8px; text-transform:uppercase;">Verified Case</p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="padding:4px 0; font-size:13px; color:#64748b; width:40%;">Case Number</td>
+                        <td style="padding:4px 0; font-size:13px; font-weight:600; color:#0f172a;">#{{case.caseNumber}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0; font-size:13px; color:#64748b;">Document Type</td>
+                        <td style="padding:4px 0; font-size:13px; font-weight:600; color:#0f172a;">{{case.document.type.name}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0; font-size:13px; color:#64748b;">Status</td>
+                        <td style="padding:4px 0; font-size:13px; font-weight:600; color:#1d9e75;">Verified — Matching in Progress</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Appreciation panel -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#f0fdf4; border-left:4px solid #1d9e75; border-radius:0 8px 8px 0; margin-bottom:32px;">
+                <tr>
+                  <td style="padding:16px 18px;">
+                    <p style="margin:0 0 6px; font-size:13px; font-weight:600; color:#14532d;">You're making a difference</p>
+                    <p style="margin:0; font-size:13px; color:#14532d; line-height:1.7;">
+                      Acts like yours help restore trust and security in our communities. Our system is now matching your report against active lost document cases and the rightful owner will be contacted when a match is confirmed.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 32px;">
+                <tr>
+                  <td align="center" style="border-radius:8px; background-color:#003b5a;">
+                    <a href="citizenlinkapp://document-case/{{case.id}}"
+                      style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px; letter-spacing:-0.1px;">
+                      View Your Case →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0; font-size:14px; color:#475569; line-height:1.7;">
+                We will let you know once a match is confirmed. Thank you again for your civic responsibility.<br />
+                <strong style="color:#003b5a;">The Citizen Link Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 12px 12px; padding:20px 40px;" align="center">
+              <p style="margin:0 0 12px; font-size:11px; color:#94a3b8;">
+                If the button above does not open the app, open Citizen Link and go to <strong>My Cases → #{{case.caseNumber}}</strong>.
+              </p>
+              <p style="margin:0; font-size:11px; color:#94a3b8;">
+                This is an automated message from Citizen Link. For support, contact
+                <a href="mailto:support@citizenlink.app" style="color:#006397; text-decoration:none;">support@citizenlink.app</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document Details Extracted — Citizen Link</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:'Inter', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
+
+          <!-- Header / Logo bar -->
+          <tr>
+            <td align="center" style="background-color:#003b5a; border-radius:12px 12px 0 0; padding:28px 40px;">
+              <p style="margin:0; font-size:22px; font-weight:700; color:#ffffff; letter-spacing:-0.3px;">Citizen Link</p>
+              <p style="margin:6px 0 0; font-size:12px; color:#a8cfe0; letter-spacing:0.8px; text-transform:uppercase;">Trusted Civic Services</p>
+            </td>
+          </tr>
+
+          <!-- Body card -->
+          <tr>
+            <td style="background-color:#ffffff; padding:40px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+
+              <!-- Greeting -->
+              <p style="margin:0 0 8px; font-size:15px; color:#475569;">Hello {{user.name}},</p>
+              <h1 style="margin:0 0 20px; font-size:22px; font-weight:700; color:#003b5a; line-height:1.3;">
+                Your document details have been extracted
+              </h1>
+              <p style="margin:0 0 24px; font-size:15px; color:#475569; line-height:1.7;">
+                Our AI has successfully scanned the images you submitted for your lost document case and extracted the relevant details.
+                Please take a moment to <strong>review and confirm</strong> that the extracted information is accurate before your case enters active matching.
+              </p>
+
+              <!-- Case summary card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#f0f7ff; border:1px solid #bfdbfe; border-radius:10px; margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 10px; font-size:11px; font-weight:600; color:#006397; letter-spacing:0.8px; text-transform:uppercase;">Case Summary</p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="padding:4px 0; font-size:13px; color:#64748b; width:40%;">Case Number</td>
+                        <td style="padding:4px 0; font-size:13px; font-weight:600; color:#0f172a;">#{{case.caseNumber}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0; font-size:13px; color:#64748b;">Document Type</td>
+                        <td style="padding:4px 0; font-size:13px; font-weight:600; color:#0f172a;">{{case.document.type.name}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Why review matters -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#fffbeb; border-left:4px solid #e8b84b; border-radius:0 8px 8px 0; margin-bottom:32px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="margin:0; font-size:13px; color:#78350f; line-height:1.6;">
+                      <strong>Why does this matter?</strong><br />
+                      Accurate details help us find a match faster. Fields you already filled in were kept as-is — only missing fields were filled from the scan.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 32px;">
+                <tr>
+                  <td align="center" style="border-radius:8px; background-color:#003b5a;">
+                    <a href="citizenlinkapp://document-case/{{case.id}}"
+                      style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px; letter-spacing:-0.1px;">
+                      Review Case Details →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 4px; font-size:14px; color:#475569; line-height:1.7;">
+                Thank you for using Citizen Link to help recover your document. We are actively searching for a match.
+              </p>
+              <p style="margin:0; font-size:14px; color:#475569;">
+                Best regards,<br />
+                <strong style="color:#003b5a;">The Citizen Link Team</strong>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 12px 12px; padding:20px 40px;" align="center">
+              <p style="margin:0 0 12px; font-size:11px; color:#94a3b8;">
+                If the button above does not open the app, open Citizen Link and go to <strong>My Cases → #{{case.caseNumber}}</strong>.
+              </p>
+              <p style="margin:0; font-size:11px; color:#94a3b8;">
+                This is an automated message from Citizen Link. For support, contact
+                <a href="mailto:support@citizenlink.app" style="color:#006397; text-decoration:none;">support@citizenlink.app</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -36,10 +36,7 @@ export class DocumentCasesCreateService {
     private readonly visionService: VisionService,
   ) {}
 
-  private async filesExists(
-    images: string[],
-    onFailed?: () => void,
-  ): Promise<void> {
+  async filesExists(images: string[], onFailed?: () => void): Promise<void> {
     this.logger.debug('Checking if images exist', images);
     const exists = await Promise.all(
       images.map((image) => this.s3Service.fileExists(image, 'tmp')),
@@ -53,10 +50,7 @@ export class DocumentCasesCreateService {
     this.logger.debug('All images exist');
   }
 
-  private moveAndGenerateBluredVersions(
-    images: Array<string>,
-    caseNumber: string,
-  ) {
+  moveAndGenerateBluredVersions(images: Array<string>, caseNumber: string) {
     return Promise.all(
       images.map(async (image) => {
         const caseImageKey = `${caseNumber}/${image}`;
@@ -92,7 +86,7 @@ export class DocumentCasesCreateService {
     );
   }
 
-  private async runAiExtraction(
+  async runAiExtraction(
     extractionId: string,
     images: string[],
     user: UserSession['user'],

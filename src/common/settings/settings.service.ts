@@ -107,7 +107,7 @@ export class SettingsService {
     const settings = await this.prisma.setting.findMany({
       where: dbQuery,
     });
-    return SettingsUtils.nestSettings(settings, query.keyPrefix);
+    return SettingsUtils.nestSettings(settings, query.keyPrefix) ?? {};
   }
 
   async setSetting(
@@ -167,7 +167,7 @@ export class SettingsService {
       ),
     );
 
-    return SettingsUtils.nestSettings(settings, data.prefix);
+    return SettingsUtils.nestSettings(settings, data.prefix) ?? {};
   }
 
   async deleteSetting(

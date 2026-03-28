@@ -42,10 +42,10 @@ export class SettingsUtils {
     keyPrefix: string,
     coerce: boolean = true,
     includePrefix: boolean = false,
-  ) {
+  ): Record<string, Primitive> {
     // Build a flat object from stored rows, stripping the prefix
     const strip = `${keyPrefix}.`.length;
-    const flat: Record<string, any> = {};
+    const flat: Record<string, Primitive> = {};
     for (const row of setting) {
       flat[includePrefix ? row.key : row.key.slice(strip)] = coerce
         ? this.autoCoerce(row.value)
@@ -60,14 +60,14 @@ export class SettingsUtils {
    * @param keyPrefix The prefix to strip from the keys
    * @param coerce Whether to coerce the values
    * @param includePrefix Whether to include the prefix in the keys
-   * @returns The nested settings
+   * @returns The nested settings, or undefined if the input was empty
    */
   static nestSettings(
     setting: Setting[],
     keyPrefix: string,
     coerce: boolean = true,
     includePrefix: boolean = false,
-  ) {
+  ): Record<string, unknown> | undefined {
     const flat = this.flattenSettings(
       setting,
       keyPrefix,
@@ -88,7 +88,7 @@ export class SettingsUtils {
     obj: Record<string, unknown>,
     keyPrefix?: string,
     serialize: boolean = true,
-  ) {
+  ): Record<string, unknown> {
     const flat = flattie(obj);
     if (serialize) {
       return Object.fromEntries(
@@ -105,9 +105,12 @@ export class SettingsUtils {
    * Nest a flat object
    * @param flat The flat object to nest
    * @param coerce Whether to coerce the values
-   * @returns The nested object
+   * @returns The nested object, or undefined if the input was empty
    */
-  static nestFlatObject(flat: Record<string, unknown>, coerce: boolean = true) {
+  static nestFlatObject(
+    flat: Record<string, unknown>,
+    coerce: boolean = true,
+  ): Record<string, unknown> | undefined {
     if (coerce) {
       return nestie(
         Object.fromEntries(

@@ -31,6 +31,11 @@ import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { LOST_CASE_EXTRACTION_QUEUE } from './document-cases.constants';
+import { LostCaseExtractionJob } from './document-cases.interface';
+import { ExtractionService } from '../extraction/extraction.service';
 
 @Injectable()
 export class DocumentCasesService {
@@ -43,6 +48,9 @@ export class DocumentCasesService {
     private readonly documentCasesWorkflowService: DocumentCasesWorkflowService,
     private readonly documentCasesCreateService: DocumentCasesCreateService,
     private readonly humanIdService: HumanIdService,
+    private readonly extractionService: ExtractionService,
+    @InjectQueue(LOST_CASE_EXTRACTION_QUEUE)
+    private readonly lostCaseExtractionQueue: Queue<LostCaseExtractionJob>,
   ) {}
 
   findAll(
@@ -165,67 +173,79 @@ export class DocumentCasesService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
+    const { images, ...dto } = createLostDocumentCaseDto;
     const { fullName, givenName, surName } = this.getName(
-      createLostDocumentCaseDto.givenNames,
-      createLostDocumentCaseDto.surname,
+      dto.givenNames,
+      dto.surname,
     );
+
+    // Validate images before touching the DB — no AIExtraction record should be
+    // created if the uploaded files are missing.
+    if (images?.length) {
+      await this.documentCasesCreateService.filesExists(images);
+    }
+
+    // Create an AIExtraction session upfront so the background job can link to it
+    const extraction = images?.length
+      ? await this.extractionService.getOrCreateAiExtraction()
+      : null;
+
     const documentCase = await this.prismaService.documentCase.create({
       data: {
         userId: user.id,
         caseNumber: await this.humanIdService.generate({
           prefix: EntityPrefix.LOST_DOCUMENT_CASE,
         }),
-        eventDate: dayjs(createLostDocumentCaseDto.eventDate).toDate(),
-        addressId: createLostDocumentCaseDto.addressId,
+        eventDate: dayjs(dto.eventDate).toDate(),
+        addressId: dto.addressId,
+        extractionId: extraction?.id,
         document: {
           create: {
-            documentNumber: createLostDocumentCaseDto.documentNumber,
+            documentNumber: dto.documentNumber,
             fullName,
             givenNames: givenName,
             surname: surName,
-            isExpired: createLostDocumentCaseDto.expiryDate
-              ? dayjs(createLostDocumentCaseDto.expiryDate).isBefore(dayjs())
+            isExpired: dto.expiryDate
+              ? dayjs(dto.expiryDate).isBefore(dayjs())
               : undefined,
-            fingerprintPresent: createLostDocumentCaseDto.fingerprintPresent,
-            photoPresent: createLostDocumentCaseDto.photoPresent,
-            signaturePresent: createLostDocumentCaseDto.signaturePresent,
-            typeId: createLostDocumentCaseDto.typeId,
-            batchNumber: createLostDocumentCaseDto.batchNumber,
-            serialNumber: createLostDocumentCaseDto.serialNumber,
-            issuer: createLostDocumentCaseDto.issuer,
-            issuanceDate: createLostDocumentCaseDto.issuanceDate
-              ? dayjs(createLostDocumentCaseDto.issuanceDate).toDate()
+            fingerprintPresent: dto.fingerprintPresent,
+            photoPresent: dto.photoPresent,
+            signaturePresent: dto.signaturePresent,
+            typeId: dto.typeId,
+            batchNumber: dto.batchNumber,
+            serialNumber: dto.serialNumber,
+            issuer: dto.issuer,
+            issuanceDate: dto.issuanceDate
+              ? dayjs(dto.issuanceDate).toDate()
               : undefined,
-            expiryDate: createLostDocumentCaseDto.expiryDate
-              ? dayjs(createLostDocumentCaseDto.expiryDate).toDate()
+            expiryDate: dto.expiryDate
+              ? dayjs(dto.expiryDate).toDate()
               : undefined,
-            dateOfBirth: createLostDocumentCaseDto.dateOfBirth
-              ? dayjs(createLostDocumentCaseDto.dateOfBirth).toDate()
+            dateOfBirth: dto.dateOfBirth
+              ? dayjs(dto.dateOfBirth).toDate()
               : undefined,
-            placeOfBirth: createLostDocumentCaseDto.placeOfBirth,
-            placeOfIssue: createLostDocumentCaseDto.placeOfIssue,
-            gender: createLostDocumentCaseDto.gender,
-            note: createLostDocumentCaseDto.note,
-            addressRaw: createLostDocumentCaseDto.addressRaw,
-            addressCountry: createLostDocumentCaseDto.addressCountry,
-            addressComponents: createLostDocumentCaseDto.addressComponents,
-            additionalFields: createLostDocumentCaseDto.additionalFields?.length
+            placeOfBirth: dto.placeOfBirth,
+            placeOfIssue: dto.placeOfIssue,
+            gender: dto.gender,
+            note: dto.note,
+            addressRaw: dto.addressRaw,
+            addressCountry: dto.addressCountry,
+            addressComponents: dto.addressComponents,
+            additionalFields: dto.additionalFields?.length
               ? {
                   createMany: {
                     skipDuplicates: true,
-                    data: createLostDocumentCaseDto.additionalFields.map(
-                      (field) => ({
-                        fieldName: field.fieldName,
-                        fieldValue: field.fieldValue,
-                      }),
-                    ),
+                    data: dto.additionalFields.map((field) => ({
+                      fieldName: field.fieldName,
+                      fieldValue: field.fieldValue,
+                    })),
                   },
                 }
               : undefined,
           },
         },
-        description: createLostDocumentCaseDto.description,
-        tags: createLostDocumentCaseDto.tags,
+        description: dto.description,
+        tags: dto.tags,
         lostDocumentCase: {
           create: {},
         },
@@ -234,6 +254,30 @@ export class DocumentCasesService {
         document: true,
       },
     });
+
+    // If images were provided, dispatch background extraction — returns immediately
+    if (images?.length && extraction && documentCase.document) {
+      this.lostCaseExtractionQueue
+        .add('extract-lost-case', {
+          caseId: documentCase.id,
+          documentId: documentCase.document.id,
+          extractionId: extraction.id,
+          images,
+          userId: user.id,
+        })
+        .then((job) => {
+          this.logger.debug(
+            `Queued background extraction job ${job.id} for lost case ${documentCase.id}`,
+          );
+        })
+        .catch((e) => {
+          this.logger.error(
+            `Failed to queue background extraction for lost case ${documentCase.id}`,
+            e,
+          );
+        });
+    }
+
     return await this.findOne(documentCase.id, query, user);
   }
 

@@ -24,7 +24,10 @@ import {
 } from './notification.interfaces';
 
 // Error codes that mean the token is permanently invalid
-const PERMANENT_PUSH_ERRORS = new Set(['DeviceNotRegistered', 'InvalidCredentials']);
+const PERMANENT_PUSH_ERRORS = new Set([
+  'DeviceNotRegistered',
+  'InvalidCredentials',
+]);
 
 @Injectable()
 export class NotificationProcessorHandler {
@@ -42,7 +45,7 @@ export class NotificationProcessorHandler {
   ) {}
 
   async process(job: Job<NotificationJob>): Promise<void> {
-    const { logId, channel, source, recipient, userId } = job.data;
+    const { logId, channel, source, recipient } = job.data;
 
     this.logger.log(
       `Processing job ${job.id} | log:${logId} | channel:${channel}`,
@@ -103,8 +106,14 @@ export class NotificationProcessorHandler {
         case NotificationChannel.PUSH:
           result = await this.pushChannel.send(payload as PushPayload);
           // Deactivate permanently invalid tokens immediately (Phase 1 error)
-          if (!result.success && result.errorCode && PERMANENT_PUSH_ERRORS.has(result.errorCode)) {
-            await this.pushToken.deactivatePushToken((payload as PushPayload).to);
+          if (
+            !result.success &&
+            result.errorCode &&
+            PERMANENT_PUSH_ERRORS.has(result.errorCode)
+          ) {
+            await this.pushToken.deactivatePushToken(
+              (payload as PushPayload).to,
+            );
           }
           break;
         default:
@@ -142,7 +151,9 @@ export class NotificationProcessorHandler {
           );
         }
 
-        this.logger.log(`[${channel}] Delivered log:${logId} via ${result.providerName ?? 'unknown'}`);
+        this.logger.log(
+          `[${channel}] Delivered log:${logId} via ${result.providerName ?? 'unknown'}`,
+        );
       } else {
         throw new Error(result.error ?? 'Provider returned failure');
       }
@@ -152,7 +163,10 @@ export class NotificationProcessorHandler {
       );
       await this.prisma.notificationLog.update({
         where: { id: logId },
-        data: { lastError: String(err.message).slice(0, 500), attempts: job.attemptsMade + 1 },
+        data: {
+          lastError: String(err.message).slice(0, 500),
+          attempts: job.attemptsMade + 1,
+        },
       });
       // Re-throw so BullMQ triggers retry/backoff
       throw err;
@@ -163,7 +177,10 @@ export class NotificationProcessorHandler {
     if (job.attemptsMade >= (job.opts.attempts ?? 3)) {
       await this.prisma.notificationLog.update({
         where: { id: job.data.logId },
-        data: { status: NotificationStatus.FAILED, lastError: err.message.slice(0, 500) },
+        data: {
+          status: NotificationStatus.FAILED,
+          lastError: err.message.slice(0, 500),
+        },
       });
       this.logger.error(
         `[${job.data.channel}] Permanently failed log:${job.data.logId} after ${job.attemptsMade} attempts`,

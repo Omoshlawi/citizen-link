@@ -57,7 +57,7 @@ export const NotificationSettingsSchema = z.object({
     .default(false),
   push: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
-    .default(false),
+    .default(true),
   overrides: z
     .record(z.string(), z.record(z.string(), z.boolean()))
     .optional()

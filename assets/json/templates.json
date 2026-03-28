@@ -3,65 +3,114 @@
     "key": "notification.case.lost.reported",
     "type": "notification",
     "name": "Lost Case Reported",
-    "description": "Sent to owner when they report a lost document.",
+    "description": "Sent to the owner when they submit a lost document report.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Lost Document Case #{{case.caseNumber}} Reported" },
-      "email_body": { "source": "file", "path": "mail/document-case-reported.hbs" },
-      "sms_body": { "source": "text", "text": "Citizen Link: Your lost document case #{{case.caseNumber}} ({{case.document.type.name}}) has been reported. We are now searching for matches." },
-      "push_title": { "source": "text", "text": "Report Received #{{case.caseNumber}}" },
-      "push_body": { "source": "text", "text": "We are searching for matches for your {{case.document.type.name}} case." }
+      "email_subject": { "source": "text", "text": "Lost Document Case #{{case.caseNumber}} Received — Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/lost-case-reported.hbs" },
+      "sms_body": { "source": "text", "text": "Citizen Link: Your lost {{case.document.type.name}} case #{{case.caseNumber}} has been registered. We will notify you when a match is found." },
+      "push_title": { "source": "text", "text": "Report Received — #{{case.caseNumber}}" },
+      "push_body": { "source": "text", "text": "Your lost {{case.document.type.name}} report has been registered. We are now searching for a match." }
     },
     "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
     "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+  },
+  {
+    "key": "notification.case.found.submitted",
+    "type": "notification",
+    "name": "Found Case Submitted",
+    "description": "Sent to the finder when their found document report is submitted and awaiting staff review.",
+    "engine": "handlebars",
+    "slots": {
+      "push_title": { "source": "text", "text": "Report Submitted — Under Review" },
+      "push_body": { "source": "text", "text": "Your found {{case.document.type.name}} report (case #{{case.caseNumber}}) has been submitted and is awaiting verification." },
+      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+    },
+    "schema": { "required": [], "optional": ["push_title", "push_body", "push_data"] },
+    "metadata": { "channels": { "email": false, "sms": false, "push": true } }
   },
   {
     "key": "notification.case.found.verified",
     "type": "notification",
     "name": "Found Case Verified",
-    "description": "Sent to finder when their found report is verified by staff.",
+    "description": "Sent to the finder when their found document report is verified by staff.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Found Document Case #{{case.caseNumber}} Verified" },
-      "email_body": { "source": "file", "path": "mail/document-case-reported.hbs" },
-      "sms_body": { "source": "text", "text": "Citizen Link: Your found document case #{{case.caseNumber}} ({{case.document.type.name}}) has been verified. We are now matching it with lost cases." },
-      "push_title": { "source": "text", "text": "Report Verified #{{case.caseNumber}}" },
-      "push_body": { "source": "text", "text": "Your report for {{case.document.type.name}} has been verified." }
+      "email_subject": { "source": "text", "text": "Your Found Document Report Has Been Verified — Case #{{case.caseNumber}}" },
+      "email_body": { "source": "file", "path": "mail/found-case-verified.hbs" },
+      "sms_body": { "source": "text", "text": "Citizen Link: Your found {{case.document.type.name}} case #{{case.caseNumber}} has been verified. We are matching it with lost cases now." },
+      "push_title": { "source": "text", "text": "Report Verified — #{{case.caseNumber}}" },
+      "push_body": { "source": "text", "text": "Your found {{case.document.type.name}} report has been verified. We are now searching for the rightful owner." },
+      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body", "push_data"] },
     "metadata": { "channels": { "email": true, "sms": true, "push": true } }
   },
   {
     "key": "notification.case.found.matched",
     "type": "notification",
-    "name": "Lost Owner Match Found",
-    "description": "Sent to the owner of a lost document when a match is found.",
+    "name": "Owner Match Found",
+    "description": "Sent to the owner of a lost document when a matching found report is identified. Owner must claim or reject.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Match Found! Case #{{match.lostDocumentCase.case.caseNumber}}" },
-      "email_body": { "source": "file", "path": "mail/document-match-found.hbs" },
-      "sms_body": { "source": "text", "text": "Citizen Link: Match found for your lost case #{{match.lostDocumentCase.case.caseNumber}} ({{match.lostDocumentCase.case.document.type.name}}). Visit citizenlink.app to see details." },
-      "push_title": { "source": "text", "text": "Match Found! #{{match.lostDocumentCase.case.caseNumber}}" },
-      "push_body": { "source": "text", "text": "A potential match for your {{match.lostDocumentCase.case.document.type.name}} has been located." }
+      "email_subject": { "source": "text", "text": "Match Found for Your Lost Case #{{match.lostDocumentCase.case.caseNumber}} — Action Required" },
+      "email_body": { "source": "file", "path": "mail/owner-match-found.hbs" },
+      "sms_body": { "source": "text", "text": "Citizen Link: A match was found for your lost {{match.lostDocumentCase.case.document.type.name}} (case #{{match.lostDocumentCase.case.caseNumber}}). Open the app to claim or reject the match." },
+      "push_title": { "source": "text", "text": "Match Found — Is This Yours?" },
+      "push_body": { "source": "text", "text": "A potential match was found for your {{match.lostDocumentCase.case.document.type.name}} (case #{{match.lostDocumentCase.case.caseNumber}}). Tap to review and respond." },
+      "push_data": { "source": "text", "text": "{\"screen\": \"match\", \"matchId\": \"{{match.id}}\"}" }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body", "push_data"] },
     "metadata": { "channels": { "email": true, "sms": true, "push": true } }
   },
   {
     "key": "notification.case.lost.matched",
     "type": "notification",
-    "name": "Found Finder Match Found",
-    "description": "Sent to the finder of a document when a match is found with a lost case.",
+    "name": "Finder Match Notification",
+    "description": "Sent to the finder when their found document report is matched to a lost case. Owner has been notified to take action.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Match Found for Case #{{match.foundDocumentCase.case.caseNumber}}" },
-      "email_body": { "source": "file", "path": "mail/document-match-found.hbs" },
-      "sms_body": { "source": "text", "text": "Citizen Link: Match found for found case #{{match.foundDocumentCase.case.caseNumber}} ({{match.foundDocumentCase.case.document.type.name}}). Visit citizenlink.app to see details." },
-      "push_title": { "source": "text", "text": "Match Found! #{{match.foundDocumentCase.case.caseNumber}}" },
-      "push_body": { "source": "text", "text": "A potential match for the {{match.foundDocumentCase.case.document.type.name}} you found has been located." }
+      "email_subject": { "source": "text", "text": "Your Found Document Report Has Been Matched — Case #{{match.foundDocumentCase.case.caseNumber}}" },
+      "email_body": { "source": "file", "path": "mail/finder-match-found.hbs" },
+      "sms_body": { "source": "text", "text": "Citizen Link: The {{match.foundDocumentCase.case.document.type.name}} you reported (case #{{match.foundDocumentCase.case.caseNumber}}) has been matched to a lost report. The owner has been notified." },
+      "push_title": { "source": "text", "text": "Your Report Has Been Matched" },
+      "push_body": { "source": "text", "text": "The {{match.foundDocumentCase.case.document.type.name}} you found (case #{{match.foundDocumentCase.case.caseNumber}}) has been matched to a lost report. The owner is reviewing the match." },
+      "push_data": { "source": "text", "text": "{\"screen\": \"match\", \"matchId\": \"{{match.id}}\"}" }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body", "push_data"] },
     "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+  },
+  {
+    "key": "notification.case.lost.extraction.complete",
+    "type": "notification",
+    "name": "Lost Case Extraction Complete",
+    "description": "Sent to owner after background AI document image extraction finishes on a lost case report.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Action Required: Review Extracted Details for Case #{{case.caseNumber}} — Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/lost-case-extraction-complete.hbs" },
+      "push_title": { "source": "text", "text": "Details Extracted — Review Required" },
+      "push_body": { "source": "text", "text": "We scanned your {{case.document.type.name}} images. Tap to review the extracted details and confirm they are correct." },
+      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+    },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"] },
+    "metadata": { "channels": { "email": true, "sms": false, "push": true } }
+  },
+  {
+    "key": "notification.case.lost.extraction.failed",
+    "type": "notification",
+    "name": "Lost Case Extraction Failed",
+    "description": "Sent to owner when background AI document image extraction permanently fails on a lost case.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Action Required: Document Scan Unsuccessful for Case #{{case.caseNumber}} — Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/lost-case-extraction-failed.hbs" },
+      "push_title": { "source": "text", "text": "Document Scan Unsuccessful" },
+      "push_body": { "source": "text", "text": "We had trouble scanning your {{case.document.type.name}} images for case #{{case.caseNumber}}. Tap to review your case and try again." },
+      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+    },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"] },
+    "metadata": { "channels": { "email": true, "sms": false, "push": true } }
   },
   {
     "key": "prompt.chatbot.guide",

@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -447,15 +443,80 @@ export class NotificationDispatchService {
     } = options;
 
     const effectiveQueue = queue ?? this.resolveQueue(priority);
+    const logCtx =
+      source.type === 'template'
+        ? `template:${source.templateKey} user:${userId}`
+        : `inline user:${userId}`;
 
     // Determine which channels to attempt
-    const requestedChannels = channels ?? [
+    let requestedChannels = channels ?? [
       NotificationChannel.EMAIL,
       NotificationChannel.SMS,
       NotificationChannel.PUSH,
     ];
 
-    // Filter channels by user preferences + quiet hours (fast DB read, kept here to avoid queuing suppressed jobs)
+    this.logger.debug(
+      `[enqueue] ${logCtx} — caller-provided channels: [${requestedChannels.join(', ')}]${force ? ' force=true' : ''}`,
+    );
+
+    // Stage 1: Narrow by template metadata.channels BEFORE applying user preferences.
+    // This ensures filterAllowedChannels only operates on channels the template
+    // actually supports — preventing a misleading "all channels disabled" result
+    // when a push-only template has push suppressed by quiet hours.
+    if (source.type === 'template') {
+      const tplMeta = await this.prisma.template.findUnique({
+        where: { key: source.templateKey, voided: false },
+        select: { metadata: true },
+      });
+      const channelConfig = (
+        tplMeta?.metadata as {
+          channels?: { email?: boolean; sms?: boolean; push?: boolean };
+        } | null
+      )?.channels;
+
+      if (!tplMeta) {
+        this.logger.warn(
+          `[enqueue] ${logCtx} — template not found or voided; aborting`,
+        );
+        return;
+      }
+
+      if (channelConfig) {
+        this.logger.debug(
+          `[enqueue] ${logCtx} — template metadata.channels: email=${channelConfig.email ?? true} sms=${channelConfig.sms ?? true} push=${channelConfig.push ?? true}`,
+        );
+        const before = [...requestedChannels];
+        requestedChannels = requestedChannels.filter((ch) => {
+          if (ch === NotificationChannel.EMAIL)
+            return channelConfig.email !== false;
+          if (ch === NotificationChannel.SMS)
+            return channelConfig.sms !== false;
+          if (ch === NotificationChannel.PUSH)
+            return channelConfig.push !== false;
+          return true;
+        });
+        const removedByMeta = before.filter(
+          (ch) => !requestedChannels.includes(ch),
+        );
+        if (removedByMeta.length) {
+          this.logger.debug(
+            `[enqueue] ${logCtx} — template metadata removed [${removedByMeta.join(', ')}]; remaining: [${requestedChannels.join(', ')}]`,
+          );
+        }
+        if (!requestedChannels.length) {
+          this.logger.debug(
+            `[enqueue] ${logCtx} — all channels disabled by template metadata; aborting`,
+          );
+          return;
+        }
+      } else {
+        this.logger.debug(
+          `[enqueue] ${logCtx} — no metadata.channels on template; all channels pass through`,
+        );
+      }
+    }
+
+    // Stage 2: Filter the template-supported channels by user preferences + quiet hours.
     const allowedChannels = await this.contentResolver.filterAllowedChannels(
       requestedChannels,
       userId,
@@ -464,9 +525,15 @@ export class NotificationDispatchService {
     );
 
     if (!allowedChannels.length) {
-      this.logger.log(`All channels suppressed for user:${userId}`);
+      this.logger.debug(
+        `[enqueue] ${logCtx} — all channels suppressed by preferences/quiet hours; aborting`,
+      );
       return;
     }
+
+    this.logger.debug(
+      `[enqueue] ${logCtx} — final channels after all filters: [${allowedChannels.join(', ')}]`,
+    );
 
     // Resolve recipient — start from whatever the caller provided (or empty) and fill in
     // any missing contact fields from the user record so callers don't have to pre-load them.
@@ -573,6 +640,17 @@ export class NotificationDispatchService {
           });
           this.logger.log(`Queued ${channel} log:${log.id} → token:${token}`);
         }
+        continue;
+      }
+
+      // Guard EMAIL and SMS the same way PUSH guards against missing tokens —
+      // skip silently rather than creating a log row that immediately gets SKIPPED.
+      if (channel === NotificationChannel.EMAIL && !resolvedRecipient.email) {
+        this.logger.log(`Skipping EMAIL — no email address for user:${userId}`);
+        continue;
+      }
+      if (channel === NotificationChannel.SMS && !resolvedRecipient.phone) {
+        this.logger.log(`Skipping SMS — no phone number for user:${userId}`);
         continue;
       }
 

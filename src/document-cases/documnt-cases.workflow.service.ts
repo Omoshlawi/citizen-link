@@ -4,7 +4,6 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
   MatchTrigger,
-  NotificationChannel,
 } from '../../generated/prisma/client';
 import { UserSession } from '../auth/auth.types';
 import {
@@ -47,7 +46,9 @@ export class DocumentCasesWorkflowService {
       include: {
         case: {
           include: {
-            document: true,
+            document: {
+              include: { type: true },
+            },
           },
         },
       },
@@ -116,7 +117,6 @@ export class DocumentCasesWorkflowService {
     // 5. Notify owner of successfull submission of case and inform them they'll be notified on matches
     this.notifications
       .sendFromTemplate({
-        channels: [NotificationChannel.EMAIL],
         templateKey: 'notification.case.lost.reported', // TODO: Set used template key to settings and use setting to retrive template
         data: {
           case: { ...canSubmit.case, user },
@@ -155,6 +155,15 @@ export class DocumentCasesWorkflowService {
           userId: user.id,
         },
       },
+      include: {
+        case: {
+          include: {
+            document: {
+              include: { type: true },
+            },
+          },
+        },
+      },
     });
     if (!canSubmit)
       throw new BadRequestException(`Can only submit your found cases`);
@@ -171,9 +180,8 @@ export class DocumentCasesWorkflowService {
       },
     });
     if (!reason) throw new BadRequestException('Invalid reason');
-    return await this.prismaService.$transaction(async (tx) => {
-      // Update claim status to rejected
-      const founderCase = await tx.foundDocumentCase.update({
+    const founderCase = await this.prismaService.$transaction(async (tx) => {
+      const updated = await tx.foundDocumentCase.update({
         where: { id: foundCaseId },
         data: {
           status: FoundDocumentCaseStatus.SUBMITTED,
@@ -188,12 +196,42 @@ export class DocumentCasesWorkflowService {
           fromStatus: canSubmit.status,
           toStatus: FoundDocumentCaseStatus.SUBMITTED,
           changedById: user?.id,
-          // comment: rejectDto.comment,
           reasonId: reason.id,
         },
       });
-      return founderCase;
+      return updated;
     });
+    // Notify finder that their submission was received and is pending review (push only)
+    this.notifications
+      .sendFromTemplate({
+        templateKey: 'notification.case.found.submitted',
+        data: {
+          case: {
+            id: canSubmit.case.id,
+            caseNumber: canSubmit.case.caseNumber,
+            document: {
+              type: { name: canSubmit.case.document?.type?.name ?? 'Document' },
+            },
+          },
+        },
+        priority: NotificationPriority.NORMAL,
+        userId: user.id,
+        eventTitle: 'Report Submitted',
+        eventBody: `Your found ${canSubmit.case.document?.type?.name ?? 'document'} report (case #${canSubmit.case.caseNumber}) has been submitted and is pending review.`,
+        eventDescription: `Found case ${foundCaseId} submitted by user ${user.id}`,
+      })
+      .then(() => {
+        this.logger.debug(
+          `Submission notification sent for found case ${foundCaseId} to user ${user.id}`,
+        );
+      })
+      .catch((e) => {
+        this.logger.error(
+          `Error sending submission notification for found case ${foundCaseId} to user ${user.id}`,
+          e,
+        );
+      });
+    return founderCase;
   }
 
   async verifyFoundCase(
@@ -282,7 +320,6 @@ export class DocumentCasesWorkflowService {
     //5. Notify finder of success verification of the found document
     this.notifications
       .sendFromTemplate({
-        channels: [NotificationChannel.EMAIL],
         templateKey: 'notification.case.found.verified', // TODO: Set used template key to settings and use setting to retrive template
         data: {
           case: canVerify.case,
