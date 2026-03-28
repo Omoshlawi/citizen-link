@@ -197,6 +197,7 @@ model Address {
   locale   AddressLocale? @relation(fields: [localeId], references: [id])
 
   cases DocumentCase[]
+  collectionAddressFoundCases FoundDocumentCase[] @relation("FoundCaseCollectionAddress")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -640,6 +641,14 @@ model FoundDocumentCase {
   pickupStation   PickupStation?          @relation(fields: [pickupStationId], references: [id])
   pickupStationId String?
 
+  // Submission method chosen by the finder
+  submissionMethod    SubmissionMethod?
+  // For PICKUP: address where agent should come collect the document
+  collectionAddressId String?
+  collectionAddress   Address?          @relation("FoundCaseCollectionAddress", fields: [collectionAddressId], references: [id])
+  // For PICKUP: scheduled date+time when finder will be available at the collection address
+  scheduledPickupAt   DateTime?
+
   @@map("found_document_cases")
 }
 
@@ -647,6 +656,11 @@ enum LostDocumentCaseStatus {
   DRAFT
   SUBMITTED // When user submit lost document info
   COMPLETED // When the document is reunited with the owner
+}
+
+enum SubmissionMethod {
+  DROPOFF // Finder will drop the document off at a partner pickup station
+  PICKUP  // An agent will be dispatched to collect the document from the finder
 }
 
 enum FoundDocumentCaseStatus {

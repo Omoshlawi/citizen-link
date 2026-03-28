@@ -123,7 +123,16 @@ export class DocumentCasesService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const { images, eventDate, typeId, ...caseData } = createDocumentCaseDto;
+    const {
+      images,
+      eventDate,
+      typeId,
+      submissionMethod,
+      pickupStationId,
+      collectionAddressId,
+      scheduledPickupAt,
+      ...caseData
+    } = createDocumentCaseDto;
 
     // Validate images before touching the DB (for found cases, image/s will always be provided)
     await this.documentCasesCreateService.filesExists(images);
@@ -139,7 +148,14 @@ export class DocumentCasesService {
         caseNumber,
         eventDate: dayjs(eventDate).toDate(),
         userId: user.id,
-        foundDocumentCase: { create: {} },
+        foundDocumentCase: {
+          create: {
+            submissionMethod,
+            pickupStationId,
+            collectionAddressId,
+            scheduledPickupAt,
+          },
+        },
         document: {
           create: {
             typeId,

@@ -83,16 +83,55 @@ export const DocumentCaseSchema = z.object({
   ]),
 });
 
-export const FoundDocumentCaseSchema = z.object({
+const FoundDocumentCaseBaseSchema = z.object({
   typeId: z.uuid(),
   addressId: z.uuid(),
   eventDate: pastOrTodayDate,
   tags: z.string().min(1).array().optional(),
   description: z.string().optional(),
   images: z.string().nonempty().array().nonempty().max(2),
+  submissionMethod: z.enum(['DROPOFF', 'PICKUP']).optional(),
+  pickupStationId: z.uuid().optional(),
+  collectionAddressId: z.uuid().optional(),
+  scheduledPickupAt: z.iso.datetime().optional(),
 });
 
-export const LostDocumentCaseSchema = FoundDocumentCaseSchema.omit({
+export const FoundDocumentCaseSchema = FoundDocumentCaseBaseSchema.superRefine(
+  (data, ctx) => {
+    if (data.submissionMethod === 'DROPOFF' && !data.pickupStationId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['pickupStationId'],
+        message: 'A partner station is required for drop-off submission',
+      });
+    }
+    if (data.submissionMethod === 'PICKUP') {
+      if (!data.collectionAddressId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['collectionAddressId'],
+          message: 'A collection address is required for agent pickup',
+        });
+      }
+      if (!data.scheduledPickupAt) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['scheduledPickupAt'],
+          message:
+            'A scheduled pickup date and time is required for agent pickup',
+        });
+      } else if (!dayjs(data.scheduledPickupAt).isAfter(dayjs())) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['scheduledPickupAt'],
+          message: 'Scheduled pickup must be a future date and time',
+        });
+      }
+    }
+  },
+);
+
+export const LostDocumentCaseSchema = FoundDocumentCaseBaseSchema.omit({
   images: true,
 }).extend(CaseDocumentSchema.omit({ images: true }).shape);
 
@@ -104,7 +143,7 @@ export class CreateFoundDocumentCaseDto extends createZodDto(
   FoundDocumentCaseSchema,
 ) {}
 export class WsCreateFoundDocumentCaseDto extends createZodDto(
-  FoundDocumentCaseSchema.extend({
+  FoundDocumentCaseBaseSchema.extend({
     caseType: z.enum(['FOUND', 'LOST']),
   }),
 ) {}
@@ -114,7 +153,7 @@ export class CreateLostDocumentCaseDto extends createZodDto(
 ) {}
 
 export class UpdateDocumentCaseDto extends createZodDto(
-  FoundDocumentCaseSchema.omit({ images: true }).partial(),
+  FoundDocumentCaseBaseSchema.omit({ images: true }).partial(),
 ) {}
 
 export class LostDocumentCaseResponseDto implements LostDocumentCase {
@@ -145,6 +184,12 @@ export class SecurityQuestionDto {
 export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
   @ApiProperty()
   pickupStationId: string | null;
+  @ApiProperty({ enum: ['DROPOFF', 'PICKUP'], nullable: true })
+  submissionMethod: 'DROPOFF' | 'PICKUP' | null;
+  @ApiProperty({ nullable: true })
+  collectionAddressId: string | null;
+  @ApiProperty({ nullable: true })
+  scheduledPickupAt: Date | null;
   @ApiProperty()
   createdAt: Date;
   @ApiProperty()
