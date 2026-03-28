@@ -77,6 +77,7 @@ export const DocumentCaseSchema = z.object({
 });
 
 export const FoundDocumentCaseSchema = z.object({
+  typeId: z.uuid(),
   addressId: z.uuid(),
   eventDate: z.iso.date(),
   tags: z.string().min(1).array().optional(),
@@ -84,12 +85,9 @@ export const FoundDocumentCaseSchema = z.object({
   images: z.string().nonempty().array().nonempty().max(2),
 });
 
-export const LostDocumentCaseSchema = FoundDocumentCaseSchema.merge(
-  CaseDocumentSchema,
-).extend({
-  // Images are optional for REST lost-case creation (triggers background extraction)
-  images: z.string().nonempty().array().nonempty().max(2).optional(),
-});
+export const LostDocumentCaseSchema = FoundDocumentCaseSchema.omit({
+  images: true,
+}).extend(CaseDocumentSchema.omit({ images: true }).shape);
 
 export class QueryDocumentCaseDto extends createZodDto(
   QueryDocumentCaseSchema,
@@ -100,7 +98,6 @@ export class CreateFoundDocumentCaseDto extends createZodDto(
 ) {}
 export class WsCreateFoundDocumentCaseDto extends createZodDto(
   FoundDocumentCaseSchema.extend({
-    extractionId: z.uuid(),
     caseType: z.enum(['FOUND', 'LOST']),
   }),
 ) {}
@@ -114,6 +111,11 @@ export class UpdateDocumentCaseDto extends createZodDto(
 ) {}
 
 export class LostDocumentCaseResponseDto implements LostDocumentCase {
+  @ApiProperty({
+    description:
+      'Indicates if the case was created through manual reporting or auto scanning',
+  })
+  auto: boolean;
   @ApiProperty()
   id: string;
   @ApiProperty()
@@ -155,8 +157,6 @@ export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
 export class GetDocumentCaseResponseDto implements DocumentCase {
   @ApiProperty()
   caseNumber: string;
-  @ApiProperty({ required: false, nullable: true })
-  extractionId: string | null;
   @ApiProperty()
   addressId: string;
   @ApiProperty()

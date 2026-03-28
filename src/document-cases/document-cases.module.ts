@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
 import { DocumentCasesController } from './document-cases.controller';
 import { DocumentCasesService } from './document-cases.service';
@@ -15,13 +16,17 @@ import { EmbeddingModule } from '../embedding/embedding.module';
 import { EmbeddingConfig } from '../embedding/embedding.config';
 import { BullModule } from '@nestjs/bullmq';
 import {
+  CASE_POST_PROCESSING_QUEUE,
+  CASE_TEXT_EXTRACTION_QUEUE,
+  CASE_VISION_EXTRACTION_QUEUE,
   DOCUMENT_EMBEDDING_QUEUE,
-  LOST_CASE_EXTRACTION_QUEUE,
 } from './document-cases.constants';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { DocumentEmbeddingProcessor } from './document.processor';
-import { LostCaseExtractionProcessor } from './lost-case-extraction.processor';
+import { CaseVisionExtractionProcessor } from './case-vision-extraction.processor';
+import { CaseTextExtractionProcessor } from './case-text-extraction.processor';
+import { CasePostProcessingProcessor } from './case-post-processing.processor';
 
 @Module({
   imports: [
@@ -39,7 +44,7 @@ import { LostCaseExtractionProcessor } from './lost-case-extraction.processor';
       },
     }),
     BullModule.registerQueue({
-      name: LOST_CASE_EXTRACTION_QUEUE,
+      name: CASE_VISION_EXTRACTION_QUEUE,
       defaultJobOptions: {
         priority: 3,
         attempts: 3,
@@ -51,12 +56,46 @@ import { LostCaseExtractionProcessor } from './lost-case-extraction.processor';
         removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
       },
     }),
+    BullModule.registerQueue({
+      name: CASE_TEXT_EXTRACTION_QUEUE,
+      defaultJobOptions: {
+        priority: 3,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 10_000, // 10s → 20s → 40s
+        },
+        removeOnComplete: { age: 60 * 60 * 24 }, // keep 24h
+        removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
+      },
+    }),
+    BullModule.registerQueue({
+      name: CASE_POST_PROCESSING_QUEUE,
+      defaultJobOptions: {
+        priority: 3,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5_000, // 5s → 10s → 20s
+        },
+        removeOnComplete: { age: 60 * 60 * 24 }, // keep 24h
+        removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
+      },
+    }),
     BullBoardModule.forFeature({
       name: DOCUMENT_EMBEDDING_QUEUE,
       adapter: BullMQAdapter,
     }),
     BullBoardModule.forFeature({
-      name: LOST_CASE_EXTRACTION_QUEUE,
+      name: CASE_VISION_EXTRACTION_QUEUE,
+      adapter: BullMQAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: CASE_TEXT_EXTRACTION_QUEUE,
+      adapter: BullMQAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: CASE_POST_PROCESSING_QUEUE,
       adapter: BullMQAdapter,
     }),
     EmbeddingModule.registerAsync({
@@ -75,7 +114,7 @@ import { LostCaseExtractionProcessor } from './lost-case-extraction.processor';
         return {
           apiKey: config.openaiApiKey,
           baseURL: config.aiBaseUrl,
-          model: config.aiModel || 'gpt-4o', // Default to GPT-4o, can be overridden via env var
+          model: config.aiModel || 'gpt-4o',
         };
       },
       inject: [AiConfig],
@@ -84,7 +123,6 @@ import { LostCaseExtractionProcessor } from './lost-case-extraction.processor';
     ExtractionModule,
     MatchingModule.registerAsync({
       useFactory: (config: MatchingConfig) => {
-        // Ensure weights add up to 1
         const sum = config.weightVector + config.weightExact + config.weightAi;
         if (sum !== 1) {
           throw new Error('Weights must add up to 1');
@@ -110,7 +148,9 @@ import { LostCaseExtractionProcessor } from './lost-case-extraction.processor';
   controllers: [DocumentCasesController],
   providers: [
     DocumentEmbeddingProcessor,
-    LostCaseExtractionProcessor,
+    CaseVisionExtractionProcessor,
+    CaseTextExtractionProcessor,
+    CasePostProcessingProcessor,
     DocumentCasesService,
     DocumentCasesCreateService,
     DocumentCasesQueryService,

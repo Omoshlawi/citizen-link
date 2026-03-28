@@ -16,7 +16,6 @@ import {
   CustomRepresentationService,
   DeleteQueryDto,
 } from '../common/query-builder';
-import { ExtractionProgressEvent } from '../extraction/extraction.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { DocumentCasesCreateService } from './document-cases.create.service';
 import {
@@ -29,13 +28,11 @@ import { DocumentCasesQueryService } from './document-cases.query.service';
 import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
 import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
-import { EmbeddingService } from '../embedding/embedding.service';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { LOST_CASE_EXTRACTION_QUEUE } from './document-cases.constants';
-import { LostCaseExtractionJob } from './document-cases.interface';
-import { ExtractionService } from '../extraction/extraction.service';
+import { CASE_VISION_EXTRACTION_QUEUE } from './document-cases.constants';
+import { CaseExtractionJob } from './document-cases.interface';
 
 @Injectable()
 export class DocumentCasesService {
@@ -43,14 +40,12 @@ export class DocumentCasesService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly representationService: CustomRepresentationService,
-    private readonly embeddingService: EmbeddingService,
     private readonly documentCasesQueryService: DocumentCasesQueryService,
     private readonly documentCasesWorkflowService: DocumentCasesWorkflowService,
     private readonly documentCasesCreateService: DocumentCasesCreateService,
     private readonly humanIdService: HumanIdService,
-    private readonly extractionService: ExtractionService,
-    @InjectQueue(LOST_CASE_EXTRACTION_QUEUE)
-    private readonly lostCaseExtractionQueue: Queue<LostCaseExtractionJob>,
+    @InjectQueue(CASE_VISION_EXTRACTION_QUEUE)
+    private readonly caseVisionExtractionQueue: Queue<CaseExtractionJob>,
   ) {}
 
   findAll(
@@ -104,11 +99,10 @@ export class DocumentCasesService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    // const isAdmin = isSuperUser(user);
     await this.canUpdateCase(id);
     const docCase = await this.prismaService.documentCase.update({
       where: {
-        id, // userId: isAdmin ? undefined : user.id
+        id,
         userId: user.id,
       },
       data: {
@@ -124,36 +118,135 @@ export class DocumentCasesService {
     return await this.findOne(docCase.id, query, user);
   }
 
-  reportFoundDocumentCase(
-    extractionId: string,
+  async reportFoundDocumentCase(
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
-    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
   ) {
-    return this.documentCasesCreateService.reportFoundDocumentCase(
-      extractionId,
-      createDocumentCaseDto,
-      query,
-      user,
-      onPublishProgressEvent,
-    );
+    const { images, eventDate, typeId, ...caseData } = createDocumentCaseDto;
+
+    // Validate images before touching the DB (for found cases, image/s will always be provided)
+    await this.documentCasesCreateService.filesExists(images);
+
+    // Create case + document first (document fields populated by extraction later)
+    const caseNumber = await this.humanIdService.generate({
+      prefix: EntityPrefix.FOUND_DOCUMENT_CASE,
+    });
+
+    const documentCase = await this.prismaService.documentCase.create({
+      data: {
+        ...caseData,
+        caseNumber,
+        eventDate: dayjs(eventDate).toDate(),
+        userId: user.id,
+        foundDocumentCase: { create: {} },
+        document: {
+          create: {
+            typeId,
+            images: images?.length
+              ? {
+                  createMany: {
+                    data: images.map((image) => ({ url: image })),
+                  },
+                }
+              : undefined,
+          },
+        },
+        extraction: { create: {} },
+      },
+      include: { document: true, extraction: true },
+    });
+
+    // Create extraction record linked to this case, then queue the pipeline (document and and extraction are guaranted as they are created)
+    this.caseVisionExtractionQueue
+      .add('extract-vision', {
+        caseId: documentCase.id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        documentId: documentCase.document!.id!,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        extractionId: documentCase.extraction!.id,
+        images,
+        userId: user.id,
+        caseType: 'FOUND',
+      })
+      .then((job) => {
+        this.logger.debug(
+          `Queued vision job ${job.id} for found case ${caseNumber}`,
+        );
+      })
+      .catch((e) => {
+        this.logger.error(
+          `Failed to queue vision job for found case ${caseNumber}`,
+          e,
+        );
+      });
+
+    return await this.findOne(documentCase.id, query, user);
   }
 
-  reportLostDocumentCaseScanned(
-    extractionId: string,
+  async reportLostDocumentCaseScanned(
     createDocumentCaseDto: CreateFoundDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
-    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
   ) {
-    return this.documentCasesCreateService.reportLostDocumentCaseScanned(
-      extractionId,
-      createDocumentCaseDto,
-      query,
-      user,
-      onPublishProgressEvent,
-    );
+    const { images, eventDate, typeId, ...caseData } = createDocumentCaseDto;
+
+    // Validate images before touching the DB (For auto the image is always their)
+    await this.documentCasesCreateService.filesExists(images);
+
+    const caseNumber = await this.humanIdService.generate({
+      prefix: EntityPrefix.LOST_DOCUMENT_CASE,
+    });
+    // Create case + document first (document fields populated by extraction later)
+    const documentCase = await this.prismaService.documentCase.create({
+      data: {
+        ...caseData,
+        caseNumber,
+        eventDate: dayjs(eventDate).toDate(),
+        userId: user.id,
+        lostDocumentCase: { create: { auto: true } },
+        document: {
+          create: {
+            typeId,
+            images: images?.length
+              ? {
+                  createMany: {
+                    data: images.map((image) => ({ url: image })),
+                  },
+                }
+              : undefined,
+          },
+        },
+        extraction: { create: {} },
+      },
+      include: { document: true, extraction: true },
+    });
+    // Create extraction record linked to this case, then queue the pipeline
+
+    this.caseVisionExtractionQueue
+      .add('extract-vision', {
+        caseId: documentCase.id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        documentId: documentCase.document!.id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        extractionId: documentCase.extraction!.id,
+        images,
+        userId: user.id,
+        caseType: 'LOST',
+      })
+      .then((job) => {
+        this.logger.debug(
+          `Queued vision job ${job.id} for lost scan case ${documentCase.id}`,
+        );
+      })
+      .catch((e) => {
+        this.logger.error(
+          `Failed to queue vision job for lost scan case ${documentCase.id}`,
+          e,
+        );
+      });
+
+    return await this.findOne(documentCase.id, query, user);
   }
 
   private getName(givenNames?: string, surname?: string) {
@@ -168,117 +261,79 @@ export class DocumentCasesService {
     };
   }
 
-  async reportLostDocumentCase(
+  async reportLostDocumentCaseMannual(
     createLostDocumentCaseDto: CreateLostDocumentCaseDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const { images, ...dto } = createLostDocumentCaseDto;
     const { fullName, givenName, surName } = this.getName(
-      dto.givenNames,
-      dto.surname,
+      createLostDocumentCaseDto.givenNames,
+      createLostDocumentCaseDto.surname,
     );
 
-    // Validate images before touching the DB — no AIExtraction record should be
-    // created if the uploaded files are missing.
-    if (images?.length) {
-      await this.documentCasesCreateService.filesExists(images);
-    }
-
-    // Create an AIExtraction session upfront so the background job can link to it
-    const extraction = images?.length
-      ? await this.extractionService.getOrCreateAiExtraction()
-      : null;
-
-    const documentCase = await this.prismaService.documentCase.create({
+    return await this.prismaService.documentCase.create({
       data: {
         userId: user.id,
         caseNumber: await this.humanIdService.generate({
           prefix: EntityPrefix.LOST_DOCUMENT_CASE,
         }),
-        eventDate: dayjs(dto.eventDate).toDate(),
-        addressId: dto.addressId,
-        extractionId: extraction?.id,
+        eventDate: dayjs(createLostDocumentCaseDto.eventDate).toDate(),
+        addressId: createLostDocumentCaseDto.addressId,
         document: {
           create: {
-            documentNumber: dto.documentNumber,
+            documentNumber: createLostDocumentCaseDto.documentNumber,
             fullName,
             givenNames: givenName,
             surname: surName,
-            isExpired: dto.expiryDate
-              ? dayjs(dto.expiryDate).isBefore(dayjs())
+            isExpired: createLostDocumentCaseDto.expiryDate
+              ? dayjs(createLostDocumentCaseDto.expiryDate).isBefore(dayjs())
               : undefined,
-            fingerprintPresent: dto.fingerprintPresent,
-            photoPresent: dto.photoPresent,
-            signaturePresent: dto.signaturePresent,
-            typeId: dto.typeId,
-            batchNumber: dto.batchNumber,
-            serialNumber: dto.serialNumber,
-            issuer: dto.issuer,
-            issuanceDate: dto.issuanceDate
-              ? dayjs(dto.issuanceDate).toDate()
+            fingerprintPresent: createLostDocumentCaseDto.fingerprintPresent,
+            photoPresent: createLostDocumentCaseDto.photoPresent,
+            signaturePresent: createLostDocumentCaseDto.signaturePresent,
+            typeId: createLostDocumentCaseDto.typeId,
+            batchNumber: createLostDocumentCaseDto.batchNumber,
+            serialNumber: createLostDocumentCaseDto.serialNumber,
+            issuer: createLostDocumentCaseDto.issuer,
+            issuanceDate: createLostDocumentCaseDto.issuanceDate
+              ? dayjs(createLostDocumentCaseDto.issuanceDate).toDate()
               : undefined,
-            expiryDate: dto.expiryDate
-              ? dayjs(dto.expiryDate).toDate()
+            expiryDate: createLostDocumentCaseDto.expiryDate
+              ? dayjs(createLostDocumentCaseDto.expiryDate).toDate()
               : undefined,
-            dateOfBirth: dto.dateOfBirth
-              ? dayjs(dto.dateOfBirth).toDate()
+            dateOfBirth: createLostDocumentCaseDto.dateOfBirth
+              ? dayjs(createLostDocumentCaseDto.dateOfBirth).toDate()
               : undefined,
-            placeOfBirth: dto.placeOfBirth,
-            placeOfIssue: dto.placeOfIssue,
-            gender: dto.gender,
-            note: dto.note,
-            addressRaw: dto.addressRaw,
-            addressCountry: dto.addressCountry,
-            addressComponents: dto.addressComponents,
-            additionalFields: dto.additionalFields?.length
+            placeOfBirth: createLostDocumentCaseDto.placeOfBirth,
+            placeOfIssue: createLostDocumentCaseDto.placeOfIssue,
+            gender: createLostDocumentCaseDto.gender,
+            note: createLostDocumentCaseDto.note,
+            addressRaw: createLostDocumentCaseDto.addressRaw,
+            addressCountry: createLostDocumentCaseDto.addressCountry,
+            addressComponents: createLostDocumentCaseDto.addressComponents,
+            additionalFields: createLostDocumentCaseDto.additionalFields?.length
               ? {
                   createMany: {
                     skipDuplicates: true,
-                    data: dto.additionalFields.map((field) => ({
-                      fieldName: field.fieldName,
-                      fieldValue: field.fieldValue,
-                    })),
+                    data: createLostDocumentCaseDto.additionalFields.map(
+                      (field) => ({
+                        fieldName: field.fieldName,
+                        fieldValue: field.fieldValue,
+                      }),
+                    ),
                   },
                 }
               : undefined,
           },
         },
-        description: dto.description,
-        tags: dto.tags,
+        description: createLostDocumentCaseDto.description,
+        tags: createLostDocumentCaseDto.tags,
         lostDocumentCase: {
-          create: {},
+          create: { auto: false },
         },
       },
-      include: {
-        document: true,
-      },
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
-
-    // If images were provided, dispatch background extraction — returns immediately
-    if (images?.length && extraction && documentCase.document) {
-      this.lostCaseExtractionQueue
-        .add('extract-lost-case', {
-          caseId: documentCase.id,
-          documentId: documentCase.document.id,
-          extractionId: extraction.id,
-          images,
-          userId: user.id,
-        })
-        .then((job) => {
-          this.logger.debug(
-            `Queued background extraction job ${job.id} for lost case ${documentCase.id}`,
-          );
-        })
-        .catch((e) => {
-          this.logger.error(
-            `Failed to queue background extraction for lost case ${documentCase.id}`,
-            e,
-          );
-        });
-    }
-
-    return await this.findOne(documentCase.id, query, user);
   }
 
   submitLostDocumentCase(

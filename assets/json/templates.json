@@ -81,6 +81,38 @@
     "metadata": { "channels": { "email": true, "sms": true, "push": true } }
   },
   {
+    "key": "notification.case.found.extraction.complete",
+    "type": "notification",
+    "name": "Found Case Extraction Complete",
+    "description": "Sent to the finder when AI extraction of their found document report succeeds.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Action Required: Review Extracted Details for Case #{{case.caseNumber}} — Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/found-case-extraction-complete.hbs" },
+      "push_title": { "source": "text", "text": "Details Extracted — Review Required" },
+      "push_body": { "source": "text", "text": "We scanned your found {{case.document.type.name}} images. Tap to review the extracted details." },
+      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+    },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"] },
+    "metadata": { "channels": { "email": true, "sms": false, "push": true } }
+  },
+  {
+    "key": "notification.case.found.extraction.failed",
+    "type": "notification",
+    "name": "Found Case Extraction Failed",
+    "description": "Sent to the finder when AI extraction of their found document report permanently fails.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": { "source": "text", "text": "Action Required: Document Scan Unsuccessful for Case #{{case.caseNumber}} — Citizen Link" },
+      "email_body": { "source": "file", "path": "mail/found-case-extraction-failed.hbs" },
+      "push_title": { "source": "text", "text": "Document Scan Unsuccessful" },
+      "push_body": { "source": "text", "text": "We had trouble scanning your found document images for case #{{case.caseNumber}}. Tap to review your case and try again." },
+      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+    },
+    "schema": { "required": [], "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"] },
+    "metadata": { "channels": { "email": true, "sms": false, "push": true } }
+  },
+  {
     "key": "notification.case.lost.extraction.complete",
     "type": "notification",
     "name": "Lost Case Extraction Complete",

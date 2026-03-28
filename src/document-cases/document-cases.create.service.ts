@@ -1,26 +1,26 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { UnrecoverableError } from 'bullmq';
 import dayjs from 'dayjs';
-import { EntityPrefix } from '../human-id/human-id.constants';
-import { VisionService } from '../vision/vision.service';
 import { AIInteraction } from '../../generated/prisma/client';
-import { AIExtractionInteractionType } from '../../generated/prisma/enums';
+import {
+  AIExtractionInteractionType,
+  ExtractionStatus,
+  ExtractionStep,
+} from '../../generated/prisma/enums';
 import { parseDate } from '../app.utils';
 import { UserSession } from '../auth/auth.types';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
 import { TextExtractionOutputDto } from '../extraction/extraction.dto';
 import {
   AsyncError,
-  ExtractionAiProgressEvent,
-  ExtractionProgressEvent,
   TextExtractionOutput,
   VisionExtractionOutput,
 } from '../extraction/extraction.interface';
 import { ExtractionService } from '../extraction/extraction.service';
-import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { VisionExtractionOutputDto } from '../vision/vision.dto';
-import { CreateFoundDocumentCaseDto } from './document-cases.dto';
+import { VisionService } from '../vision/vision.service';
 import { DocumentCasesQueryService } from './document-cases.query.service';
 
 @Injectable()
@@ -32,7 +32,6 @@ export class DocumentCasesCreateService {
     private readonly s3Service: S3Service,
     private readonly extractionService: ExtractionService,
     private readonly documentCasesQueryService: DocumentCasesQueryService,
-    private readonly humanIdService: HumanIdService,
     private readonly visionService: VisionService,
   ) {}
 
@@ -86,35 +85,35 @@ export class DocumentCasesCreateService {
     );
   }
 
-  async runAiExtraction(
+  /**
+   * Runs only the vision (OCR) step for an extraction.
+   * Creates the AIExtractionInteraction record and updates AIExtraction status.
+   * Throws UnrecoverableError if images are missing from S3 (no retry possible).
+   * Throws a regular Error on vision API failure (will retry).
+   */
+  async runVisionStep(
     extractionId: string,
     images: string[],
-    user: UserSession['user'],
-    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
-  ) {
-    this.logger.debug('Running AI extraction for extractionId', extractionId);
-    // Image validation ---
-    onPublishProgressEvent?.({
-      key: 'IMAGE_VALIDATION',
-      state: { isLoading: true },
-    });
-    await this.filesExists(images, () => {
-      onPublishProgressEvent?.({
-        key: 'IMAGE_VALIDATION',
-        state: {
-          isLoading: false,
-          error: new Error('One or more images do not exist'),
-        },
-      });
-      throw new BadRequestException('One or more images do not exist');
-    });
-    onPublishProgressEvent?.({
-      key: 'IMAGE_VALIDATION',
-      state: {
-        isLoading: false,
-        data: 'Image validation succesfull',
+  ): Promise<
+    AIInteraction & { parsedResponse: VisionExtractionOutput | null }
+  > {
+    // Mark as in-progress at the vision step
+    await this.prismaService.aIExtraction.update({
+      where: { id: extractionId },
+      data: {
+        extractionStatus: ExtractionStatus.IN_PROGRESS,
+        currentStep: ExtractionStep.VISION,
       },
     });
+
+    // Guard against missing images — permanent failure, no retry
+    await this.filesExists(images, () => {
+      throw new UnrecoverableError(
+        'One or more document images could not be found. Please re-upload and try again.',
+      );
+    });
+
+    // Download images from S3
     const inputImages = await Promise.all(
       images.map(async (image) => {
         const buffer = await this.s3Service.downloadFile(image, 'tmp');
@@ -124,371 +123,279 @@ export class DocumentCasesCreateService {
         return { buffer, mimeType };
       }),
     );
-    // Vision extraction
-    onPublishProgressEvent?.({
-      key: 'VISION_EXTRACTION',
-      state: { isLoading: true },
-    });
-    const visionOutput =
+
+    // Run vision extraction
+    const visionInteraction =
       await this.visionService.extractTextFromImage(inputImages);
-    await this.checkIfInteractionEncounteredError(
-      extractionId,
-      visionOutput,
-      'VISION_EXTRACTION',
-      onPublishProgressEvent,
+
+    const hasError = !!(
+      visionInteraction.parseError || visionInteraction.callError
     );
 
-    // Text extraction
-    onPublishProgressEvent?.({
-      key: 'TEXT_EXTRACTION',
-      state: { isLoading: true },
-    });
-    const textExtractionOutput =
-      await this.extractionService.extractDocumentData(
-        visionOutput.parsedResponse as unknown as VisionExtractionOutputDto,
-        user,
-      );
-    await this.checkIfInteractionEncounteredError(
-      extractionId,
-      textExtractionOutput,
-      'TEXT_EXTRACTION',
-      onPublishProgressEvent,
-    );
+    const errorPayload: AsyncError | null = hasError
+      ? ((visionInteraction.parseError as unknown as AsyncError) ?? {
+          message: visionInteraction.callError,
+        })
+      : null;
 
-    const extractionResult =
-      textExtractionOutput.parsedResponse as unknown as TextExtractionOutputDto;
-
-    // Validate types
-    onPublishProgressEvent?.({
-      key: 'DOCUMENT_TYPE_VALIDATION',
-      state: { isLoading: true },
-    });
-    const documentType = await this.prismaService.documentType.findUnique({
-      where: { code: extractionResult.documentType.code },
-    });
-    if (!documentType) {
-      onPublishProgressEvent?.({
-        key: 'DOCUMENT_TYPE_VALIDATION',
-        state: {
-          isLoading: false,
-          error: { message: 'Document type not found' },
-        },
-      });
-      throw new BadRequestException('Document type not found');
-    }
-    onPublishProgressEvent?.({
-      key: 'DOCUMENT_TYPE_VALIDATION',
-      state: {
-        isLoading: false,
-        data: 'Document type validation succesfull',
-      },
-    });
-
-    return await this.prismaService.aIExtraction.update({
-      where: { id: extractionId },
-      data: {
-        // Quality summary — rolled up here, not recomputed elsewhere
-        ocrConfidence: extractionResult.quality.ocrConfidence,
-        extractionConfidence: extractionResult.quality.extractionConfidence,
-        documentTypeCode: extractionResult.documentType.code,
-        warnings: extractionResult.quality.warnings,
-        success: true,
-        aiextractionInteractions: {
-          createMany: {
-            skipDuplicates: true,
-            data: [
-              {
-                extractionType: AIExtractionInteractionType.VISION_EXTRACTION,
-                aiInteractionId: visionOutput.id,
-                confidence: extractionResult.quality.ocrConfidence,
-              },
-              {
-                extractionType: AIExtractionInteractionType.TEXT_EXTRACTION,
-                aiInteractionId: textExtractionOutput.id,
-                confidence: extractionResult.quality.extractionConfidence,
-              },
-            ],
-          },
-        },
-      },
-      include: {
-        aiextractionInteractions: {
-          include: {
-            aiInteraction: true,
-          },
-        },
-      },
-    });
-  }
-
-  async checkIfInteractionEncounteredError(
-    extractionId: string,
-    interaction: Omit<AIInteraction, 'parsedResponse' | 'parseError'> & {
-      parsedResponse: TextExtractionOutput | VisionExtractionOutput | null;
-      parseError: AsyncError | null;
-    },
-    event: ExtractionAiProgressEvent['key'],
-    onPublishProgressEvent?: (data: ExtractionAiProgressEvent) => void,
-  ) {
-    if (!interaction.parseError && !interaction.callError) {
-      // ─── Happy path ──────────────────────────────────
-      this.logger.debug(`AI extraction successful on ${event}`);
-      onPublishProgressEvent?.({
-        key: event,
-        state: { isLoading: false, data: interaction },
-      });
-      return;
-    }
-    const errorPayload: AsyncError =
-      (interaction.parseError as unknown as AsyncError) ??
-      ({
-        message: interaction.callError,
-      } as AsyncError);
-
-    // ─── Error path ────────────────────────────────────
-    this.logger.error(
-      `AI extraction encountered an error on ${event}`,
-      JSON.stringify(errorPayload),
-    );
-
-    onPublishProgressEvent?.({
-      key: event,
-      state: { isLoading: false, error: errorPayload },
-    });
-
-    // Only TEXT_EXTRACTION carries quality fields we can roll up
-    const extractionResult =
-      event === 'TEXT_EXTRACTION'
-        ? (interaction.parsedResponse as unknown as TextExtractionOutputDto)
-        : null;
-
-    // ─── Create the failed interaction record ──────────
+    // Create junction record regardless of success/failure
     await this.prismaService.aIExtractionInteraction.create({
       data: {
-        extractionType:
-          event === 'VISION_EXTRACTION'
-            ? AIExtractionInteractionType.VISION_EXTRACTION
-            : AIExtractionInteractionType.TEXT_EXTRACTION,
-        errorMessage: JSON.stringify(errorPayload),
-        success: false,
+        extractionType: AIExtractionInteractionType.VISION_EXTRACTION,
+        aiInteractionId: visionInteraction.id,
         aiExtractionId: extractionId,
-        aiInteractionId: interaction.id,
-        // confidence omitted — step failed, no reliable value
+        success: !hasError,
+        errorMessage: hasError ? JSON.stringify(errorPayload) : undefined,
       },
     });
 
+    if (hasError) {
+      this.logger.error(
+        `Vision step failed for extraction ${extractionId}`,
+        JSON.stringify(errorPayload),
+      );
+      throw new Error(JSON.stringify(errorPayload));
+    }
+
+    return visionInteraction as AIInteraction & {
+      parsedResponse: VisionExtractionOutput | null;
+    };
+  }
+
+  /**
+   * Runs only the text (structured extraction) step.
+   * Expects the vision OCR output from the previous step.
+   * Creates the AIExtractionInteraction record.
+   */
+  async runTextStep(
+    extractionId: string,
+    visionOutput: VisionExtractionOutputDto,
+    user: UserSession['user'],
+  ): Promise<AIInteraction & { parsedResponse: TextExtractionOutput | null }> {
+    // Mark current step
     await this.prismaService.aIExtraction.update({
       where: { id: extractionId },
+      data: { currentStep: ExtractionStep.TEXT },
+    });
+
+    const textInteraction = await this.extractionService.extractDocumentData(
+      visionOutput,
+      user,
+    );
+
+    const hasError = !!(
+      textInteraction.parseError || textInteraction.callError
+    );
+
+    const errorPayload: AsyncError | null = hasError
+      ? ((textInteraction.parseError as unknown as AsyncError) ?? {
+          message: textInteraction.callError,
+        })
+      : null;
+
+    // Create junction record
+    await this.prismaService.aIExtractionInteraction.create({
       data: {
-        success: false,
-        // Only populate quality fields if text extraction had partial results
-        ...(extractionResult && {
-          ocrConfidence: extractionResult.quality?.ocrConfidence,
-          extractionConfidence: extractionResult.quality?.extractionConfidence,
-          documentTypeCode: extractionResult.documentType?.code,
-          warnings: extractionResult.quality?.warnings ?? [],
-        }),
+        extractionType: AIExtractionInteractionType.TEXT_EXTRACTION,
+        aiInteractionId: textInteraction.id,
+        aiExtractionId: extractionId,
+        success: !hasError,
+        errorMessage: hasError ? JSON.stringify(errorPayload) : undefined,
       },
     });
 
-    throw new BadRequestException(errorPayload);
+    if (hasError) {
+      this.logger.error(
+        `Text step failed for extraction ${extractionId}`,
+        JSON.stringify(errorPayload),
+      );
+      throw new Error(JSON.stringify(errorPayload));
+    }
+
+    return textInteraction as AIInteraction & {
+      parsedResponse: TextExtractionOutput | null;
+    };
   }
 
-  async reportFoundDocumentCase(
-    extractionId: string,
-    createDocumentCaseDto: CreateFoundDocumentCaseDto,
+  findOne(
+    id: string,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
-    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
   ) {
-    const { eventDate, images, ...caseData } = createDocumentCaseDto;
-    const extraction = await this.runAiExtraction(
-      extractionId,
-      images,
-      user,
-      onPublishProgressEvent,
-    );
-    const documentData = extraction.aiextractionInteractions.find(
-      (interaction) =>
-        interaction.extractionType ===
-        AIExtractionInteractionType.TEXT_EXTRACTION,
-    )?.aiInteraction?.parsedResponse as unknown as TextExtractionOutputDto;
-    const documentType = await this.prismaService.documentType.findUnique({
-      where: {
-        code: documentData.documentType.code,
-      },
-    });
-    if (!documentType) {
-      throw new BadRequestException('Document type not found');
-    }
-    const documentCase = await this.prismaService.documentCase.create({
-      data: {
-        ...caseData,
-        caseNumber: await this.humanIdService.generate({
-          prefix: EntityPrefix.FOUND_DOCUMENT_CASE,
-        }),
-        extractionId: extraction.id,
-        eventDate: dayjs(eventDate).toDate(),
-        userId: user.id,
-        foundDocumentCase: {
-          create: {},
-        },
-        document: {
-          create: {
-            fullName: documentData.person.fullName,
-            documentNumber: documentData.document.number,
-            typeId: documentType.id,
-            gender: documentData.person.gender,
-            expiryDate: parseDate(documentData.document.expiryDate),
-            issuanceDate: parseDate(documentData.document.issueDate),
-            dateOfBirth: parseDate(documentData.person.dateOfBirth),
-            addressRaw: documentData.address.raw,
-            addressComponents: documentData.address.components,
-            addressCountry: documentData.address.country,
-            placeOfBirth: documentData.person.placeOfBirth,
-            placeOfIssue: documentData.document.placeOfIssue,
-            issuer: documentData.document.issuer,
-            serialNumber: documentData.document.serialNumber,
-            batchNumber: documentData.document.batchNumber,
-            fingerprintPresent: documentData.biometrics.fingerprintPresent,
-            signaturePresent: documentData.biometrics.signaturePresent,
-            photoPresent: documentData.biometrics.photoPresent,
-            givenNames: documentData.person.givenNames,
-            surname: documentData.person.surname,
-            isExpired: documentData.document.expiryDate
-              ? dayjs(documentData.document.expiryDate).isBefore(dayjs())
-              : false,
-            images: images?.length
-              ? {
-                  createMany: {
-                    data: images.map((image) => ({
-                      url: image,
-                    })),
-                  },
-                }
-              : undefined,
-            additionalFields: documentData.additionalFields?.length
-              ? {
-                  createMany: {
-                    skipDuplicates: true,
-                    data: documentData.additionalFields.map((field) => ({
-                      fieldName: field.fieldName,
-                      fieldValue: field.fieldValue,
-                    })),
-                  },
-                }
-              : undefined,
-          },
-        },
-      },
-      include: {
-        document: true,
-      },
-    });
-    await this.moveAndGenerateBluredVersions(images, documentCase.caseNumber);
-    return await this.documentCasesQueryService.findOne(
-      documentCase.id,
-      query,
-      user,
-    );
+    return this.documentCasesQueryService.findOne(id, query, user);
   }
 
-  async reportLostDocumentCaseScanned(
-    extractionId: string,
-    createDocumentCaseDto: CreateFoundDocumentCaseDto,
-    query: CustomRepresentationQueryDto,
-    user: UserSession['user'],
-    onPublishProgressEvent?: (data: ExtractionProgressEvent) => void,
-  ) {
-    const { eventDate, images, ...caseData } = createDocumentCaseDto;
-    const extraction = await this.runAiExtraction(
-      extractionId,
-      images,
-      user,
-      onPublishProgressEvent,
-    );
-    const documentData = extraction.aiextractionInteractions.find(
-      (interaction) =>
-        interaction.extractionType ===
-        AIExtractionInteractionType.TEXT_EXTRACTION,
-    )?.aiInteraction?.parsedResponse as unknown as TextExtractionOutputDto;
-    const documentType = await this.prismaService.documentType.findUnique({
-      where: {
-        code: documentData.documentType.code,
+  /**
+   * Applies extracted text output to a Document — only fills currently null/empty fields.
+   * Also sets the document type if not yet set.
+   * Returns the fields that were updated.
+   */
+  async applyExtractionToDocument(
+    documentId: string,
+    documentData: TextExtractionOutputDto,
+  ): Promise<void> {
+    const existing = await this.prismaService.document.findUnique({
+      where: { id: documentId },
+      select: {
+        documentNumber: true,
+        serialNumber: true,
+        batchNumber: true,
+        fullName: true,
+        surname: true,
+        givenNames: true,
+        dateOfBirth: true,
+        placeOfBirth: true,
+        gender: true,
+        issuer: true,
+        placeOfIssue: true,
+        issuanceDate: true,
+        expiryDate: true,
+        addressRaw: true,
+        addressCountry: true,
+        addressComponents: true,
+        fingerprintPresent: true,
+        photoPresent: true,
+        signaturePresent: true,
       },
     });
-    if (!documentType) {
-      throw new BadRequestException('Document type not found');
+
+    if (!existing) {
+      this.logger.warn(
+        `Document ${documentId} not found — skipping extraction apply`,
+      );
+      return;
     }
-    const documentCase = await this.prismaService.documentCase.create({
-      data: {
-        ...caseData,
-        caseNumber: await this.humanIdService.generate({
-          prefix: EntityPrefix.LOST_DOCUMENT_CASE,
-        }),
-        extractionId: extraction.id,
-        eventDate: dayjs(eventDate).toDate(),
-        lostDocumentCase: {
-          create: {},
-        },
-        userId: user.id,
-        document: {
-          create: {
-            fullName: documentData.person.fullName,
-            documentNumber: documentData.document.number,
-            typeId: documentType.id,
-            gender: documentData.person.gender,
-            expiryDate: parseDate(documentData.document.expiryDate),
-            issuanceDate: parseDate(documentData.document.issueDate),
-            dateOfBirth: parseDate(documentData.person.dateOfBirth),
-            addressRaw: documentData.address.raw,
-            addressComponents: documentData.address.components,
-            addressCountry: documentData.address.country,
-            placeOfBirth: documentData.person.placeOfBirth,
-            placeOfIssue: documentData.document.placeOfIssue,
-            issuer: documentData.document.issuer,
-            serialNumber: documentData.document.serialNumber,
-            batchNumber: documentData.document.batchNumber,
-            fingerprintPresent: documentData.biometrics.fingerprintPresent,
-            signaturePresent: documentData.biometrics.signaturePresent,
-            photoPresent: documentData.biometrics.photoPresent,
-            givenNames: documentData.person.givenNames,
-            surname: documentData.person.surname,
-            isExpired: documentData.document.expiryDate
-              ? dayjs(documentData.document.expiryDate).isBefore(dayjs())
-              : false,
-            images: images?.length
-              ? {
-                  createMany: {
-                    data: images.map((image) => ({
-                      url: image,
-                    })),
-                  },
-                }
-              : undefined,
-            additionalFields: documentData.additionalFields?.length
-              ? {
-                  createMany: {
-                    skipDuplicates: true,
-                    data: documentData.additionalFields.map((field) => ({
-                      fieldName: field.fieldName,
-                      fieldValue: field.fieldValue,
-                    })),
-                  },
-                }
-              : undefined,
-          },
-        },
-      },
-      include: {
-        document: true,
-      },
-    });
-    await this.moveAndGenerateBluredVersions(images, documentCase.caseNumber);
-    return await this.documentCasesQueryService.findOne(
-      documentCase.id,
-      query,
-      user,
+
+    const update: Record<string, unknown> = {};
+
+    const setIfNull = <T>(
+      currentVal: T | null | undefined,
+      extractedVal: T | null | undefined,
+      key: string,
+    ) => {
+      if (
+        (currentVal === null || currentVal === undefined) &&
+        extractedVal != null
+      ) {
+        update[key] = extractedVal;
+      }
+    };
+
+    setIfNull(
+      existing.documentNumber,
+      documentData.document?.number,
+      'documentNumber',
     );
+    setIfNull(
+      existing.serialNumber,
+      documentData.document?.serialNumber,
+      'serialNumber',
+    );
+    setIfNull(
+      existing.batchNumber,
+      documentData.document?.batchNumber,
+      'batchNumber',
+    );
+    setIfNull(existing.fullName, documentData.person?.fullName, 'fullName');
+    setIfNull(existing.surname, documentData.person?.surname, 'surname');
+    setIfNull(
+      existing.placeOfBirth,
+      documentData.person?.placeOfBirth,
+      'placeOfBirth',
+    );
+    setIfNull(existing.gender, documentData.person?.gender, 'gender');
+    setIfNull(existing.issuer, documentData.document?.issuer, 'issuer');
+    setIfNull(
+      existing.placeOfIssue,
+      documentData.document?.placeOfIssue,
+      'placeOfIssue',
+    );
+    setIfNull(existing.addressRaw, documentData.address?.raw, 'addressRaw');
+    setIfNull(
+      existing.addressCountry,
+      documentData.address?.country,
+      'addressCountry',
+    );
+
+    // Arrays — treat empty array as "not provided"
+    if (
+      (!existing.givenNames || existing.givenNames.length === 0) &&
+      documentData.person?.givenNames?.length
+    ) {
+      update['givenNames'] = documentData.person.givenNames;
+    }
+
+    if (
+      (!existing.addressComponents ||
+        (Array.isArray(existing.addressComponents) &&
+          existing.addressComponents.length === 0)) &&
+      documentData.address?.components?.length
+    ) {
+      update['addressComponents'] = documentData.address.components;
+    }
+
+    // Dates
+    setIfNull(
+      existing.dateOfBirth,
+      parseDate(documentData.person?.dateOfBirth),
+      'dateOfBirth',
+    );
+    setIfNull(
+      existing.issuanceDate,
+      parseDate(documentData.document?.issueDate),
+      'issuanceDate',
+    );
+
+    const extractedExpiry = parseDate(documentData.document?.expiryDate);
+    setIfNull(existing.expiryDate, extractedExpiry, 'expiryDate');
+    if (extractedExpiry && !existing.expiryDate) {
+      update['isExpired'] = dayjs(extractedExpiry).isBefore(dayjs());
+    }
+
+    // Biometric flags — only promote false→true; never demote a confirmed true
+    if (
+      !existing.fingerprintPresent &&
+      documentData.biometrics?.fingerprintPresent
+    ) {
+      update['fingerprintPresent'] = true;
+    }
+    if (!existing.photoPresent && documentData.biometrics?.photoPresent) {
+      update['photoPresent'] = true;
+    }
+    if (
+      !existing.signaturePresent &&
+      documentData.biometrics?.signaturePresent
+    ) {
+      update['signaturePresent'] = true;
+    }
+
+    // Additional fields — append only
+    const additionalFieldsToAdd =
+      documentData.additionalFields?.filter(
+        (f) => f.fieldName && f.fieldValue,
+      ) ?? [];
+
+    if (Object.keys(update).length > 0 || additionalFieldsToAdd.length > 0) {
+      await this.prismaService.document.update({
+        where: { id: documentId },
+        data: {
+          ...update,
+          ...(additionalFieldsToAdd.length > 0 && {
+            additionalFields: {
+              createMany: {
+                skipDuplicates: true,
+                data: additionalFieldsToAdd.map((f) => ({
+                  fieldName: f.fieldName,
+                  fieldValue: f.fieldValue,
+                })),
+              },
+            },
+          }),
+        },
+      });
+      this.logger.debug(
+        `Applied ${Object.keys(update).length} field(s) from extraction to document ${documentId}`,
+      );
+    }
   }
 }

@@ -29,18 +29,18 @@ model User {
   displayUsername String?
 
   // relationshipd
-  sessions       Session[]
-  accounts       Account[]
-  notifications       NotificationLog[]
-  notificationEvents  NotificationEvent[]
-  messages       Message[]
-  ratings        Rating[]
-  cases          DocumentCase[]
-  addresses      Address[]
-  userActivities UserActivity[]
-  claims         Claim[]
-  aiinteractions AIInteraction[]
-  transactions   Transaction[]
+  sessions           Session[]
+  accounts           Account[]
+  notifications      NotificationLog[]
+  notificationEvents NotificationEvent[]
+  messages           Message[]
+  ratings            Rating[]
+  cases              DocumentCase[]
+  addresses          Address[]
+  userActivities     UserActivity[]
+  claims             Claim[]
+  aiinteractions     AIInteraction[]
+  transactions       Transaction[]
 
   twoFactorEnabled    Boolean?           @default(false)
   phoneNumber         String?
@@ -507,6 +507,11 @@ enum AIInteractionType {
 model AIExtraction {
   id String @id @default(uuid())
 
+  // ─── Case link ─────────────────────────────────────
+  // Extraction is always owned by a case (case is created first)
+  caseId String       @unique
+  case   DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
   // ─── Extraction-level quality summary ──────────────
   // Rolled up from both vision + text interactions
   // Avoids joining through AIExtractionInteraction → AIInteraction to get these
@@ -516,13 +521,13 @@ model AIExtraction {
   warnings             Json? // merged warnings from both steps
   fallbackTriggered    Boolean @default(false) // was multimodal rescue invoked?
 
-  // Status 
-  success Boolean @default(true)
+  // ─── Pipeline status ───────────────────────────────
+  extractionStatus ExtractionStatus @default(PENDING)
+  currentStep      ExtractionStep? // null when COMPLETED or not yet started
 
   createdAt DateTime @default(now())
 
   aiextractionInteractions AIExtractionInteraction[]
-  documentCases            DocumentCase[]
 
   @@map("ai_extractions")
 }
@@ -559,6 +564,19 @@ enum AIExtractionInteractionType {
   TEXT_EXTRACTION
 }
 
+enum ExtractionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum ExtractionStep {
+  VISION
+  TEXT
+  POST_PROCESSING
+}
+
 model DocumentCase {
   id         String   @id @default(uuid())
   caseNumber String   @unique
@@ -569,9 +587,8 @@ model DocumentCase {
   addressId  String
   address    Address  @relation(fields: [addressId], references: [id], onDelete: Cascade)
 
-  // Related Extraction
-  extractionId String?
-  extraction   AIExtraction? @relation(fields: [extractionId], references: [id])
+  // Extraction is linked from the AIExtraction side (AIExtraction.caseId → DocumentCase)
+  extraction AIExtraction?
 
   tags        Json    @default("[]") // array of key words
   description String?
@@ -597,6 +614,7 @@ model LostDocumentCase {
   caseId    String                 @unique
   case      DocumentCase           @relation(fields: [caseId], references: [id], onDelete: Cascade)
   status    LostDocumentCaseStatus @default(DRAFT)
+  auto      Boolean // Indicator if user entered mannuallu when reporting or auto scanning
   createdAt DateTime               @default(now())
   updatedAt DateTime               @updatedAt
   matches   Match[]
@@ -1178,19 +1196,19 @@ model TemplateVersion {
 
 // One logical notification per user — groups all channel/device deliveries together
 model NotificationEvent {
-  id         String    @id @default(uuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateId String?
-  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  title       String  // short human-friendly title shown in the inbox e.g. "Document Verified"
-  body        String  // user-facing message body e.g. "Document ABCD passed verification"
+  id          String            @id @default(uuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId  String?
+  template    Template?         @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  title       String // short human-friendly title shown in the inbox e.g. "Document Verified"
+  body        String // user-facing message body e.g. "Document ABCD passed verification"
   description String? // internal/admin context e.g. "Notify finder of successful verification of document ABC"
   readAt      DateTime?
-  voided     Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  logs       NotificationLog[]
+  voided      Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  logs        NotificationLog[]
 
   @@index([userId])
   @@index([createdAt])

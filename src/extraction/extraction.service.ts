@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DocumentTypeCode } from '../document-types/document-type.dto';
 import z from 'zod';
 import { AIExtractionInteractionType } from '../../generated/prisma/enums';
@@ -21,20 +21,6 @@ export class ExtractionService {
     private readonly prismaService: PrismaService,
     private readonly promptsService: PromptsService,
   ) {}
-  async getOrCreateAiExtraction(extractionId?: string) {
-    if (extractionId) {
-      const extraction = await this.prismaService.aIExtraction.findUnique({
-        where: { id: extractionId },
-        include: { aiextractionInteractions: true },
-      });
-      if (!extraction)
-        throw new NotFoundException('extraction with id not found');
-    }
-    return await this.prismaService.aIExtraction.create({
-      data: {},
-      include: { aiextractionInteractions: true },
-    });
-  }
 
   async testExtraction(visionOutputDto: VisionExtractionOutputDto) {
     const documentTypes = await this.prismaService.documentType.findMany({

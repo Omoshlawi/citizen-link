@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import {
@@ -5,6 +7,7 @@ import {
   LostDocumentCaseStatus,
   MatchTrigger,
 } from '../../generated/prisma/client';
+import { ExtractionStatus } from '../../generated/prisma/enums';
 import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
@@ -255,12 +258,24 @@ export class DocumentCasesWorkflowService {
               },
             },
             user: true,
+            extraction: true,
           },
         },
       },
     });
     if (!canVerify)
       throw new BadRequestException(`Can only verify submitted cases`);
+
+    // Block verification if extraction is still pending or has failed
+    const extraction = canVerify.case?.extraction;
+    if (
+      extraction &&
+      extraction.extractionStatus !== ExtractionStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        `Cannot verify a found case while document extraction is still ${extraction.extractionStatus.toLowerCase()}. Please wait for extraction to complete or ask the finder to re-submit images.`,
+      );
+    }
     //2. Get and validate transition reasons
     const reason = await this.prismaService.transitionReason.findUnique({
       where: {

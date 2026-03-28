@@ -6,10 +6,14 @@ export interface DocumentEmbeddingJob {
   userId: string;
 }
 
-export interface LostCaseExtractionJob {
+export type CaseType = 'LOST' | 'FOUND';
+
+/** Shared job shape across all three extraction pipeline queues */
+export interface CaseExtractionJob {
   caseId: string;
   documentId: string;
   extractionId: string;
   images: string[];
   userId: string;
+  caseType: CaseType;
 }

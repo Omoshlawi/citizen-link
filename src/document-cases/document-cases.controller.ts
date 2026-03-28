@@ -31,28 +31,22 @@ import {
 } from './document-cases.dto';
 import { DocumentCasesService } from './document-cases.service';
 import { RequireSystemPermission } from '../auth/auth.decorators';
-import { ExtractionService } from '../extraction/extraction.service';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 
 @Controller('documents/cases')
 export class DocumentCasesController {
-  constructor(
-    private readonly documentCasesService: DocumentCasesService,
-    private readonly extractionService: ExtractionService,
-  ) {}
+  constructor(private readonly documentCasesService: DocumentCasesService) {}
 
   @Post('found')
   @ApiOperation({ summary: 'Report Found Document Case' })
   @ApiCreatedResponse({ type: GetDocumentCaseResponseDto })
   @ApiErrorsResponse({ badRequest: true })
-  async reportFoundDocumentCase(
+  reportFoundDocumentCase(
     @Body() createFoundDocumentCaseDto: CreateFoundDocumentCaseDto,
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    const extraction = await this.extractionService.getOrCreateAiExtraction();
-    return await this.documentCasesService.reportFoundDocumentCase(
-      extraction.id,
+    return this.documentCasesService.reportFoundDocumentCase(
       createFoundDocumentCaseDto,
       query,
       user,
@@ -68,7 +62,7 @@ export class DocumentCasesController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.documentCasesService.reportLostDocumentCase(
+    return this.documentCasesService.reportLostDocumentCaseMannual(
       createLostDocumentCaseDto,
       query,
       user,

@@ -1,6 +1,8 @@
 /*
   Warnings:
 
+  - You are about to drop the column `success` on the `ai_extractions` table. All the data in the column will be lost.
+  - You are about to drop the column `extractionId` on the `document_cases` table. All the data in the column will be lost.
   - You are about to drop the column `aiInteractionId` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `aiScore` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `aiVerificationResult` on the `matches` table. All the data in the column will be lost.
@@ -8,9 +10,17 @@
   - You are about to drop the column `securityQuestionsAiInteractionId` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the `case_status_transitions` table. If the table is not empty, all the data it contains will be lost.
   - You are about to drop the `notifications` table. If the table is not empty, all the data it contains will be lost.
+  - A unique constraint covering the columns `[caseId]` on the table `ai_extractions` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[key,userId]` on the table `settings` will be added. If there are existing duplicate values, this will fail.
+  - Added the required column `caseId` to the `ai_extractions` table without a default value. This is not possible if the table is not empty.
 
 */
+-- CreateEnum
+CREATE TYPE "ExtractionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "ExtractionStep" AS ENUM ('VISION', 'TEXT', 'POST_PROCESSING');
+
 -- CreateEnum
 CREATE TYPE "NotificationChannel" AS ENUM ('EMAIL', 'SMS', 'PUSH');
 
@@ -19,6 +29,9 @@ CREATE TYPE "NotificationStatus" AS ENUM ('PENDING', 'QUEUED', 'SENT', 'FAILED',
 
 -- DropForeignKey
 ALTER TABLE "case_status_transitions" DROP CONSTRAINT "case_status_transitions_caseId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "document_cases" DROP CONSTRAINT "document_cases_extractionId_fkey";
 
 -- DropForeignKey
 ALTER TABLE "matches" DROP CONSTRAINT "matches_aiInteractionId_fkey";
@@ -46,6 +59,15 @@ DROP INDEX "matches_securityQuestionsAiInteractionId_key";
 
 -- DropIndex
 DROP INDEX "settings_key_key";
+
+-- AlterTable
+ALTER TABLE "ai_extractions" DROP COLUMN "success",
+ADD COLUMN     "caseId" TEXT NOT NULL,
+ADD COLUMN     "currentStep" "ExtractionStep",
+ADD COLUMN     "extractionStatus" "ExtractionStatus" NOT NULL DEFAULT 'PENDING';
+
+-- AlterTable
+ALTER TABLE "document_cases" DROP COLUMN "extractionId";
 
 -- AlterTable
 ALTER TABLE "matches" DROP COLUMN "aiInteractionId",
@@ -199,10 +221,16 @@ CREATE UNIQUE INDEX "user_push_tokens_token_key" ON "user_push_tokens"("token");
 CREATE INDEX "user_push_tokens_userId_idx" ON "user_push_tokens"("userId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "ai_extractions_caseId_key" ON "ai_extractions"("caseId");
+
+-- CreateIndex
 CREATE INDEX "settings_userId_idx" ON "settings"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "settings_key_userId_key" ON "settings"("key", "userId");
+
+-- AddForeignKey
+ALTER TABLE "ai_extractions" ADD CONSTRAINT "ai_extractions_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "document_cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "template_versions" ADD CONSTRAINT "template_versions_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
