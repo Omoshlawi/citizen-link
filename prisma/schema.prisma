@@ -39,8 +39,10 @@ model User {
   addresses          Address[]
   userActivities     UserActivity[]
   claims             Claim[]
-  aiinteractions     AIInteraction[]
-  transactions       Transaction[]
+  aiinteractions        AIInteraction[]
+  transactions          Transaction[]    @relation("TransactionPayer")
+  initiatedTransactions Transaction[]    @relation("TransactionInitiator")
+  disbursements         Disbursement[]
 
   twoFactorEnabled    Boolean?           @default(false)
   phoneNumber         String?
@@ -937,28 +939,33 @@ model Invoice {
   id            String @id @default(uuid())
   invoiceNumber String @unique
 
-  claimId String @unique // 1-to-1 relationship retained!
-  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  // Restrict deletion — financial records must never cascade-delete
+  claimId String @unique
+  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Restrict)
 
   // Use Decimal for money!
   serviceFee   Decimal @db.Decimal(10, 2)
   finderReward Decimal @db.Decimal(10, 2)
   totalAmount  Decimal @db.Decimal(10, 2)
 
-  // Tracking installments
+  // Installment tracking — ALWAYS update both fields atomically in a $transaction
   amountPaid Decimal @default(0.00) @db.Decimal(10, 2)
-  balanceDue Decimal @db.Decimal(10, 2) // totalAmount - amountPaid
+  balanceDue Decimal @db.Decimal(10, 2) // mirror of (totalAmount - amountPaid); kept for query performance
+
+  dueDate DateTime? // optional payment deadline; enables OVERDUE detection
 
   status InvoiceStatus @default(PENDING)
 
   // 1-to-Many relationship with Transactions
-  transactions Transaction[]
+  transactions  Transaction[]
+  disbursements Disbursement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([claimId])
   @@index([status])
+  @@index([dueDate])
   @@map("invoices")
 }
 
@@ -966,6 +973,7 @@ enum InvoiceStatus {
   PENDING
   PARTIALLY_PAID
   PAID
+  OVERDUE
   CANCELLED
 }
 
@@ -973,11 +981,17 @@ model Transaction {
   id                String @id @default(uuid())
   transactionNumber String @unique
 
+  // The claimant who is paying
   userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("TransactionPayer", fields: [userId], references: [id], onDelete: Restrict)
 
+  // The staff/agent who triggered the payment request (null = client self-initiated)
+  initiatedById String?
+  initiatedBy   User?   @relation("TransactionInitiator", fields: [initiatedById], references: [id], onDelete: SetNull)
+
+  // Restrict deletion — financial records must never cascade-delete
   invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
 
   // The amount for this specific installment/attempt
   amount   Decimal @db.Decimal(10, 2)
@@ -985,12 +999,15 @@ model Transaction {
 
   // Payment Details
   paymentMethod         PaymentMethod
-  paymentProvider       String?
-  providerTransactionId String? // e.g., M-Pesa Receipt Number
+  paymentProvider       PaymentProvider?
+  providerTransactionId String? // e.g., M-Pesa receipt number, Stripe charge ID
+
+  // STK Push matching — Daraja returns CheckoutRequestID; callback is matched by this
+  checkoutRequestId String? @unique
 
   status TransactionStatus @default(PENDING)
 
-  // Metadata
+  // Provider-specific callback data (M-Pesa ResultCode, Stripe event, etc.)
   metadata Json?
 
   createdAt DateTime @default(now())
@@ -999,6 +1016,7 @@ model Transaction {
   @@index([invoiceId])
   @@index([userId])
   @@index([status])
+  @@index([checkoutRequestId])
   @@map("transactions")
 }
 
@@ -1009,6 +1027,12 @@ enum PaymentMethod {
   WALLET
 }
 
+enum PaymentProvider {
+  MPESA
+  STRIPE
+  AFRICASTALKING
+}
+
 enum TransactionStatus {
   PENDING
   PROCESSING
@@ -1016,6 +1040,49 @@ enum TransactionStatus {
   FAILED
   REFUNDED
   CANCELLED
+}
+
+// Tracks disbursement of the finder reward to the finder after invoice is PAID
+model Disbursement {
+  id                 String @id @default(uuid())
+  disbursementNumber String @unique
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  // The finder receiving the reward
+  recipientId String
+  recipient   User   @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("KES")
+
+  paymentMethod         PaymentMethod
+  paymentProvider       PaymentProvider?
+  providerTransactionId String? // M-Pesa receipt or bank ref
+
+  status DisbursementStatus @default(PENDING)
+
+  // Provider-specific data
+  metadata Json?
+
+  initiatedAt  DateTime?
+  completedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@index([recipientId])
+  @@index([status])
+  @@map("disbursements")
+}
+
+enum DisbursementStatus {
+  PENDING     // invoice paid, disbursement not yet initiated
+  INITIATED   // payment sent to provider
+  COMPLETED   // confirmed received by finder
+  FAILED      // provider rejected or timed out
 }
 
 model Rating {

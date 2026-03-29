@@ -5,6 +5,7 @@ export enum EntityPrefix {
   HANDOVER = 'HND',
   INVOICE = 'INV',
   TRANSACTION = 'TRX',
+  DISBURSEMENT = 'DSB',
   DISPUTE = 'DSP',
   DOCUMENT = 'DOC',
   LOST_DOCUMENT_CASE = 'LDC',
