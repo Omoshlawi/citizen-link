@@ -36,9 +36,6 @@ export class AiService implements OnModuleInit {
       apiKey: this._options.apiKey,
       baseURL: this._options.baseURL + '/v1',
     });
-    this.logger.log(
-      `OpenAI client initialized with options: ${JSON.stringify(this._options, null, 2)}`,
-    );
   }
 
   /**
@@ -252,7 +249,7 @@ export class AiService implements OnModuleInit {
         aiResponse = await this.generateContent(parts, config);
       }
       responseText = aiResponse.text?.trim() ?? '';
-      this.logger.debug(`AI Response: ${responseText}`);
+      // this.logger.debug(`AI Response: ${responseText}`);
 
       return await this.prismaService.aIInteraction.create({
         data: {

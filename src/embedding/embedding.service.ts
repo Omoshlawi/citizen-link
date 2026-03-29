@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { catchError, lastValueFrom, map, Observable } from 'rxjs';
 import {
   Document,
@@ -15,7 +15,7 @@ import {
   OpenAIEmbeddingResponse,
 } from './embedding.interfaces';
 @Injectable()
-export class EmbeddingService implements OnModuleInit {
+export class EmbeddingService {
   private readonly logger = new Logger(EmbeddingService.name);
 
   constructor(
@@ -24,12 +24,6 @@ export class EmbeddingService implements OnModuleInit {
     @Inject(EMBEDDING_OPTIONS_TOKEN)
     private readonly embeddingOptions: EmbeddingOptions,
   ) {}
-
-  onModuleInit() {
-    this.logger.log(
-      `Embedding Module Initialized with options: ${JSON.stringify(this.embeddingOptions, null, 2)}`,
-    );
-  }
 
   /**
    *  The embedding is a 1536-dimension array of floats
