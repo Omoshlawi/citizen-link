@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handover Scheduled — Citizen Link</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:'Inter', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#003b5a; border-radius:12px 12px 0 0; padding:28px 40px;">
+              <p style="margin:0; font-size:22px; font-weight:700; color:#ffffff; letter-spacing:-0.3px;">Citizen Link</p>
+              <p style="margin:6px 0 0; font-size:12px; color:#a8cfe0; letter-spacing:0.8px; text-transform:uppercase;">Trusted Civic Services</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#1d9e75; padding:12px 40px;">
+              <p style="margin:0; font-size:13px; font-weight:700; color:#ffffff; text-align:center; letter-spacing:0.3px;">
+                HANDOVER CONFIRMED — YOUR DOCUMENT IS ON ITS WAY
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#ffffff; padding:40px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+              <h1 style="margin:0 0 12px; font-size:24px; font-weight:700; color:#003b5a; line-height:1.3;">
+                Handover Scheduled
+              </h1>
+              <p style="margin:0 0 24px; font-size:15px; color:#475569; line-height:1.7;">
+                Your handover for claim <strong>#{{handover.claim.claimNumber}}</strong> has been successfully scheduled. Please find the details below.
+              </p>
+
+              <!-- Handover details card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 12px; font-size:11px; font-weight:600; color:#006397; letter-spacing:0.8px; text-transform:uppercase;">Handover Details</p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="padding:5px 0; font-size:13px; color:#64748b; width:42%;">Handover Reference</td>
+                        <td style="padding:5px 0; font-size:13px; font-weight:600; color:#0f172a;">#{{handover.handoverNumber}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0; font-size:13px; color:#64748b;">Claim Reference</td>
+                        <td style="padding:5px 0; font-size:13px; font-weight:600; color:#0f172a;">#{{handover.claim.claimNumber}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0; font-size:13px; color:#64748b;">Method</td>
+                        <td style="padding:5px 0; font-size:13px; font-weight:600; color:#0f172a;">{{handover.method}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0; font-size:13px; color:#64748b;">Scheduled Date</td>
+                        <td style="padding:5px 0; font-size:13px; font-weight:600; color:#0f172a;">{{handover.scheduledDate}}</td>
+                      </tr>
+                      {{#if handover.pickupStation}}
+                      <tr>
+                        <td style="padding:5px 0; font-size:13px; color:#64748b;">Pickup Station</td>
+                        <td style="padding:5px 0; font-size:13px; font-weight:600; color:#0f172a;">{{handover.pickupStation.name}}</td>
+                      </tr>
+                      {{/if}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              {{#if handover.pickupStation}}
+              <p style="margin:0 0 20px; font-size:14px; color:#475569; line-height:1.7;">
+                Please arrive at the pickup station on the scheduled date with a valid ID. Our agent will verify your identity before releasing the document.
+              </p>
+              {{else}}
+              <p style="margin:0 0 20px; font-size:14px; color:#475569; line-height:1.7;">
+                Our agent will deliver the document to your address on the scheduled date. Please ensure someone is available to receive it and have a valid ID ready for verification.
+              </p>
+              {{/if}}
+
+              <p style="margin:0 0 8px; font-size:14px; color:#475569; line-height:1.7;">
+                Need to change the schedule? Open the app and navigate to your claim to cancel and reschedule your handover.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 12px 12px; padding:24px 40px; text-align:center;">
+              <p style="margin:0 0 4px; font-size:12px; color:#94a3b8;">Citizen Link &mdash; Trusted Civic Services</p>
+              <p style="margin:0; font-size:11px; color:#cbd5e1;">This is an automated message. Please do not reply to this email.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

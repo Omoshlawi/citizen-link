@@ -198,12 +198,12 @@ model Address {
 
   cases DocumentCase[]
   collectionAddressFoundCases FoundDocumentCase[] @relation("FoundCaseCollectionAddress")
+  handovers                   Handover[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   voided Boolean @default(false)
-  claims Claim[]
 
   // For hierarchical queries
   @@index([userId])
@@ -782,14 +782,6 @@ model Claim {
   matchId String
   match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
-  // Pickup Details
-  pickupStationId String?
-  pickupStation   PickupStation? @relation(fields: [pickupStationId], references: [id], onDelete: Cascade)
-  pickupAddressId String?
-  pickupAddress   Address?       @relation(fields: [pickupAddressId], references: [id], onDelete: Cascade)
-
-  preferredHandoverDate DateTime?
-
   // Status
   status ClaimStatus @default(PENDING)
 
@@ -884,10 +876,14 @@ model PickupStation {
 
   // Relations
   foundDocumentCases FoundDocumentCase[]
-  claims             Claim[]
   handovers          Handover[]
 
   @@map("pickup_stations")
+}
+
+enum HandoverMethod {
+  PICKUP
+  DELIVERY
 }
 
 model Handover {
@@ -897,20 +893,25 @@ model Handover {
   claimId String @unique
   claim   Claim  @relation(fields: [claimId], references: [id])
 
-  pickupStationId String
-  pickupStation   PickupStation @relation(fields: [pickupStationId], references: [id])
+  method HandoverMethod
+
+  // PICKUP: station where the owner collects the document
+  pickupStationId String?
+  pickupStation   PickupStation? @relation(fields: [pickupStationId], references: [id])
+
+  // DELIVERY: address where the document is delivered to the owner
+  deliveryAddressId String?
+  deliveryAddress   Address? @relation(fields: [deliveryAddressId], references: [id])
 
   // Scheduling
   scheduledDate DateTime
   completedAt   DateTime?
 
-  // Verification at pickup
+  // Verification at handover
   ownerVerified Boolean @default(false)
-  finderPresent Boolean @default(false)
 
   // Documentation
   ownerSignature  String?
-  finderSignature String?
   handoverNotes   String? @db.Text
 
   status HandoverStatus @default(SCHEDULED)

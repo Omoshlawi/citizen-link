@@ -13,7 +13,7 @@ import {
   SortService,
 } from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateClaimDto, QueryClaimDto, UpdateClaimDto } from './claim.dto';
+import { CreateClaimDto, QueryClaimDto } from './claim.dto';
 import { SecurityQuestionsDto } from '../extraction/extraction.dto';
 import { S3Service } from '../s3/s3.service';
 import { ClaimStatusTransitionService } from './claim.transitions.service';
@@ -134,21 +134,10 @@ export class ClaimService {
   }
 
   async create(
-    {
-      attachments,
-      securityQuestions,
-      pickupStationId,
-      addressId,
-      ...createClaimDto
-    }: CreateClaimDto,
+    { attachments, securityQuestions, ...createClaimDto }: CreateClaimDto,
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    if (!pickupStationId && !addressId) {
-      throw new BadRequestException(
-        'Either pickupStationId or addressId must be provided',
-      );
-    }
     const match = await this.validateMatch(createClaimDto.matchId, user.id);
     await this.validateAttachments(attachments);
     // Ensure their is no other claim with same match urther than latest cancelled claim
@@ -164,9 +153,6 @@ export class ClaimService {
         }),
         userId: user.id,
         foundDocumentCaseId: match.foundDocumentCaseId,
-        pickupStationId,
-        pickupAddressId: addressId,
-        preferredHandoverDate: parseDate(createClaimDto.preferredHandoverDate),
       },
     });
 
@@ -253,12 +239,7 @@ export class ClaimService {
         {
           claimNumber: query.claimNumber,
           matchId: query.matchId,
-          pickupStationId: query.pickupStationId,
           status: query.status,
-          preferredHandoverDate: {
-            gte: parseDate(query.preferredHandoverDateFrom),
-            lte: parseDate(query.preferredHandoverDateTo),
-          },
           userId: isAdmin ? query.userId : user.id,
           createdAt: {
             lte: parseDate(query.createdAtTo),
@@ -353,18 +334,6 @@ export class ClaimService {
     });
     if (!data) throw new NotFoundException('Claim not found');
     return data;
-  }
-
-  update(
-    id: string,
-    updateClaimDto: UpdateClaimDto,
-    query: CustomRepresentationQueryDto,
-  ) {
-    return this.prismaService.claim.update({
-      where: { id },
-      data: updateClaimDto,
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
-    });
   }
 
   async reject(

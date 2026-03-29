@@ -5,10 +5,7 @@ import { Claim, ClaimStatus } from '../../generated/prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 
 export const ClaimSchema = z.object({
-  pickupStationId: z.uuid().optional(),
-  addressId: z.uuid().optional(),
   matchId: z.uuid(),
-  preferredHandoverDate: z.iso.date().optional(),
   securityQuestions: z
     .object({
       question: z.string(),
@@ -47,9 +44,6 @@ export const QueryClaimSchema = z.object({
   foundDocumentCaseId: z.uuid().optional(),
   matchId: z.uuid().optional(),
   caseId: z.uuid().optional(),
-  pickupStationId: z.uuid().optional(),
-  preferredHandoverDateFrom: z.iso.date().optional(),
-  preferredHandoverDateTo: z.iso.date().optional(),
   createdAtFrom: z.iso.date().optional(),
   createdAtTo: z.iso.date().optional(),
   status: z
@@ -57,45 +51,21 @@ export const QueryClaimSchema = z.object({
     .optional(),
 });
 
-export const SechduleClaimHandoverSchema = z.object({
-  pickupStationId: z.uuid().optional(),
-  addressId: z.uuid().optional(),
-  preferredHandoverDate: z.iso.date(),
-});
-
-export class ScheduleClaimHandoverDto extends createZodDto(
-  SechduleClaimHandoverSchema,
-) {}
-
 export class CreateClaimDto extends createZodDto(
   ClaimSchema.pick({
     matchId: true,
     securityQuestions: true,
     attachments: true,
-    pickupStationId: true,
-    addressId: true,
-    preferredHandoverDate: true,
   }),
 ) {}
 export class QueryClaimDto extends createZodDto(QueryClaimSchema) {}
 export class ClaimVerificationDto extends createZodDto(
   ClaimVerificationSchema,
 ) {}
-export class UpdateClaimDto extends createZodDto(
-  ClaimSchema.pick({
-    pickupStationId: true,
-    preferredHandoverDate: true,
-    addressId: true,
-  }),
-) {}
 
 export class GetClaimResponseDto implements Claim {
-  @ApiProperty({ required: false })
-  pickupStationId: string | null;
-  @ApiProperty({ required: false })
+  @ApiProperty()
   matchId: string;
-  @ApiProperty({ required: false })
-  preferredHandoverDate: Date | null;
   @ApiProperty({ type: 'string' })
   claimNumber: string;
   @ApiProperty()
@@ -106,8 +76,6 @@ export class GetClaimResponseDto implements Claim {
   status: ClaimStatus;
   @ApiProperty()
   id: string;
-  @ApiProperty({ required: false })
-  pickupAddressId: string | null;
   @ApiProperty()
   createdAt: Date;
   @ApiProperty()

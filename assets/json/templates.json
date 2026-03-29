@@ -294,6 +294,42 @@
     "metadata": { "channels": { "email": true, "sms": false, "push": false } }
   },
   {
+    "key": "notification.handover.scheduled",
+    "type": "notification",
+    "name": "Handover Scheduled",
+    "description": "Sent to the claimant when they successfully schedule a document handover.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Handover Scheduled — Claim #{{handover.claim.claimNumber}}"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/handover-scheduled.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Handover Scheduled — #{{handover.handoverNumber}}"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your {{handover.method}} handover for claim #{{handover.claim.claimNumber}} is confirmed for {{handover.scheduledDate}}."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\":\"handover\",\"handoverId\":\"{{handover.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"]
+    },
+    "metadata": {
+      "channels": { "email": true, "sms": false, "push": true }
+    }
+  },
+  {
     "key": "auth.email.change.alert",
     "type": "notification",
     "name": "Change Email Security Alert",

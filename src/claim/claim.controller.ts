@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
-  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -22,7 +21,6 @@ import {
   GetClaimResponseDto,
   QueryClaimDto,
   QueryClaimResponseDto,
-  UpdateClaimDto,
 } from './claim.dto';
 import { ClaimService } from './claim.service';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
@@ -64,18 +62,6 @@ export class ClaimController {
     @Session() { user }: UserSession,
   ) {
     return this.claimService.findOne(id, query, user);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update Claim' })
-  @ApiOkResponse({ type: GetClaimResponseDto })
-  @ApiErrorsResponse({ badRequest: true })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateDocumentTypeDto: UpdateClaimDto,
-    @Query() query: CustomRepresentationQueryDto,
-  ) {
-    return this.claimService.update(id, updateDocumentTypeDto, query);
   }
 
   @Post(':id/reject')

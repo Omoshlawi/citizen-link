@@ -322,5 +322,41 @@
     "code": "OTHER",
     "label": "Other",
     "description": "Other reason not list in the reasons"
+  },
+  {
+    "entityType": "Handover",
+    "fromStatus": "SCHEDULED",
+    "toStatus": "CANCELLED",
+    "code": "SCHEDULING_CONFLICT",
+    "auto": false,
+    "label": "Scheduling conflict",
+    "description": "The claimant has a conflict on the scheduled handover date."
+  },
+  {
+    "entityType": "Handover",
+    "fromStatus": "SCHEDULED",
+    "toStatus": "CANCELLED",
+    "code": "CHANGED_HANDOVER_METHOD",
+    "auto": false,
+    "label": "Changed handover method",
+    "description": "The claimant wishes to switch between pickup and delivery."
+  },
+  {
+    "entityType": "Handover",
+    "fromStatus": "SCHEDULED",
+    "toStatus": "CANCELLED",
+    "code": "LOCATION_NOT_CONVENIENT",
+    "auto": false,
+    "label": "Location not convenient",
+    "description": "The selected pickup station is too far or inconvenient for the claimant."
+  },
+  {
+    "entityType": "Handover",
+    "fromStatus": "SCHEDULED",
+    "toStatus": "CANCELLED",
+    "code": "OTHER",
+    "auto": false,
+    "label": "Other",
+    "description": "Other reason not listed."
   }
 ]
