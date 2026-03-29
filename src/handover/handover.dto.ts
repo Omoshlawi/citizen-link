@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { createZodDto } from 'nestjs-zod';
 import { QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';

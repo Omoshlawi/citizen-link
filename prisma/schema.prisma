@@ -43,6 +43,7 @@ model User {
   transactions          Transaction[]    @relation("TransactionPayer")
   initiatedTransactions Transaction[]    @relation("TransactionInitiator")
   disbursements         Disbursement[]
+  wallet                Wallet?
 
   twoFactorEnabled    Boolean?           @default(false)
   phoneNumber         String?
@@ -1083,6 +1084,58 @@ enum DisbursementStatus {
   INITIATED   // payment sent to provider
   COMPLETED   // confirmed received by finder
   FAILED      // provider rejected or timed out
+}
+
+// Generic wallet — usable for finder rewards, refunds, in-app credits, etc.
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Decimal  @default(0.00) @db.Decimal(10, 2)
+  currency  String   @default("KES")
+  ledger    WalletLedger[]
+  updatedAt DateTime @updatedAt
+
+  @@map("wallets")
+}
+
+enum WalletEntryType {
+  CREDIT // balance increases
+  DEBIT  // balance decreases
+}
+
+enum WalletEntryReason {
+  FINDER_REWARD       // credited when disbursement created after invoice PAID
+  WITHDRAWAL          // debited when B2C payout initiated
+  WITHDRAWAL_REVERSAL // credited back when B2C payout fails
+  REFUND              // reserved for future use
+}
+
+// Full audit trail of every balance change — balance can be reconstructed from ledger
+model WalletLedger {
+  id       String @id @default(uuid())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  type   WalletEntryType
+  reason WalletEntryReason
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("KES")
+
+  // Snapshot before and after — enables full transparency
+  balanceBefore Decimal @db.Decimal(10, 2)
+  balanceAfter  Decimal @db.Decimal(10, 2)
+
+  // Polymorphic reference to the source entity (Disbursement, etc.)
+  referenceType String? // e.g. "Disbursement"
+  referenceId   String? // ID of the related record
+
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([walletId])
+  @@index([referenceType, referenceId])
+  @@map("wallet_ledger")
 }
 
 model Rating {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
@@ -5,7 +6,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaginationService } from '../common/query-builder';
 import { CustomRepresentationService } from '../common/query-builder/representation.service';
 import { SortService } from '../common/query-builder/sort.service';
-import { NotificationChannel, NotificationStatus } from '../../generated/prisma/enums';
+import {
+  NotificationChannel,
+  NotificationStatus,
+} from '../../generated/prisma/enums';
 
 const mockPrisma = {
   notificationLog: {
@@ -17,9 +21,18 @@ const mockPrisma = {
 };
 const mockPagination = {
   buildSafePaginationQuery: jest.fn().mockReturnValue({}),
-  buildPaginationControls: jest.fn().mockReturnValue({ totalCount: 0, totalPages: 0, currentPage: 1, pageSize: 10, next: null, prev: null }),
+  buildPaginationControls: jest.fn().mockReturnValue({
+    totalCount: 0,
+    totalPages: 0,
+    currentPage: 1,
+    pageSize: 10,
+    next: null,
+    prev: null,
+  }),
 };
-const mockRepresentation = { buildCustomRepresentationQuery: jest.fn().mockReturnValue({}) };
+const mockRepresentation = {
+  buildCustomRepresentationQuery: jest.fn().mockReturnValue({}),
+};
 const mockSort = { buildSortQuery: jest.fn().mockReturnValue({}) };
 
 const adminUser = { id: 'admin-1', role: 'admin' } as any;
@@ -67,12 +80,19 @@ describe('NotificationsService', () => {
 
     it('throws NotFoundException when log does not exist', async () => {
       mockPrisma.notificationLog.findUnique.mockResolvedValue(null);
-      await expect(service.findOne('missing', regularUser)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing', regularUser)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
-    it('throws ForbiddenException when non-admin requests another user\'s log', async () => {
-      mockPrisma.notificationLog.findUnique.mockResolvedValue({ ...log, userId: 'other-user' });
-      await expect(service.findOne('log-1', regularUser)).rejects.toThrow(ForbiddenException);
+    it("throws ForbiddenException when non-admin requests another user's log", async () => {
+      mockPrisma.notificationLog.findUnique.mockResolvedValue({
+        ...log,
+        userId: 'other-user',
+      });
+      await expect(service.findOne('log-1', regularUser)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -82,12 +102,16 @@ describe('NotificationsService', () => {
     it('deletes the log when admin requests', async () => {
       mockPrisma.notificationLog.findUnique.mockResolvedValue(log);
       mockPrisma.notificationLog.delete.mockResolvedValue(log);
-      await expect(service.remove('log-1', adminUser, {})).resolves.toEqual(log);
+      await expect(service.remove('log-1', adminUser, {})).resolves.toEqual(
+        log,
+      );
     });
 
     it('throws ForbiddenException when non-admin tries to delete', async () => {
       mockPrisma.notificationLog.findUnique.mockResolvedValue(log);
-      await expect(service.remove('log-1', regularUser, {})).rejects.toThrow(ForbiddenException);
+      await expect(service.remove('log-1', regularUser, {})).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

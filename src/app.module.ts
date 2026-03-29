@@ -17,6 +17,7 @@ import { ChatBotModule } from './chat-bot/chat-bot.module';
 import { ClaimModule } from './claim/claim.module';
 import { HandoverModule } from './handover/handover.module';
 import { PaymentModule } from './payment/payment.module';
+import { DisbursementModule } from './disbursement/disbursement.module';
 import { QueryBuilderModule } from './common/query-builder';
 import { SettingsModule } from './common/settings';
 import { TemplatesModule } from './common/templates';
@@ -119,6 +120,7 @@ import { VisionModule } from './vision/vision.module';
     InvoiceModule,
     HandoverModule,
     PaymentModule,
+    DisbursementModule,
     VisionModule,
 
     SettingsModule,

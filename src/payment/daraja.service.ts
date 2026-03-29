@@ -1,3 +1,6 @@
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   Injectable,
   Logger,
@@ -16,6 +19,30 @@ export interface StkPushResponse {
   ResponseCode: string;
   ResponseDescription: string;
   CustomerMessage: string;
+}
+
+export interface B2CResponse {
+  ConversationID: string;
+  OriginatorConversationID: string;
+  ResponseCode: string;
+  ResponseDescription: string;
+}
+
+export interface B2CCallbackBody {
+  Result: {
+    ResultType: number;
+    ResultCode: number; // 0 = success
+    ResultDesc: string;
+    OriginatorConversationID: string;
+    ConversationID: string;
+    TransactionID: string; // M-Pesa receipt number
+    ResultParameters?: {
+      ResultParameter: Array<{ Key: string; Value: string | number }>;
+    };
+    ReferenceData?: {
+      ReferenceItem: { Key: string; Value: string };
+    };
+  };
 }
 
 export interface StkCallbackBody {
@@ -129,6 +156,92 @@ export class DarajaService {
 
     this.logger.log(
       `STK push initiated — CheckoutRequestID: ${data.CheckoutRequestID}`,
+    );
+    return data;
+  }
+
+  /**
+   * Encrypts the B2C initiator password with the Safaricom public certificate.
+   * Download the real cert from the Daraja portal and place it at:
+   *   assets/certs/daraja-sandbox.cer   (sandbox)
+   *   assets/certs/daraja-production.cer (production)
+   */
+  private buildSecurityCredential(): string {
+    const certFile =
+      this.config.environment === 'production'
+        ? 'daraja-production.cer'
+        : 'daraja-sandbox.cer';
+    const certPath = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      'assets',
+      'certs',
+      certFile,
+    );
+    const cert = fs.readFileSync(certPath, 'utf8');
+    const encrypted = crypto.publicEncrypt(
+      { key: cert, padding: crypto.constants.RSA_PKCS1_PADDING },
+      Buffer.from(this.config.b2cInitiatorPassword),
+    );
+    return encrypted.toString('base64');
+  }
+
+  /**
+   * Initiates a Daraja B2C (Business-to-Customer) payment — used to disburse
+   * finder rewards directly to the finder's M-Pesa account.
+   */
+  async initiateB2CPayout(params: {
+    phoneNumber: string; // 2547XXXXXXXX
+    amount: number; // in KES, integer
+    reference: string; // disbursement number shown in M-Pesa message
+    remarks: string;
+  }): Promise<B2CResponse> {
+    const token = await this.getAccessToken();
+    const securityCredential = this.buildSecurityCredential();
+
+    const body = {
+      InitiatorName: this.config.b2cInitiatorName,
+      SecurityCredential: securityCredential,
+      CommandID: 'BusinessPayment',
+      Amount: Math.ceil(params.amount),
+      PartyA: this.config.shortcode,
+      PartyB: params.phoneNumber,
+      Remarks: params.remarks,
+      QueueTimeOutURL: this.config.b2cTimeoutUrl,
+      ResultURL: this.config.b2cResultUrl,
+      Occassion: params.reference, // Daraja typo in spec — keep as-is
+    };
+
+    const res = await fetch(
+      `${this.config.baseUrl}/mpesa/b2c/v3/paymentrequest`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.error(`B2C payout failed: ${res.status} — ${text}`);
+      throw new ServiceUnavailableException('Failed to initiate payout');
+    }
+
+    const data = (await res.json()) as B2CResponse;
+
+    if (data.ResponseCode !== '0') {
+      this.logger.error(`B2C payout rejected: ${data.ResponseDescription}`);
+      throw new ServiceUnavailableException(
+        data.ResponseDescription || 'Payout initiation rejected',
+      );
+    }
+
+    this.logger.log(
+      `B2C payout initiated — ConversationID: ${data.ConversationID}`,
     );
     return data;
   }

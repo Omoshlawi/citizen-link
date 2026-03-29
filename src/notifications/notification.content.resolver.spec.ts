@@ -26,14 +26,20 @@ describe('NotificationContentResolver', () => {
       ],
     }).compile();
 
-    resolver = module.get<NotificationContentResolver>(NotificationContentResolver);
+    resolver = module.get<NotificationContentResolver>(
+      NotificationContentResolver,
+    );
     jest.clearAllMocks();
   });
 
   describe('filterAllowedChannels()', () => {
     it('returns all channels unchanged when force is true', async () => {
       const channels = [NotificationChannel.EMAIL, NotificationChannel.SMS];
-      const result = await resolver.filterAllowedChannels(channels, 'user-1', true);
+      const result = await resolver.filterAllowedChannels(
+        channels,
+        'user-1',
+        true,
+      );
       expect(result).toEqual(channels);
       expect(mockUserSettingService.getAllowedChannels).not.toHaveBeenCalled();
     });
@@ -45,11 +51,17 @@ describe('NotificationContentResolver', () => {
     });
 
     it('filters channels based on user preferences', async () => {
-      mockUserSettingService.getAllowedChannels.mockResolvedValue([NotificationChannel.EMAIL]);
+      mockUserSettingService.getAllowedChannels.mockResolvedValue([
+        NotificationChannel.EMAIL,
+      ]);
       mockUserSettingService.isQuietHours.mockResolvedValue(false);
 
       const result = await resolver.filterAllowedChannels(
-        [NotificationChannel.EMAIL, NotificationChannel.SMS, NotificationChannel.PUSH],
+        [
+          NotificationChannel.EMAIL,
+          NotificationChannel.SMS,
+          NotificationChannel.PUSH,
+        ],
         'user-1',
       );
       expect(result).toEqual([NotificationChannel.EMAIL]);
@@ -64,14 +76,20 @@ describe('NotificationContentResolver', () => {
       mockUserSettingService.isQuietHours.mockResolvedValue(true);
 
       const result = await resolver.filterAllowedChannels(
-        [NotificationChannel.EMAIL, NotificationChannel.SMS, NotificationChannel.PUSH],
+        [
+          NotificationChannel.EMAIL,
+          NotificationChannel.SMS,
+          NotificationChannel.PUSH,
+        ],
         'user-1',
       );
       expect(result).toEqual([NotificationChannel.EMAIL]);
     });
 
     it('quiet hours do NOT suppress EMAIL (email is non-intrusive)', async () => {
-      mockUserSettingService.getAllowedChannels.mockResolvedValue([NotificationChannel.EMAIL]);
+      mockUserSettingService.getAllowedChannels.mockResolvedValue([
+        NotificationChannel.EMAIL,
+      ]);
       mockUserSettingService.isQuietHours.mockResolvedValue(true);
 
       const result = await resolver.filterAllowedChannels(
@@ -95,7 +113,11 @@ describe('NotificationContentResolver', () => {
         NotificationChannel.EMAIL,
         recipient,
       );
-      expect(result).toEqual({ to: recipient.email, subject: 'Hello', html: '<p>Hi</p>' });
+      expect(result).toEqual({
+        to: recipient.email,
+        subject: 'Hello',
+        html: '<p>Hi</p>',
+      });
     });
 
     it('returns sms payload for inline SMS', async () => {
@@ -109,7 +131,10 @@ describe('NotificationContentResolver', () => {
 
     it('returns push payload for inline PUSH', async () => {
       const result = await resolver.resolve(
-        { type: 'inline', push: { title: 'Alert', body: 'Something happened' } },
+        {
+          type: 'inline',
+          push: { title: 'Alert', body: 'Something happened' },
+        },
         NotificationChannel.PUSH,
         recipient,
       );
@@ -160,7 +185,11 @@ describe('NotificationContentResolver', () => {
         NotificationChannel.EMAIL,
         recipient,
       );
-      expect(result).toMatchObject({ to: recipient.email, subject: 'Welcome', html: '<p>Welcome!</p>' });
+      expect(result).toMatchObject({
+        to: recipient.email,
+        subject: 'Welcome',
+        html: '<p>Welcome!</p>',
+      });
     });
 
     it('returns null when template disables the channel', async () => {
@@ -199,7 +228,10 @@ describe('NotificationContentResolver', () => {
 
     it('returns null when no push tokens on recipient', async () => {
       mockTemplatesService.renderAll.mockResolvedValue({
-        slots: { [NOTIFICATION_SLOTS.PUSH_TITLE]: 'Hi', [NOTIFICATION_SLOTS.PUSH_BODY]: 'Body' },
+        slots: {
+          [NOTIFICATION_SLOTS.PUSH_TITLE]: 'Hi',
+          [NOTIFICATION_SLOTS.PUSH_BODY]: 'Body',
+        },
         metadata: { channels: { push: true } },
       });
 

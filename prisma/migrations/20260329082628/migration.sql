@@ -2,17 +2,26 @@
   Warnings:
 
   - You are about to drop the column `success` on the `ai_extractions` table. All the data in the column will be lost.
+  - You are about to drop the column `pickupAddressId` on the `claims` table. All the data in the column will be lost.
+  - You are about to drop the column `pickupStationId` on the `claims` table. All the data in the column will be lost.
+  - You are about to drop the column `preferredHandoverDate` on the `claims` table. All the data in the column will be lost.
   - You are about to drop the column `extractionId` on the `document_cases` table. All the data in the column will be lost.
+  - You are about to drop the column `finderPresent` on the `handovers` table. All the data in the column will be lost.
+  - You are about to drop the column `finderSignature` on the `handovers` table. All the data in the column will be lost.
   - You are about to drop the column `aiInteractionId` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `aiScore` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `aiVerificationResult` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `securityQuestions` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `securityQuestionsAiInteractionId` on the `matches` table. All the data in the column will be lost.
+  - The `paymentProvider` column on the `transactions` table would be dropped and recreated. This will lead to data loss if there is data in the column.
   - You are about to drop the `case_status_transitions` table. If the table is not empty, all the data it contains will be lost.
   - You are about to drop the `notifications` table. If the table is not empty, all the data it contains will be lost.
   - A unique constraint covering the columns `[caseId]` on the table `ai_extractions` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[key,userId]` on the table `settings` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[checkoutRequestId]` on the table `transactions` will be added. If there are existing duplicate values, this will fail.
   - Added the required column `caseId` to the `ai_extractions` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `method` to the `handovers` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `auto` to the `lost_document_cases` table without a default value. This is not possible if the table is not empty.
 
 */
 -- CreateEnum
@@ -22,16 +31,43 @@ CREATE TYPE "ExtractionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', '
 CREATE TYPE "ExtractionStep" AS ENUM ('VISION', 'TEXT', 'POST_PROCESSING');
 
 -- CreateEnum
+CREATE TYPE "SubmissionMethod" AS ENUM ('DROPOFF', 'PICKUP');
+
+-- CreateEnum
+CREATE TYPE "HandoverMethod" AS ENUM ('PICKUP', 'DELIVERY');
+
+-- CreateEnum
+CREATE TYPE "PaymentProvider" AS ENUM ('MPESA', 'STRIPE', 'AFRICASTALKING');
+
+-- CreateEnum
+CREATE TYPE "DisbursementStatus" AS ENUM ('PENDING', 'INITIATED', 'COMPLETED', 'FAILED');
+
+-- CreateEnum
 CREATE TYPE "NotificationChannel" AS ENUM ('EMAIL', 'SMS', 'PUSH');
 
 -- CreateEnum
 CREATE TYPE "NotificationStatus" AS ENUM ('PENDING', 'QUEUED', 'SENT', 'FAILED', 'SKIPPED');
 
+-- AlterEnum
+ALTER TYPE "InvoiceStatus" ADD VALUE 'OVERDUE';
+
 -- DropForeignKey
 ALTER TABLE "case_status_transitions" DROP CONSTRAINT "case_status_transitions_caseId_fkey";
 
 -- DropForeignKey
+ALTER TABLE "claims" DROP CONSTRAINT "claims_pickupAddressId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "claims" DROP CONSTRAINT "claims_pickupStationId_fkey";
+
+-- DropForeignKey
 ALTER TABLE "document_cases" DROP CONSTRAINT "document_cases_extractionId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "handovers" DROP CONSTRAINT "handovers_pickupStationId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "invoices" DROP CONSTRAINT "invoices_claimId_fkey";
 
 -- DropForeignKey
 ALTER TABLE "matches" DROP CONSTRAINT "matches_aiInteractionId_fkey";
@@ -44,6 +80,12 @@ ALTER TABLE "notifications" DROP CONSTRAINT "notifications_documentCaseId_fkey";
 
 -- DropForeignKey
 ALTER TABLE "notifications" DROP CONSTRAINT "notifications_userId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "transactions" DROP CONSTRAINT "transactions_invoiceId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "transactions" DROP CONSTRAINT "transactions_userId_fkey";
 
 -- DropIndex
 DROP INDEX "document_embedding_ada_idx";
@@ -67,7 +109,30 @@ ADD COLUMN     "currentStep" "ExtractionStep",
 ADD COLUMN     "extractionStatus" "ExtractionStatus" NOT NULL DEFAULT 'PENDING';
 
 -- AlterTable
+ALTER TABLE "claims" DROP COLUMN "pickupAddressId",
+DROP COLUMN "pickupStationId",
+DROP COLUMN "preferredHandoverDate";
+
+-- AlterTable
 ALTER TABLE "document_cases" DROP COLUMN "extractionId";
+
+-- AlterTable
+ALTER TABLE "found_document_cases" ADD COLUMN     "collectionAddressId" TEXT,
+ADD COLUMN     "scheduledPickupAt" TIMESTAMP(3),
+ADD COLUMN     "submissionMethod" "SubmissionMethod";
+
+-- AlterTable
+ALTER TABLE "handovers" DROP COLUMN "finderPresent",
+DROP COLUMN "finderSignature",
+ADD COLUMN     "deliveryAddressId" TEXT,
+ADD COLUMN     "method" "HandoverMethod" NOT NULL,
+ALTER COLUMN "pickupStationId" DROP NOT NULL;
+
+-- AlterTable
+ALTER TABLE "invoices" ADD COLUMN     "dueDate" TIMESTAMP(3);
+
+-- AlterTable
+ALTER TABLE "lost_document_cases" ADD COLUMN     "auto" BOOLEAN NOT NULL;
 
 -- AlterTable
 ALTER TABLE "matches" DROP COLUMN "aiInteractionId",
@@ -83,6 +148,12 @@ ADD COLUMN     "userId" TEXT NOT NULL DEFAULT '*';
 -- AlterTable
 ALTER TABLE "status_transitions" ADD COLUMN     "metadata" JSONB;
 
+-- AlterTable
+ALTER TABLE "transactions" ADD COLUMN     "checkoutRequestId" TEXT,
+ADD COLUMN     "initiatedById" TEXT,
+DROP COLUMN "paymentProvider",
+ADD COLUMN     "paymentProvider" "PaymentProvider";
+
 -- DropTable
 DROP TABLE "case_status_transitions";
 
@@ -94,6 +165,27 @@ DROP TYPE "ActorType";
 
 -- DropEnum
 DROP TYPE "CaseType";
+
+-- CreateTable
+CREATE TABLE "disbursements" (
+    "id" TEXT NOT NULL,
+    "disbursementNumber" TEXT NOT NULL,
+    "invoiceId" TEXT NOT NULL,
+    "recipientId" TEXT NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'KES',
+    "paymentMethod" "PaymentMethod" NOT NULL,
+    "paymentProvider" "PaymentProvider",
+    "providerTransactionId" TEXT,
+    "status" "DisbursementStatus" NOT NULL DEFAULT 'PENDING',
+    "metadata" JSONB,
+    "initiatedAt" TIMESTAMP(3),
+    "completedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "disbursements_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "templates" (
@@ -185,6 +277,18 @@ CREATE TABLE "user_push_tokens" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "disbursements_disbursementNumber_key" ON "disbursements"("disbursementNumber");
+
+-- CreateIndex
+CREATE INDEX "disbursements_invoiceId_idx" ON "disbursements"("invoiceId");
+
+-- CreateIndex
+CREATE INDEX "disbursements_recipientId_idx" ON "disbursements"("recipientId");
+
+-- CreateIndex
+CREATE INDEX "disbursements_status_idx" ON "disbursements"("status");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "templates_key_key" ON "templates"("key");
 
 -- CreateIndex
@@ -224,13 +328,49 @@ CREATE INDEX "user_push_tokens_userId_idx" ON "user_push_tokens"("userId");
 CREATE UNIQUE INDEX "ai_extractions_caseId_key" ON "ai_extractions"("caseId");
 
 -- CreateIndex
+CREATE INDEX "invoices_dueDate_idx" ON "invoices"("dueDate");
+
+-- CreateIndex
 CREATE INDEX "settings_userId_idx" ON "settings"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "settings_key_userId_key" ON "settings"("key", "userId");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "transactions_checkoutRequestId_key" ON "transactions"("checkoutRequestId");
+
+-- CreateIndex
+CREATE INDEX "transactions_checkoutRequestId_idx" ON "transactions"("checkoutRequestId");
+
 -- AddForeignKey
 ALTER TABLE "ai_extractions" ADD CONSTRAINT "ai_extractions_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "document_cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "found_document_cases" ADD CONSTRAINT "found_document_cases_collectionAddressId_fkey" FOREIGN KEY ("collectionAddressId") REFERENCES "addresses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "handovers" ADD CONSTRAINT "handovers_pickupStationId_fkey" FOREIGN KEY ("pickupStationId") REFERENCES "pickup_stations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "handovers" ADD CONSTRAINT "handovers_deliveryAddressId_fkey" FOREIGN KEY ("deliveryAddressId") REFERENCES "addresses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "claims"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_initiatedById_fkey" FOREIGN KEY ("initiatedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "invoices"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "disbursements" ADD CONSTRAINT "disbursements_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "invoices"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "disbursements" ADD CONSTRAINT "disbursements_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "template_versions" ADD CONSTRAINT "template_versions_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
 import { DocumentCasesController } from './document-cases.controller';
 import { DocumentCasesService } from './document-cases.service';

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { NotificationConfig } from '../../../notification.config';
@@ -40,7 +42,11 @@ export class AfricasTalkingProvider implements ISmsProvider {
       if (first?.status === 'Success') {
         return { success: true, messageId: first.messageId };
       }
-      return { success: false, error: first?.status ?? 'Unknown error', raw: response.data };
+      return {
+        success: false,
+        error: first?.status ?? 'Unknown error',
+        raw: response.data,
+      };
     } catch (err: any) {
       return { success: false, error: err.message, raw: err.response?.data };
     }

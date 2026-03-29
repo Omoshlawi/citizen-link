@@ -8,11 +8,17 @@ import { EmailChannelService } from './channels/email/email.channel.service';
 import { SmsChannelService } from './channels/sms/sms.channel.service';
 import { PushChannelService } from './channels/push/push.channel.service';
 import { NOTIFICATION_QUEUES } from './notification.constants';
-import { NotificationChannel, NotificationStatus } from '../../generated/prisma/enums';
+import {
+  NotificationChannel,
+  NotificationStatus,
+} from '../../generated/prisma/enums';
 import { NotificationJob } from './notification.interfaces';
 import { Job } from 'bullmq';
 
-const makeMockJob = (overrides: Partial<NotificationJob> = {}, attemptsMade = 0): Job<NotificationJob> =>
+const makeMockJob = (
+  overrides: Partial<NotificationJob> = {},
+  attemptsMade = 0,
+): Job<NotificationJob> =>
   ({
     id: 'job-1',
     attemptsMade,
@@ -20,14 +26,17 @@ const makeMockJob = (overrides: Partial<NotificationJob> = {}, attemptsMade = 0)
     data: {
       logId: 'log-1',
       channel: NotificationChannel.EMAIL,
-      source: { type: 'inline', email: { subject: 'Test', html: '<p>Test</p>' } },
+      source: {
+        type: 'inline',
+        email: { subject: 'Test', html: '<p>Test</p>' },
+      },
       recipient: { email: 'test@example.com' },
       userId: undefined,
       force: false,
       attempt: 0,
       ...overrides,
     },
-  } as unknown as Job<NotificationJob>);
+  }) as unknown as Job<NotificationJob>;
 
 describe('NotificationProcessorHandler', () => {
   let handler: NotificationProcessorHandler;
@@ -48,7 +57,9 @@ describe('NotificationProcessorHandler', () => {
     contentResolver = { resolve: jest.fn() } as any;
     emailChannel = { send: jest.fn() } as any;
     pushChannel = { send: jest.fn() } as any;
-    pushToken = { deactivatePushToken: jest.fn().mockResolvedValue(undefined) } as any;
+    pushToken = {
+      deactivatePushToken: jest.fn().mockResolvedValue(undefined),
+    } as any;
     receiptQueue = { add: jest.fn().mockResolvedValue({}) };
 
     const smsChannel = { send: jest.fn() } as any;
@@ -62,11 +73,16 @@ describe('NotificationProcessorHandler', () => {
         { provide: SmsChannelService, useValue: smsChannel },
         { provide: PushChannelService, useValue: pushChannel },
         { provide: PushTokenService, useValue: pushToken },
-        { provide: getQueueToken(NOTIFICATION_QUEUES.PUSH_RECEIPT), useValue: receiptQueue },
+        {
+          provide: getQueueToken(NOTIFICATION_QUEUES.PUSH_RECEIPT),
+          useValue: receiptQueue,
+        },
       ],
     }).compile();
 
-    handler = module.get<NotificationProcessorHandler>(NotificationProcessorHandler);
+    handler = module.get<NotificationProcessorHandler>(
+      NotificationProcessorHandler,
+    );
   });
 
   describe('process()', () => {
@@ -76,12 +92,18 @@ describe('NotificationProcessorHandler', () => {
         subject: 'Test',
         html: '<p>Test</p>',
       });
-      emailChannel.send.mockResolvedValue({ success: true, messageId: 'msg-1', providerName: 'mailpit' });
+      emailChannel.send.mockResolvedValue({
+        success: true,
+        messageId: 'msg-1',
+        providerName: 'mailpit',
+      });
 
       await handler.process(makeMockJob());
 
       expect(prisma.notificationLog.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ status: 'QUEUED' }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'QUEUED' }),
+        }),
       );
       expect(prisma.notificationLog.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -96,7 +118,9 @@ describe('NotificationProcessorHandler', () => {
       await handler.process(makeMockJob());
 
       expect(prisma.notificationLog.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ status: 'SKIPPED' }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'SKIPPED' }),
+        }),
       );
     });
 
@@ -106,9 +130,14 @@ describe('NotificationProcessorHandler', () => {
         subject: 'Test',
         html: '<p>Test</p>',
       });
-      emailChannel.send.mockResolvedValue({ success: false, error: 'SMTP timeout' });
+      emailChannel.send.mockResolvedValue({
+        success: false,
+        error: 'SMTP timeout',
+      });
 
-      await expect(handler.process(makeMockJob())).rejects.toThrow('SMTP timeout');
+      await expect(handler.process(makeMockJob())).rejects.toThrow(
+        'SMTP timeout',
+      );
 
       expect(prisma.notificationLog.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -119,7 +148,11 @@ describe('NotificationProcessorHandler', () => {
 
     it('truncates lastError to 500 characters', async () => {
       const longError = 'x'.repeat(1000);
-      contentResolver.resolve.mockResolvedValue({ to: 'a@b.com', subject: 'x', html: 'x' });
+      contentResolver.resolve.mockResolvedValue({
+        to: 'a@b.com',
+        subject: 'x',
+        html: 'x',
+      });
       emailChannel.send.mockResolvedValue({ success: false, error: longError });
 
       await expect(handler.process(makeMockJob())).rejects.toThrow();
@@ -131,7 +164,11 @@ describe('NotificationProcessorHandler', () => {
     });
 
     it('deactivates push token on DeviceNotRegistered error', async () => {
-      const pushPayload = { to: 'ExponentPushToken[abc]', title: 'Hi', body: 'Test' };
+      const pushPayload = {
+        to: 'ExponentPushToken[abc]',
+        title: 'Hi',
+        body: 'Test',
+      };
       contentResolver.resolve.mockResolvedValue(pushPayload);
       pushChannel.send.mockResolvedValue({
         success: false,
@@ -139,14 +176,23 @@ describe('NotificationProcessorHandler', () => {
         errorCode: 'DeviceNotRegistered',
       });
 
-      const job = makeMockJob({ channel: NotificationChannel.PUSH, recipient: { pushTokens: [pushPayload.to] } });
+      const job = makeMockJob({
+        channel: NotificationChannel.PUSH,
+        recipient: { pushTokens: [pushPayload.to] },
+      });
       await expect(handler.process(job)).rejects.toThrow();
 
-      expect(pushToken.deactivatePushToken).toHaveBeenCalledWith(pushPayload.to);
+      expect(pushToken.deactivatePushToken).toHaveBeenCalledWith(
+        pushPayload.to,
+      );
     });
 
     it('does NOT deactivate token on transient push error', async () => {
-      const pushPayload = { to: 'ExponentPushToken[abc]', title: 'Hi', body: 'Test' };
+      const pushPayload = {
+        to: 'ExponentPushToken[abc]',
+        title: 'Hi',
+        body: 'Test',
+      };
       contentResolver.resolve.mockResolvedValue(pushPayload);
       pushChannel.send.mockResolvedValue({
         success: false,
@@ -154,14 +200,21 @@ describe('NotificationProcessorHandler', () => {
         errorCode: 'EXPO_NETWORK_ERROR',
       });
 
-      const job = makeMockJob({ channel: NotificationChannel.PUSH, recipient: { pushTokens: [pushPayload.to] } });
+      const job = makeMockJob({
+        channel: NotificationChannel.PUSH,
+        recipient: { pushTokens: [pushPayload.to] },
+      });
       await expect(handler.process(job)).rejects.toThrow();
 
       expect(pushToken.deactivatePushToken).not.toHaveBeenCalled();
     });
 
     it('enqueues a receipt-check job 15 minutes after a successful push', async () => {
-      const pushPayload = { to: 'ExponentPushToken[abc]', title: 'Hi', body: 'Msg' };
+      const pushPayload = {
+        to: 'ExponentPushToken[abc]',
+        title: 'Hi',
+        body: 'Msg',
+      };
       contentResolver.resolve.mockResolvedValue(pushPayload);
       pushChannel.send.mockResolvedValue({
         success: true,
@@ -169,19 +222,33 @@ describe('NotificationProcessorHandler', () => {
         providerName: 'expo',
       });
 
-      const job = makeMockJob({ channel: NotificationChannel.PUSH, recipient: { pushTokens: [pushPayload.to] } });
+      const job = makeMockJob({
+        channel: NotificationChannel.PUSH,
+        recipient: { pushTokens: [pushPayload.to] },
+      });
       await handler.process(job);
 
       expect(receiptQueue.add).toHaveBeenCalledWith(
         'check-receipt',
-        expect.objectContaining({ receiptId: 'receipt-id-42', token: pushPayload.to }),
+        expect.objectContaining({
+          receiptId: 'receipt-id-42',
+          token: pushPayload.to,
+        }),
         { delay: 15 * 60 * 1000 },
       );
     });
 
     it('does NOT enqueue a receipt job for email sends', async () => {
-      contentResolver.resolve.mockResolvedValue({ to: 'test@example.com', subject: 'x', html: 'x' });
-      emailChannel.send.mockResolvedValue({ success: true, messageId: 'msg-1', providerName: 'mailpit' });
+      contentResolver.resolve.mockResolvedValue({
+        to: 'test@example.com',
+        subject: 'x',
+        html: 'x',
+      });
+      emailChannel.send.mockResolvedValue({
+        success: true,
+        messageId: 'msg-1',
+        providerName: 'mailpit',
+      });
 
       await handler.process(makeMockJob());
 

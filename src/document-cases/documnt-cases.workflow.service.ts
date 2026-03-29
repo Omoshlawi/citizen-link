@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import {

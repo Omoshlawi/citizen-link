@@ -6,14 +6,44 @@
     "description": "Sent to the owner when they submit a lost document report.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Lost Document Case #{{case.caseNumber}} Received — Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/lost-case-reported.hbs" },
-      "sms_body": { "source": "text", "text": "Citizen Link: Your lost {{case.document.type.name}} case #{{case.caseNumber}} has been registered. We will notify you when a match is found." },
-      "push_title": { "source": "text", "text": "Report Received — #{{case.caseNumber}}" },
-      "push_body": { "source": "text", "text": "Your lost {{case.document.type.name}} report has been registered. We are now searching for a match." }
+      "email_subject": {
+        "source": "text",
+        "text": "Lost Document Case #{{case.caseNumber}} Received \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/lost-case-reported.hbs"
+      },
+      "sms_body": {
+        "source": "text",
+        "text": "Citizen Link: Your lost {{case.document.type.name}} case #{{case.caseNumber}} has been registered. We will notify you when a match is found."
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Report Received \u2014 #{{case.caseNumber}}"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your lost {{case.document.type.name}} report has been registered. We are now searching for a match."
+      }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body"] },
-    "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "sms_body",
+        "push_title",
+        "push_body"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": true,
+        "push": true
+      }
+    }
   },
   {
     "key": "notification.case.found.submitted",
@@ -22,12 +52,34 @@
     "description": "Sent to the finder when their found document report is submitted and awaiting staff review.",
     "engine": "handlebars",
     "slots": {
-      "push_title": { "source": "text", "text": "Report Submitted — Under Review" },
-      "push_body": { "source": "text", "text": "Your found {{case.document.type.name}} report (case #{{case.caseNumber}}) has been submitted and is awaiting verification." },
-      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+      "push_title": {
+        "source": "text",
+        "text": "Report Submitted \u2014 Under Review"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your found {{case.document.type.name}} report (case #{{case.caseNumber}}) has been submitted and is awaiting verification."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
     },
-    "schema": { "required": [], "optional": ["push_title", "push_body", "push_data"] },
-    "metadata": { "channels": { "email": false, "sms": false, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": false,
+        "sms": false,
+        "push": true
+      }
+    }
   },
   {
     "key": "notification.case.found.verified",
@@ -36,15 +88,49 @@
     "description": "Sent to the finder when their found document report is verified by staff.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Your Found Document Report Has Been Verified — Case #{{case.caseNumber}}" },
-      "email_body": { "source": "file", "path": "mail/found-case-verified.hbs" },
-      "sms_body": { "source": "text", "text": "Citizen Link: Your found {{case.document.type.name}} case #{{case.caseNumber}} has been verified. We are matching it with lost cases now." },
-      "push_title": { "source": "text", "text": "Report Verified — #{{case.caseNumber}}" },
-      "push_body": { "source": "text", "text": "Your found {{case.document.type.name}} report has been verified. We are now searching for the rightful owner." },
-      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+      "email_subject": {
+        "source": "text",
+        "text": "Your Found Document Report Has Been Verified \u2014 Case #{{case.caseNumber}}"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/found-case-verified.hbs"
+      },
+      "sms_body": {
+        "source": "text",
+        "text": "Citizen Link: Your found {{case.document.type.name}} case #{{case.caseNumber}} has been verified. We are matching it with lost cases now."
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Report Verified \u2014 #{{case.caseNumber}}"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your found {{case.document.type.name}} report has been verified. We are now searching for the rightful owner."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body", "push_data"] },
-    "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "sms_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": true,
+        "push": true
+      }
+    }
   },
   {
     "key": "notification.case.found.matched",
@@ -53,15 +139,49 @@
     "description": "Sent to the owner of a lost document when a matching found report is identified. Owner must claim or reject.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Match Found for Your Lost Case #{{match.lostDocumentCase.case.caseNumber}} — Action Required" },
-      "email_body": { "source": "file", "path": "mail/owner-match-found.hbs" },
-      "sms_body": { "source": "text", "text": "Citizen Link: A match was found for your lost {{match.lostDocumentCase.case.document.type.name}} (case #{{match.lostDocumentCase.case.caseNumber}}). Open the app to claim or reject the match." },
-      "push_title": { "source": "text", "text": "Match Found — Is This Yours?" },
-      "push_body": { "source": "text", "text": "A potential match was found for your {{match.lostDocumentCase.case.document.type.name}} (case #{{match.lostDocumentCase.case.caseNumber}}). Tap to review and respond." },
-      "push_data": { "source": "text", "text": "{\"screen\": \"match\", \"matchId\": \"{{match.id}}\"}" }
+      "email_subject": {
+        "source": "text",
+        "text": "Match Found for Your Lost Case #{{match.lostDocumentCase.case.caseNumber}} \u2014 Action Required"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/owner-match-found.hbs"
+      },
+      "sms_body": {
+        "source": "text",
+        "text": "Citizen Link: A match was found for your lost {{match.lostDocumentCase.case.document.type.name}} (case #{{match.lostDocumentCase.case.caseNumber}}). Open the app to claim or reject the match."
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Match Found \u2014 Is This Yours?"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "A potential match was found for your {{match.lostDocumentCase.case.document.type.name}} (case #{{match.lostDocumentCase.case.caseNumber}}). Tap to review and respond."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"match\", \"matchId\": \"{{match.id}}\"}"
+      }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body", "push_data"] },
-    "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "sms_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": true,
+        "push": true
+      }
+    }
   },
   {
     "key": "notification.case.lost.matched",
@@ -70,15 +190,49 @@
     "description": "Sent to the finder when their found document report is matched to a lost case. Owner has been notified to take action.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Your Found Document Report Has Been Matched — Case #{{match.foundDocumentCase.case.caseNumber}}" },
-      "email_body": { "source": "file", "path": "mail/finder-match-found.hbs" },
-      "sms_body": { "source": "text", "text": "Citizen Link: The {{match.foundDocumentCase.case.document.type.name}} you reported (case #{{match.foundDocumentCase.case.caseNumber}}) has been matched to a lost report. The owner has been notified." },
-      "push_title": { "source": "text", "text": "Your Report Has Been Matched" },
-      "push_body": { "source": "text", "text": "The {{match.foundDocumentCase.case.document.type.name}} you found (case #{{match.foundDocumentCase.case.caseNumber}}) has been matched to a lost report. The owner is reviewing the match." },
-      "push_data": { "source": "text", "text": "{\"screen\": \"match\", \"matchId\": \"{{match.id}}\"}" }
+      "email_subject": {
+        "source": "text",
+        "text": "Your Found Document Report Has Been Matched \u2014 Case #{{match.foundDocumentCase.case.caseNumber}}"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/finder-match-found.hbs"
+      },
+      "sms_body": {
+        "source": "text",
+        "text": "Citizen Link: The {{match.foundDocumentCase.case.document.type.name}} you reported (case #{{match.foundDocumentCase.case.caseNumber}}) has been matched to a lost report. The owner has been notified."
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Your Report Has Been Matched"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "The {{match.foundDocumentCase.case.document.type.name}} you found (case #{{match.foundDocumentCase.case.caseNumber}}) has been matched to a lost report. The owner is reviewing the match."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"match\", \"matchId\": \"{{match.id}}\"}"
+      }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "sms_body", "push_title", "push_body", "push_data"] },
-    "metadata": { "channels": { "email": true, "sms": true, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "sms_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": true,
+        "push": true
+      }
+    }
   },
   {
     "key": "notification.case.found.extraction.complete",
@@ -87,14 +241,44 @@
     "description": "Sent to the finder when AI extraction of their found document report succeeds.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Action Required: Review Extracted Details for Case #{{case.caseNumber}} — Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/found-case-extraction-complete.hbs" },
-      "push_title": { "source": "text", "text": "Details Extracted — Review Required" },
-      "push_body": { "source": "text", "text": "We scanned your found {{case.document.type.name}} images. Tap to review the extracted details." },
-      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+      "email_subject": {
+        "source": "text",
+        "text": "Action Required: Review Extracted Details for Case #{{case.caseNumber}} \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/found-case-extraction-complete.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Details Extracted \u2014 Review Required"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "We scanned your found {{case.document.type.name}} images. Tap to review the extracted details."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"] },
-    "metadata": { "channels": { "email": true, "sms": false, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
   },
   {
     "key": "notification.case.found.extraction.failed",
@@ -103,14 +287,44 @@
     "description": "Sent to the finder when AI extraction of their found document report permanently fails.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Action Required: Document Scan Unsuccessful for Case #{{case.caseNumber}} — Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/found-case-extraction-failed.hbs" },
-      "push_title": { "source": "text", "text": "Document Scan Unsuccessful" },
-      "push_body": { "source": "text", "text": "We had trouble scanning your found document images for case #{{case.caseNumber}}. Tap to review your case and try again." },
-      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+      "email_subject": {
+        "source": "text",
+        "text": "Action Required: Document Scan Unsuccessful for Case #{{case.caseNumber}} \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/found-case-extraction-failed.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Document Scan Unsuccessful"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "We had trouble scanning your found document images for case #{{case.caseNumber}}. Tap to review your case and try again."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"] },
-    "metadata": { "channels": { "email": true, "sms": false, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
   },
   {
     "key": "notification.case.lost.extraction.complete",
@@ -119,14 +333,44 @@
     "description": "Sent to owner after background AI document image extraction finishes on a lost case report.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Action Required: Review Extracted Details for Case #{{case.caseNumber}} — Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/lost-case-extraction-complete.hbs" },
-      "push_title": { "source": "text", "text": "Details Extracted — Review Required" },
-      "push_body": { "source": "text", "text": "We scanned your {{case.document.type.name}} images. Tap to review the extracted details and confirm they are correct." },
-      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+      "email_subject": {
+        "source": "text",
+        "text": "Action Required: Review Extracted Details for Case #{{case.caseNumber}} \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/lost-case-extraction-complete.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Details Extracted \u2014 Review Required"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "We scanned your {{case.document.type.name}} images. Tap to review the extracted details and confirm they are correct."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"] },
-    "metadata": { "channels": { "email": true, "sms": false, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
   },
   {
     "key": "notification.case.lost.extraction.failed",
@@ -135,14 +379,44 @@
     "description": "Sent to owner when background AI document image extraction permanently fails on a lost case.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Action Required: Document Scan Unsuccessful for Case #{{case.caseNumber}} — Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/lost-case-extraction-failed.hbs" },
-      "push_title": { "source": "text", "text": "Document Scan Unsuccessful" },
-      "push_body": { "source": "text", "text": "We had trouble scanning your {{case.document.type.name}} images for case #{{case.caseNumber}}. Tap to review your case and try again." },
-      "push_data": { "source": "text", "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}" }
+      "email_subject": {
+        "source": "text",
+        "text": "Action Required: Document Scan Unsuccessful for Case #{{case.caseNumber}} \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/lost-case-extraction-failed.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Document Scan Unsuccessful"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "We had trouble scanning your {{case.document.type.name}} images for case #{{case.caseNumber}}. Tap to review your case and try again."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
     },
-    "schema": { "required": [], "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"] },
-    "metadata": { "channels": { "email": true, "sms": false, "push": true } }
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
   },
   {
     "key": "prompt.chatbot.guide",
@@ -150,8 +424,20 @@
     "name": "Chatbot Guide",
     "description": "Guidance rules for the AI chatbot assistant.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/chatbot-guide.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/chatbot-guide.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -160,8 +446,20 @@
     "name": "Claim Verification",
     "description": "Prompt for verifying validity of a field claim.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/claim-verification.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/claim-verification.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -170,8 +468,20 @@
     "name": "Document Data Extraction",
     "description": "Extract structured data from document raw text.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/document-data-extraction.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/document-data-extraction.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -180,8 +490,20 @@
     "name": "Document Matching",
     "description": "Evaluate match levels between lost and found cases.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/document-matching.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/document-matching.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -190,8 +512,20 @@
     "name": "Field Confidence Scoring",
     "description": "Score AI confidence in extracted fields.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/field-confidence-scoring.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/field-confidence-scoring.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -200,8 +534,20 @@
     "name": "Image Quality Analysis",
     "description": "Check if an uploaded image is clear and contains a valid document.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/image-quality-analysis.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/image-quality-analysis.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -210,8 +556,20 @@
     "name": "Match Verification",
     "description": "Verify high-level match between cases.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/match-verification.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/match-verification.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -220,8 +578,20 @@
     "name": "Security Questions Generator",
     "description": "Generate security questions based on matched data.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/security-questions.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/security-questions.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -230,8 +600,20 @@
     "name": "Text Extraction",
     "description": "Extract text from OCR vision results.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/text-extraction.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/text-extraction.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -240,8 +622,20 @@
     "name": "Structured Vision Extraction",
     "description": "Directly extract structured fields from images.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/vision-extraction-structured.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/vision-extraction-structured.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -250,8 +644,20 @@
     "name": "Unstructured Vision Extraction",
     "description": "Extract unstructured text from images.",
     "engine": "handlebars",
-    "slots": { "user": { "source": "file", "path": "prompts/vision-extraction-unstructured.hbs" } },
-    "schema": { "required": ["user"], "optional": ["system"] },
+    "slots": {
+      "user": {
+        "source": "file",
+        "path": "prompts/vision-extraction-unstructured.hbs"
+      }
+    },
+    "schema": {
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
+    },
     "metadata": {}
   },
   {
@@ -261,11 +667,29 @@
     "description": "Sent on sign-up to verify the user's email address.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Verify your email — Welcome to Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/auth-email-verification.hbs" }
+      "email_subject": {
+        "source": "text",
+        "text": "Verify your email \u2014 Welcome to Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/auth-email-verification.hbs"
+      }
     },
-    "schema": { "required": ["email_subject", "email_body"], "optional": [] },
-    "metadata": { "channels": { "email": true, "sms": false, "push": false } }
+    "schema": {
+      "required": [
+        "email_subject",
+        "email_body"
+      ],
+      "optional": []
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": false
+      }
+    }
   },
   {
     "key": "auth.password.reset",
@@ -274,11 +698,29 @@
     "description": "Sent to users when they request a password reset.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Action Required: Reset Your Password — Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/auth-password-reset.hbs" }
+      "email_subject": {
+        "source": "text",
+        "text": "Action Required: Reset Your Password \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/auth-password-reset.hbs"
+      }
     },
-    "schema": { "required": ["email_subject", "email_body"], "optional": [] },
-    "metadata": { "channels": { "email": true, "sms": false, "push": false } }
+    "schema": {
+      "required": [
+        "email_subject",
+        "email_body"
+      ],
+      "optional": []
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": false
+      }
+    }
   },
   {
     "key": "auth.email.change",
@@ -287,11 +729,29 @@
     "description": "Sent to users when they request an email address change.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Action Required: Verify Your New Email Address — Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/auth-change-email-verification.hbs" }
+      "email_subject": {
+        "source": "text",
+        "text": "Action Required: Verify Your New Email Address \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/auth-change-email-verification.hbs"
+      }
     },
-    "schema": { "required": ["email_subject", "email_body"], "optional": [] },
-    "metadata": { "channels": { "email": true, "sms": false, "push": false } }
+    "schema": {
+      "required": [
+        "email_subject",
+        "email_body"
+      ],
+      "optional": []
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": false
+      }
+    }
   },
   {
     "key": "notification.handover.scheduled",
@@ -302,7 +762,7 @@
     "slots": {
       "email_subject": {
         "source": "text",
-        "text": "Handover Scheduled — Claim #{{handover.claim.claimNumber}}"
+        "text": "Handover Scheduled \u2014 Claim #{{handover.claim.claimNumber}}"
       },
       "email_body": {
         "source": "file",
@@ -310,7 +770,7 @@
       },
       "push_title": {
         "source": "text",
-        "text": "Handover Scheduled — #{{handover.handoverNumber}}"
+        "text": "Handover Scheduled \u2014 #{{handover.handoverNumber}}"
       },
       "push_body": {
         "source": "text",
@@ -323,10 +783,20 @@
     },
     "schema": {
       "required": [],
-      "optional": ["email_subject", "email_body", "push_title", "push_body", "push_data"]
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
     },
     "metadata": {
-      "channels": { "email": true, "sms": false, "push": true }
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
     }
   },
   {
@@ -336,10 +806,74 @@
     "description": "Sent to the current email address when an email change is requested, as a security notice.",
     "engine": "handlebars",
     "slots": {
-      "email_subject": { "source": "text", "text": "Security Notice: Email Address Change Requested — Citizen Link" },
-      "email_body": { "source": "file", "path": "mail/auth-change-email-alert.hbs" }
+      "email_subject": {
+        "source": "text",
+        "text": "Security Notice: Email Address Change Requested \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/auth-change-email-alert.hbs"
+      }
     },
-    "schema": { "required": ["email_subject", "email_body"], "optional": [] },
-    "metadata": { "channels": { "email": true, "sms": false, "push": false } }
+    "schema": {
+      "required": [
+        "email_subject",
+        "email_body"
+      ],
+      "optional": []
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": false
+      }
+    }
+  },
+  {
+    "key": "notification.disbursement.reward_ready",
+    "type": "notification",
+    "name": "Finder Reward Ready",
+    "description": "Sent to the finder when their reward disbursement is created after an invoice is fully paid.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Your Finder Reward of KES {{amount}} Is Ready \u2014 Disbursement #{{disbursementNumber}}"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/disbursement-reward-ready.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Reward Ready \u2014 KES {{amount}}"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your finder reward of KES {{amount}} (ref #{{disbursementNumber}}) is ready to withdraw."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\":\"wallet\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
   }
 ]

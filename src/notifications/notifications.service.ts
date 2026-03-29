@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   ForbiddenException,
   Injectable,
@@ -14,7 +15,10 @@ import {
 import { CustomRepresentationService } from '../common/query-builder/representation.service';
 import { SortService } from '../common/query-builder/sort.service';
 import { QueryNotificationLogDto } from './notification.dto';
-import { NotificationChannel, NotificationStatus } from '../../generated/prisma/enums';
+import {
+  NotificationChannel,
+  NotificationStatus,
+} from '../../generated/prisma/enums';
 import { Prisma } from '../../generated/prisma/client';
 
 type EventStatus = 'SENT' | 'FAILED' | 'PENDING' | 'PARTIAL';
@@ -153,7 +157,9 @@ export class NotificationsService {
     const updated = await this.prisma.notificationEvent.update({
       where: { id },
       data: { readAt: new Date() },
-      include: { logs: { select: { status: true, channel: true, sentAt: true } } },
+      include: {
+        logs: { select: { status: true, channel: true, sentAt: true } },
+      },
     });
     return this.formatEvent(updated);
   }
@@ -178,7 +184,11 @@ export class NotificationsService {
     });
   }
 
-  async restore(id: string, user: UserSession['user'], _query: CustomRepresentationQueryDto) {
+  async restore(
+    id: string,
+    user: UserSession['user'],
+    _query: CustomRepresentationQueryDto,
+  ) {
     const isAdmin = isSuperUser(user);
     const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
@@ -195,27 +205,27 @@ export class NotificationsService {
     });
   }
 
-  private formatEvent(
-    event: {
-      id: string;
-      title: string;
-      body: string;
-      description?: string | null;
-      readAt: Date | null;
-      voided: boolean;
-      createdAt: Date;
-      updatedAt: Date;
-      userId: string;
-      templateId: string | null;
-      logs: { status: NotificationStatus; channel: NotificationChannel; sentAt?: Date | null }[];
-    },
-  ) {
+  private formatEvent(event: {
+    id: string;
+    title: string;
+    body: string;
+    description?: string | null;
+    readAt: Date | null;
+    voided: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: string;
+    templateId: string | null;
+    logs: {
+      status: NotificationStatus;
+      channel: NotificationChannel;
+      sentAt?: Date | null;
+    }[];
+  }) {
     const status = deriveEventStatus(event.logs);
     const channelsSent = [
       ...new Set(
-        event.logs
-          .filter((l) => l.status === 'SENT')
-          .map((l) => l.channel),
+        event.logs.filter((l) => l.status === 'SENT').map((l) => l.channel),
       ),
     ];
     return {

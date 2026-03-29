@@ -177,9 +177,9 @@ export class DocumentCasesService {
     this.caseVisionExtractionQueue
       .add('extract-vision', {
         caseId: documentCase.id,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-        documentId: documentCase.document!.id!,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
+        documentId: documentCase.document!.id,
+
         extractionId: documentCase.extraction!.id,
         images,
         userId: user.id,
@@ -243,9 +243,9 @@ export class DocumentCasesService {
     this.caseVisionExtractionQueue
       .add('extract-vision', {
         caseId: documentCase.id,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
         documentId: documentCase.document!.id,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
         extractionId: documentCase.extraction!.id,
         images,
         userId: user.id,

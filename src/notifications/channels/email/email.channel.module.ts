@@ -23,7 +23,8 @@ export class EmailChannelModule {
         MailerModule.forRootAsync({
           inject: [NotificationConfig],
           useFactory: (config: NotificationConfig) => {
-            const smtpFrom = config.smtpFrom ?? 'CitizenLink <no-reply@localhost>';
+            const smtpFrom =
+              config.smtpFrom ?? 'CitizenLink <no-reply@localhost>';
             if (!config.smtpFrom) {
               new Logger('EmailChannelModule').warn(
                 'SMTP_FROM is not configured — defaulting to "CitizenLink <no-reply@localhost>". ' +
