@@ -91,9 +91,15 @@ const FoundDocumentCaseBaseSchema = z.object({
   description: z.string().optional(),
   images: z.string().nonempty().array().nonempty().max(2),
   submissionMethod: z.enum(['DROPOFF', 'PICKUP']).optional(),
-  pickupStationId: z.uuid().optional(),
-  collectionAddressId: z.uuid().optional(),
-  scheduledPickupAt: z.iso.datetime().optional(),
+  pickupStationId: z.uuid().optional().describe('Drop Off - Partner Station'),
+  collectionAddressId: z
+    .uuid()
+    .optional()
+    .describe('Pickup - Collection Address'),
+  scheduledPickupAt: z.iso
+    .datetime()
+    .optional()
+    .describe('Pickup - Scheduled Pickup Date and Time'),
 });
 
 export const FoundDocumentCaseSchema = FoundDocumentCaseBaseSchema.superRefine(
@@ -153,7 +159,10 @@ export class CreateLostDocumentCaseDto extends createZodDto(
 ) {}
 
 export class UpdateDocumentCaseDto extends createZodDto(
-  FoundDocumentCaseBaseSchema.omit({ images: true }).partial(),
+  FoundDocumentCaseSchema.omit({
+    images: true,
+    typeId: true,
+  }).partial(),
 ) {}
 
 export class LostDocumentCaseResponseDto implements LostDocumentCase {

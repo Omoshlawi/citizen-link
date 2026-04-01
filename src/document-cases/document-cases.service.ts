@@ -9,6 +9,7 @@ import {
   DocumentCase,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
+  SubmissionMethod,
 } from '../../generated/prisma/client';
 import { UserSession } from '../auth/auth.types';
 import {
@@ -80,7 +81,7 @@ export class DocumentCasesService {
       documentCase.lostDocumentCase.status === LostDocumentCaseStatus.COMPLETED
     ) {
       throw new BadRequestException(
-        'Cant Update Lost Document Case that is completed',
+        "Can't Update Lost Document Case that is completed",
       );
     }
     if (
@@ -88,9 +89,10 @@ export class DocumentCasesService {
       documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
     ) {
       throw new BadRequestException(
-        'Cant Update Found Document Case that is not in draft status',
+        "Can't Update Found Document Case that is not in draft status",
       );
     }
+    return documentCase;
   }
 
   async update(
@@ -99,20 +101,47 @@ export class DocumentCasesService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    await this.canUpdateCase(id);
+    const documentCase = await this.canUpdateCase(id);
     const docCase = await this.prismaService.documentCase.update({
       where: {
         id,
         userId: user.id,
       },
       data: {
-        ...updateDocumentCaseDto,
         eventDate: updateDocumentCaseDto.eventDate
           ? dayjs(updateDocumentCaseDto.eventDate).toDate()
           : undefined,
-      },
-      include: {
-        document: true,
+        addressId: updateDocumentCaseDto.addressId,
+        description: updateDocumentCaseDto.description,
+        tags: updateDocumentCaseDto.tags,
+        foundDocumentCase: documentCase.foundDocumentCase
+          ? {
+              update: {
+                where: {
+                  caseId: id,
+                },
+                data: {
+                  submissionMethod: updateDocumentCaseDto.submissionMethod,
+                  pickupStationId:
+                    updateDocumentCaseDto.submissionMethod ===
+                    SubmissionMethod.DROPOFF
+                      ? updateDocumentCaseDto.pickupStationId
+                      : undefined,
+                  collectionAddressId:
+                    updateDocumentCaseDto.submissionMethod ===
+                    SubmissionMethod.PICKUP
+                      ? updateDocumentCaseDto.collectionAddressId
+                      : undefined,
+                  scheduledPickupAt:
+                    updateDocumentCaseDto.submissionMethod ===
+                      SubmissionMethod.PICKUP &&
+                    updateDocumentCaseDto.scheduledPickupAt
+                      ? dayjs(updateDocumentCaseDto.scheduledPickupAt).toDate()
+                      : undefined,
+                },
+              },
+            }
+          : undefined,
       },
     });
     return await this.findOne(docCase.id, query, user);
