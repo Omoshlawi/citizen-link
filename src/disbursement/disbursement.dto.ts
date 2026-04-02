@@ -7,8 +7,6 @@ import {
   DisbursementStatus,
   PaymentMethod,
   PaymentProvider,
-  WalletEntryType,
-  WalletEntryReason,
 } from '../../generated/prisma/client';
 
 export const WithdrawDisbursementSchema = z.object({
@@ -65,23 +63,3 @@ export class QueryDisbursementResponseDto {
   @ApiProperty() prev: string | null;
 }
 
-export class WalletLedgerEntryDto {
-  @ApiProperty() id: string;
-  @ApiProperty({ enum: WalletEntryType }) type: WalletEntryType;
-  @ApiProperty({ enum: WalletEntryReason }) reason: WalletEntryReason;
-  @ApiProperty() amount: any;
-  @ApiProperty() currency: string;
-  @ApiProperty() balanceBefore: any;
-  @ApiProperty() balanceAfter: any;
-  @ApiProperty({ required: false }) referenceType: string | null;
-  @ApiProperty({ required: false }) referenceId: string | null;
-  @ApiProperty({ required: false }) description: string | null;
-  @ApiProperty() createdAt: Date;
-}
-
-export class GetWalletResponseDto {
-  @ApiProperty() balance: any;
-  @ApiProperty() currency: string;
-  @ApiProperty({ isArray: true, type: WalletLedgerEntryDto })
-  ledger: WalletLedgerEntryDto[];
-}

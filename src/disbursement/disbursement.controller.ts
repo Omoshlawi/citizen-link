@@ -18,7 +18,6 @@ import {
 import { B2CCallbackBody } from '../payment/daraja.service';
 import {
   GetDisbursementResponseDto,
-  GetWalletResponseDto,
   QueryDisbursementDto,
   QueryDisbursementResponseDto,
   WithdrawDisbursementDto,
@@ -28,19 +27,6 @@ import { DisbursementService } from './disbursement.service';
 @Controller('disbursement')
 export class DisbursementController {
   constructor(private readonly disbursementService: DisbursementService) {}
-
-  /**
-   * Returns the authenticated user's wallet balance and ledger history.
-   * Must come before /:id to avoid "wallet" being parsed as a UUID.
-   */
-  @Get('wallet')
-  @ApiOperation({
-    summary: "Get the authenticated user's wallet balance and ledger",
-  })
-  @ApiOkResponse({ type: GetWalletResponseDto })
-  getWallet(@Session() { user }: UserSession) {
-    return this.disbursementService.getWallet(user);
-  }
 
   @Get()
   @ApiOperation({ summary: 'Query disbursements' })

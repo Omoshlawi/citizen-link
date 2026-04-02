@@ -270,33 +270,6 @@ export class DisbursementService {
     }
   }
 
-  /**
-   * Returns the caller's wallet balance and ledger history.
-   * Admins can query any user's wallet by userId.
-   */
-  async getWallet(user: UserSession['user']) {
-    const wallet = await this.prismaService.wallet.findUnique({
-      where: { userId: user.id },
-      include: {
-        ledger: {
-          orderBy: { createdAt: 'desc' },
-          take: 50,
-        },
-      },
-    });
-
-    if (!wallet) {
-      // Return an empty wallet rather than 404 — finder hasn't earned a reward yet
-      return { balance: 0, currency: 'KES', ledger: [] };
-    }
-
-    return {
-      balance: wallet.balance,
-      currency: wallet.currency,
-      ledger: wallet.ledger,
-    };
-  }
-
   async findAll(
     query: QueryDisbursementDto,
     originalUrl: string,
