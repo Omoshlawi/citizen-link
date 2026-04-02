@@ -64,6 +64,27 @@ export class RegionConfig {
   @Value('REGION_CALLING_CODE', { default: '+254' })
   callingCode: string;
 
+  /**
+   * Regex that validates only the subscriber portion of a phone number —
+   * i.e. the digits after the country calling code, without any leading 0.
+   * Used by the mobile app when the calling-code prefix is displayed separately.
+   * e.g. Kenya: ^[71]\d{8}$  Tanzania: ^[76]\d{8}$
+   */
+  @Value('REGION_SUBSCRIBER_REGEX', { default: '^[71]\\d{8}$' })
+  subscriberRegexRaw: string;
+
+  get subscriberRegex(): RegExp {
+    return new RegExp(this.subscriberRegexRaw);
+  }
+
+  /**
+   * A representative local phone number shown as placeholder/error hint.
+   * Should match the subscriberRegex pattern (no leading 0 or country code).
+   * e.g. Kenya: "712 345 678"  Tanzania: "712 345 678"
+   */
+  @Value('REGION_SUBSCRIBER_EXAMPLE', { default: '712 345 678' })
+  subscriberExample: string;
+
   /** Comma-separated logical payment provider names (e.g. mpesa, tigopesa, mtn_momo) */
   @Value('REGION_PAYMENT_PROVIDERS', { default: 'mpesa' })
   paymentProvidersRaw: string;

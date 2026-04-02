@@ -24,6 +24,7 @@ import {
   QueryDisbursementDto,
   WithdrawDisbursementDto,
 } from './disbursement.dto';
+import { RegionService } from '../region/region.service';
 
 @Injectable()
 export class DisbursementService {
@@ -35,6 +36,7 @@ export class DisbursementService {
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
     private readonly darajaService: DarajaService,
+    private readonly regionService: RegionService,
   ) {}
 
   /**
@@ -74,7 +76,7 @@ export class DisbursementService {
         'No phone number available for payout. Please provide phoneNumber in the request.',
       );
     }
-    const phone = rawPhone.replace(/^\+/, '').replace(/^0/, '254');
+    const phone = this.regionService.toDarajaPhone(rawPhone);
 
     const amount = disbursement.amount.toNumber();
 

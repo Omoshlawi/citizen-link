@@ -60,6 +60,42 @@ export class RegionService {
     return this.regionConfig.appName;
   }
 
+  getSubscriberRegexRaw(): string {
+    return this.regionConfig.subscriberRegexRaw;
+  }
+
+  getSubscriberRegex(): RegExp {
+    return this.regionConfig.subscriberRegex;
+  }
+
+  getSubscriberExample(): string {
+    return this.regionConfig.subscriberExample;
+  }
+
+  /**
+   * Normalises any phone format to E.164 (e.g. +254712345678).
+   * Handles: E.164, local-with-0, already-stripped, subscriber-only.
+   */
+  toE164(phone: string): string {
+    const callingDigits = this.regionConfig.callingCode.replace(/^\+/, '');
+    const cleaned = phone.replace(/\s/g, '');
+
+    if (cleaned.startsWith('+')) return cleaned;
+    if (cleaned.startsWith('0')) return `+${callingDigits}${cleaned.slice(1)}`;
+    if (cleaned.startsWith(callingDigits)) return `+${cleaned}`;
+    // Subscriber-only (e.g. 712345678)
+    return `+${callingDigits}${cleaned}`;
+  }
+
+  /**
+   * Normalises any phone format to Daraja format: digits only, country code
+   * first, no leading + (e.g. 254712345678).
+   * Daraja rejects E.164 with the leading plus sign.
+   */
+  toDarajaPhone(phone: string): string {
+    return this.toE164(phone).slice(1); // strip the leading '+'
+  }
+
   /** Shape returned by GET /api/config/public — consumed by mobile/web clients. */
   getPublicConfig() {
     return {
@@ -72,6 +108,8 @@ export class RegionService {
       languages: this.regionConfig.languages,
       mapDefault: this.getMapDefault(),
       phoneRegex: this.regionConfig.phoneRegexRaw,
+      subscriberRegex: this.regionConfig.subscriberRegexRaw,
+      subscriberExample: this.regionConfig.subscriberExample,
       callingCode: this.regionConfig.callingCode,
       paymentProviders: this.regionConfig.paymentProviders,
       appName: this.regionConfig.appName,

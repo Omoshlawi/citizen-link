@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
@@ -108,8 +107,7 @@ export class TransactionService {
         'No phone number available for STK push. Please provide phoneNumber in the request.',
       );
     }
-    // Normalise to 2547XXXXXXXX (strip leading + or 0)
-    const phone = rawPhone.replace(/^\+/, '').replace(/^0/, '254');
+    const phone = this.regionService.toDarajaPhone(rawPhone);
 
     // Create the Transaction in PENDING state before calling Daraja.
     // This ensures we have a record even if Daraja fails, and prevents re-entry.
