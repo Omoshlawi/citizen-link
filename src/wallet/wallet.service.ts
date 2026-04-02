@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { isSuperUser, parseDate } from '../app.utils';
 import { QueryWalletLedgerDto } from './wallet.dto';
+import { RegionService } from '../region/region.service';
 
 @Injectable()
 export class WalletService {
@@ -16,6 +17,7 @@ export class WalletService {
     private readonly prismaService: PrismaService,
     private readonly paginationService: PaginationService,
     private readonly sortService: SortService,
+    private readonly regionService: RegionService,
   ) {}
 
   /**
@@ -35,7 +37,7 @@ export class WalletService {
         id: null,
         userId: targetUserId,
         balance: 0,
-        currency: 'KES',
+        currency: this.regionService.getCurrency(),
         updatedAt: null,
       };
     }
@@ -63,7 +65,11 @@ export class WalletService {
     if (!wallet) {
       return {
         results: [],
-        ...this.paginationService.buildPaginationControls(0, originalUrl, query),
+        ...this.paginationService.buildPaginationControls(
+          0,
+          originalUrl,
+          query,
+        ),
       };
     }
 

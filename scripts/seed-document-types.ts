@@ -23,6 +23,8 @@ interface DocumentType {
   aiExtractionPrompt?: string | null;
 }
 
+const defaultCurrency = process.env.REGION_CURRENCY ?? 'KES';
+
 async function seedDocumentTypes(): Promise<void> {
   const filePath = path.resolve(
     __dirname,
@@ -64,7 +66,7 @@ async function seedDocumentTypes(): Promise<void> {
         voided: false,
         serviceFee: docType.serviceFee,
         finderReward: docType.finderReward,
-        currency: docType.currency,
+        currency: docType.currency ?? defaultCurrency,
         totalAmount: docType.serviceFee + docType.finderReward,
       },
       create: {
@@ -80,7 +82,7 @@ async function seedDocumentTypes(): Promise<void> {
         aiExtractionPrompt: docType.aiExtractionPrompt || null,
         serviceFee: docType.serviceFee,
         finderReward: docType.finderReward,
-        currency: docType.currency,
+        currency: docType.currency ?? defaultCurrency,
         totalAmount: docType.serviceFee + docType.finderReward,
       },
     });

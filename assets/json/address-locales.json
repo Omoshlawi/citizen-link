@@ -150,6 +150,11 @@
         { "level": "level2", "label": "Sub-County", "required": false },
         { "level": "level3", "label": "Ward / Location", "required": false }
       ],
+      "postalCode": {
+        "label": "Postal Code",
+        "required": false,
+        "description": "5-digit Kenyan postal code if applicable"
+      },
       "metadata": {
         "preferredFields": ["landmark", "plusCode"],
         "validation": {
@@ -477,7 +482,7 @@
       "levels": [
         { "level": "level1", "label": "Prefecture", "required": true },
         { "level": "level2", "label": "City / Municipality", "required": true },
-        { "level": "level3", "label": "Ward / District", "required": false },
+        { "level": "level3", "label": "Ward / District", "required": true },
         { "level": "level4", "label": "Block / Chome", "required": true }
       ],
       "postalCode": {
@@ -542,5 +547,90 @@
       }
     ],
     "tags": ["default", "po-box"]
+  },
+  {
+    "code": "tz-default",
+    "country": "TZ",
+    "regionName": "Tanzania (Region → District → Ward)",
+    "description": "Tanzanian address hierarchy using Region, District, and Ward administrative units.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level3}}, {{level2}}, {{level1}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "Region", "required": true },
+        { "level": "level2", "label": "District", "required": true },
+        { "level": "level3", "label": "Ward / Location", "required": false }
+      ]
+    },
+    "examples": [
+      {
+        "label": "Dar es Salaam Sample",
+        "address": {
+          "address1": "Samora Avenue",
+          "level3": "Kivukoni Ward",
+          "level2": "Ilala District",
+          "level1": "Dar es Salaam",
+          "country": "TZ"
+        }
+      }
+    ],
+    "tags": ["default", "east-africa"]
+  },
+  {
+    "code": "ug-default",
+    "country": "UG",
+    "regionName": "Uganda (District → County → Sub-county)",
+    "description": "Ugandan address hierarchy using District, County, and Sub-county administrative units.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "District", "required": true },
+        { "level": "level2", "label": "County", "required": true },
+        { "level": "level3", "label": "Sub-county", "required": false },
+        { "level": "level4", "label": "Parish / Village", "required": false }
+      ]
+    },
+    "examples": [
+      {
+        "label": "Kampala Sample",
+        "address": {
+          "address1": "Parliamentary Avenue",
+          "level4": "Nakasero Village",
+          "level3": "Makindye Sub-county",
+          "level2": "Kampala Central County",
+          "level1": "Kampala District",
+          "country": "UG"
+        }
+      }
+    ],
+    "tags": ["default", "east-africa"]
+  },
+  {
+    "code": "rw-default",
+    "country": "RW",
+    "regionName": "Rwanda (Province → District → Sector)",
+    "description": "Rwandan address hierarchy using Province, District, and Sector administrative units.",
+    "formatSpec": {
+      "displayTemplate": "{{address1}}, {{level4}}, {{level3}}, {{level2}}, {{level1}}, {{country}}",
+      "levels": [
+        { "level": "level1", "label": "Province", "required": true },
+        { "level": "level2", "label": "District", "required": true },
+        { "level": "level3", "label": "Sector", "required": false },
+        { "level": "level4", "label": "Cell", "required": false }
+      ]
+    },
+    "examples": [
+      {
+        "label": "Kigali Sample",
+        "address": {
+          "address1": "KN 5 Road",
+          "level4": "Nyarugenge Cell",
+          "level3": "Nyarugenge Sector",
+          "level2": "Nyarugenge District",
+          "level1": "Kigali City",
+          "country": "RW"
+        }
+      }
+    ],
+    "tags": ["default", "east-africa"]
   }
 ]

@@ -31,6 +31,8 @@ interface PickupStationSeed {
   addressLocaleCode: string;
 }
 
+const defaultCountry = process.env.REGION_COUNTRY_CODE ?? 'KE';
+
 async function seedPickupStations(): Promise<void> {
   const filePath = path.resolve(
     __dirname,
@@ -65,7 +67,7 @@ async function seedPickupStations(): Promise<void> {
       where: { code: station.code },
       update: {
         name: station.name,
-        country: station.country ?? 'KE',
+        country: station.country ?? defaultCountry,
         postalCode: station.postalCode ?? null,
         address1: station.address1,
         address2: station.address2 ?? null,
@@ -89,7 +91,7 @@ async function seedPickupStations(): Promise<void> {
       create: {
         code: station.code,
         name: station.name,
-        country: station.country ?? 'KE',
+        country: station.country ?? defaultCountry,
         postalCode: station.postalCode ?? null,
         address1: station.address1,
         address2: station.address2 ?? null,

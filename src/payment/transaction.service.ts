@@ -31,6 +31,7 @@ import { DarajaService, StkCallbackBody } from './daraja.service';
 import { InitiatePaymentDto, QueryTransactionDto } from './transaction.dto';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { NotificationPriority } from '../notifications/notification.interfaces';
+import { RegionService } from '../region/region.service';
 
 @Injectable()
 export class TransactionService {
@@ -44,6 +45,7 @@ export class TransactionService {
     private readonly sortService: SortService,
     private readonly darajaService: DarajaService,
     private readonly notificationService: NotificationDispatchService,
+    private readonly regionService: RegionService,
   ) {}
 
   /**
@@ -120,7 +122,7 @@ export class TransactionService {
         initiatedById: isAgent ? user.id : null,
         invoiceId: invoice.id,
         amount,
-        currency: 'KES',
+        currency: this.regionService.getCurrency(),
         paymentMethod: PaymentMethod.MOBILE_MONEY,
         paymentProvider: PaymentProvider.MPESA,
         status: TransactionStatus.PENDING,
@@ -285,13 +287,13 @@ export class TransactionService {
                 invoiceId: invoice.id,
                 recipientId: finderId,
                 amount: finderReward,
-                currency: 'KES',
+                currency: this.regionService.getCurrency(),
                 paymentMethod: PaymentMethod.MOBILE_MONEY,
                 paymentProvider: PaymentProvider.MPESA,
               },
             });
             this.logger.log(
-              `Disbursement created for finder ${finderId} — KES ${finderReward}`,
+              `Disbursement created for finder ${finderId} — ${this.regionService.getCurrency()} ${finderReward}`,
             );
 
             // Upsert wallet and record a CREDIT ledger entry atomically
@@ -341,7 +343,7 @@ export class TransactionService {
         userId: finderId,
         priority: NotificationPriority.NORMAL,
         eventTitle: 'Reward Ready to Withdraw',
-        eventBody: `Your finder reward of KES ${amount} is ready to withdraw.`,
+        eventBody: `Your finder reward of ${this.regionService.getCurrency()} ${amount} is ready to withdraw.`,
         eventDescription: `Disbursement ${disbursementNumber} created for finder ${finderId}`,
       });
     }

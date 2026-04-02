@@ -30,6 +30,7 @@ import {
   SortService,
 } from '../query-builder';
 import { TemplatesVersionsService } from './templates.versions.service';
+import { RegionService } from '../../region/region.service';
 
 @Injectable()
 export class TemplatesService implements OnModuleInit {
@@ -42,6 +43,7 @@ export class TemplatesService implements OnModuleInit {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly regionService: RegionService,
   ) {}
 
   onModuleInit() {
@@ -382,16 +384,25 @@ export class TemplatesService implements OnModuleInit {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Handlebars.registerHelper('date', (d: Date | string, fmt?: string) => {
       const date = new Date(d);
-      return date.toLocaleDateString('en-KE', { dateStyle: 'medium' });
+      return date.toLocaleDateString(this.regionService.getLocale(), {
+        dateStyle: 'medium',
+        timeZone: this.regionService.getTimezone(),
+      });
     });
     Handlebars.registerHelper('time', (d: Date | string) =>
-      new Date(d).toLocaleTimeString('en-KE', { timeStyle: 'short' }),
+      new Date(d).toLocaleTimeString(this.regionService.getLocale(), {
+        timeStyle: 'short',
+        timeZone: this.regionService.getTimezone(),
+      }),
     );
-    Handlebars.registerHelper('currency', (amount: number, currency = 'KES') =>
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      new Intl.NumberFormat('en-KE', { style: 'currency', currency }).format(
-        amount,
-      ),
+    Handlebars.registerHelper(
+      'currency',
+      (amount: number, currency = this.regionService.getCurrency()) =>
+        new Intl.NumberFormat(this.regionService.getLocale(), {
+          style: 'currency',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          currency,
+        }).format(amount),
     );
     Handlebars.registerHelper('json', (obj: unknown) =>
       JSON.stringify(obj, null, 2),
