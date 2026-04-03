@@ -96,6 +96,71 @@ export class RegionService {
     return this.toE164(phone).slice(1); // strip the leading '+'
   }
 
+  // ── Formatting utilities ──────────────────────────────────────────────────
+
+  /**
+   * Formats a monetary amount using the region's locale and currency.
+   * Override any Intl.NumberFormat option (e.g. `minimumFractionDigits`) via `options`.
+   */
+  formatCurrency(amount: number, options?: Intl.NumberFormatOptions): string {
+    return new Intl.NumberFormat(this.regionConfig.locale, {
+      style: 'currency',
+      currency: this.regionConfig.currency,
+      ...options,
+    }).format(amount);
+  }
+
+  /**
+   * Formats a number using the region's locale.
+   * Override any Intl.NumberFormat option via `options`.
+   */
+  formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
+    return new Intl.NumberFormat(this.regionConfig.locale, options).format(
+      value,
+    );
+  }
+
+  /**
+   * Formats a date using the region's locale and timezone.
+   * Defaults to `dateStyle: 'medium'`. Override via `options`.
+   */
+  formatDate(
+    date: Date | string,
+    options?: Intl.DateTimeFormatOptions,
+  ): string {
+    return new Intl.DateTimeFormat(this.regionConfig.locale, {
+      dateStyle: 'medium',
+      timeZone: this.regionConfig.timezone,
+      ...options,
+    }).format(new Date(date));
+  }
+
+  /**
+   * Formats a time using the region's locale and timezone.
+   * Defaults to `timeStyle: 'short'`. Override via `options`.
+   */
+  formatTime(
+    date: Date | string,
+    options?: Intl.DateTimeFormatOptions,
+  ): string {
+    return new Intl.DateTimeFormat(this.regionConfig.locale, {
+      timeStyle: 'short',
+      timeZone: this.regionConfig.timezone,
+      ...options,
+    }).format(new Date(date));
+  }
+
+  /**
+   * Formats a phone number for display.
+   * Expects a subscriber-only number (e.g. "712345678") and prepends the
+   * regional calling code (e.g. "+254 712345678").
+   */
+  formatPhone(subscriber: string): string {
+    return `${this.regionConfig.callingCode} ${subscriber.replace(/\s/g, '')}`;
+  }
+
+  // ── Public config ─────────────────────────────────────────────────────────
+
   /** Shape returned by GET /api/config/public — consumed by mobile/web clients. */
   getPublicConfig() {
     return {

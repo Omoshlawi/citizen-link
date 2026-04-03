@@ -381,29 +381,18 @@ export class TemplatesService implements OnModuleInit {
       'default',
       (value: unknown, fallback: string) => value ?? fallback,
     );
+    /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Handlebars.registerHelper('date', (d: Date | string, fmt?: string) => {
-      const date = new Date(d);
-      return date.toLocaleDateString(this.regionService.getLocale(), {
-        dateStyle: 'medium',
-        timeZone: this.regionService.getTimezone(),
-      });
-    });
+    Handlebars.registerHelper('date', (d: Date | string, _fmt?: string) =>
+      this.regionService.formatDate(d),
+    );
     Handlebars.registerHelper('time', (d: Date | string) =>
-      new Date(d).toLocaleTimeString(this.regionService.getLocale(), {
-        timeStyle: 'short',
-        timeZone: this.regionService.getTimezone(),
-      }),
+      this.regionService.formatTime(d),
     );
-    Handlebars.registerHelper(
-      'currency',
-      (amount: number, currency = this.regionService.getCurrency()) =>
-        new Intl.NumberFormat(this.regionService.getLocale(), {
-          style: 'currency',
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          currency,
-        }).format(amount),
+    Handlebars.registerHelper('currency', (amount: number) =>
+      this.regionService.formatCurrency(amount),
     );
+    /* eslint-enable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
     Handlebars.registerHelper('json', (obj: unknown) =>
       JSON.stringify(obj, null, 2),
     );
