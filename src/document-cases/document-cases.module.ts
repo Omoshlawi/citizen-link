@@ -26,6 +26,7 @@ import { DocumentEmbeddingProcessor } from './document.processor';
 import { CaseVisionExtractionProcessor } from './case-vision-extraction.processor';
 import { CaseTextExtractionProcessor } from './case-text-extraction.processor';
 import { CasePostProcessingProcessor } from './case-post-processing.processor';
+import { DocumentCasesTimelineService } from './document-cases.timeline.service';
 
 @Module({
   imports: [
@@ -155,6 +156,7 @@ import { CasePostProcessingProcessor } from './case-post-processing.processor';
     DocumentCasesQueryService,
     DocumentCasesWorkflowService,
     DocumentCaseGateway,
+    DocumentCasesTimelineService,
   ],
 })
 export class DocumentCasesModule {}

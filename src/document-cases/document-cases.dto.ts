@@ -265,3 +265,19 @@ export class QuerySimilarDocumentCaseResponsesDto extends PickType(
   QueryDocumentCaseResponseDto,
   ['results'],
 ) {}
+
+export class TimelineEventDto {
+  @ApiProperty()
+  key: string;
+
+  @ApiProperty({ nullable: true, type: 'string' })
+  timestamp: string | null;
+
+  @ApiProperty({ enum: ['done', 'active', 'pending'] })
+  status: 'done' | 'active' | 'pending';
+}
+
+export class CaseTimelineResponseDto {
+  @ApiProperty({ isArray: true, type: TimelineEventDto })
+  events: TimelineEventDto[];
+}

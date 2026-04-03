@@ -22,6 +22,7 @@ import {
   OriginalUrl,
 } from '../common/query-builder';
 import {
+  CaseTimelineResponseDto,
   CreateFoundDocumentCaseDto,
   GetDocumentCaseResponseDto,
   QueryDocumentCaseDto,
@@ -132,6 +133,17 @@ export class DocumentCasesController {
     @Session() { user }: UserSession,
   ) {
     return this.documentCasesService.findOne(id, query, user);
+  }
+
+  @Get(':id/timeline')
+  @ApiOperation({ summary: 'Get Document Case Timeline' })
+  @ApiOkResponse({ type: CaseTimelineResponseDto })
+  @ApiErrorsResponse({ notFound: true })
+  getCaseTimeline(
+    @Param('id') id: string,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.getCaseTimeline(id, user);
   }
 
   @Patch(':id')

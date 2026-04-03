@@ -34,6 +34,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { CASE_VISION_EXTRACTION_QUEUE } from './document-cases.constants';
 import { CaseExtractionJob } from './document-cases.interface';
+import { DocumentCasesTimelineService } from './document-cases.timeline.service';
 
 @Injectable()
 export class DocumentCasesService {
@@ -45,6 +46,7 @@ export class DocumentCasesService {
     private readonly documentCasesWorkflowService: DocumentCasesWorkflowService,
     private readonly documentCasesCreateService: DocumentCasesCreateService,
     private readonly humanIdService: HumanIdService,
+    private readonly documentCaseTimelineService: DocumentCasesTimelineService,
     @InjectQueue(CASE_VISION_EXTRACTION_QUEUE)
     private readonly caseVisionExtractionQueue: Queue<CaseExtractionJob>,
   ) {}
@@ -63,6 +65,10 @@ export class DocumentCasesService {
     user: UserSession['user'],
   ) {
     return this.documentCasesQueryService.findOne(id, query, user);
+  }
+
+  getCaseTimeline(id: string, user: UserSession['user']) {
+    return this.documentCaseTimelineService.getCaseTimeline(id, user);
   }
 
   private async canUpdateCase(caseId: string) {
