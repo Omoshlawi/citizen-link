@@ -17,6 +17,7 @@ import { UserSession } from '../auth/auth.types';
 import { isSuperUser } from '../app.utils';
 import { pick } from 'lodash';
 import { PickupStation, Prisma } from '../../generated/prisma/client';
+import { RegionService } from '../region/region.service';
 
 @Injectable()
 export class PickupStationsService {
@@ -25,6 +26,7 @@ export class PickupStationsService {
     private readonly sortService: SortService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
+    private readonly regionService: RegionService,
   ) {}
 
   async getAll(
@@ -42,7 +44,7 @@ export class PickupStationsService {
           level3: query?.level3,
           level4: query?.level4,
           level5: query?.level5,
-          country: query?.country,
+          country: this.regionService.getCountryCode(),
           addressLocaleCode: query?.addressLocaleCode,
           postalCode: query?.postalCode,
           createdAt: {

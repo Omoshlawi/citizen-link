@@ -19,7 +19,6 @@ export const QueryPickupAddressSchema = z.object({
   level3: z.string().optional(),
   level4: z.string().optional(),
   level5: z.string().optional(),
-  country: z.string().optional(),
   postalCode: z.string().optional(),
   code: z.string().optional(),
   createdAtFrom: z.iso.date().optional(),
