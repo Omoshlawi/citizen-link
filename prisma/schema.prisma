@@ -162,6 +162,10 @@ model Address {
   type  AddressType @default(OTHER)
   label String? // e.g., "Home", "Office", "Billing"
 
+  // Contact details for the person reachable at this address
+  name        String? // Contact person's name
+  phoneNumber String? // Contact subscriber number (no calling code prefix)
+
   // Street-level details
   address1 String // Building/house number and street
   address2 String? // Apartment, suite, floor, etc.

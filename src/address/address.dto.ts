@@ -55,6 +55,8 @@ export const QueryAddressSchema = z.object({
 export const AddressSchema = z.object({
   type: z.enum(['HOME', 'WORK', 'BILLING', 'SHIPPING', 'OFFICE', 'OTHER']),
   label: z.string().optional(),
+  name: z.string().optional(),
+  phoneNumber: z.string().optional(),
   address1: z.string(),
   address2: z.string().optional(),
   landmark: z.string().optional(),
