@@ -243,7 +243,7 @@
     "slots": {
       "email_subject": {
         "source": "text",
-        "text": "Action Required: Review Extracted Details for Case #{{case.caseNumber}} \u2014 Citizen Link"
+        "text": "Action Required: Review Your Document Details for Case #{{case.caseNumber}} \u2014 Citizen Link"
       },
       "email_body": {
         "source": "file",
@@ -251,11 +251,11 @@
       },
       "push_title": {
         "source": "text",
-        "text": "Details Extracted \u2014 Review Required"
+        "text": "Document Details Ready \u2014 Please Review"
       },
       "push_body": {
         "source": "text",
-        "text": "We scanned your found {{case.document.type.name}} images. Tap to review the extracted details."
+        "text": "We've filled in the details from your {{case.document.type.name}} images. Tap to review them."
       },
       "push_data": {
         "source": "text",
@@ -289,7 +289,7 @@
     "slots": {
       "email_subject": {
         "source": "text",
-        "text": "Action Required: Document Scan Unsuccessful for Case #{{case.caseNumber}} \u2014 Citizen Link"
+        "text": "Action Required: Help Needed for Case #{{case.caseNumber}} \u2014 Citizen Link"
       },
       "email_body": {
         "source": "file",
@@ -297,11 +297,11 @@
       },
       "push_title": {
         "source": "text",
-        "text": "Document Scan Unsuccessful"
+        "text": "We Need Your Help"
       },
       "push_body": {
         "source": "text",
-        "text": "We had trouble scanning your found document images for case #{{case.caseNumber}}. Tap to review your case and try again."
+        "text": "We couldn't read your found document images for case #{{case.caseNumber}}. Tap to fill in the details yourself."
       },
       "push_data": {
         "source": "text",
@@ -335,7 +335,7 @@
     "slots": {
       "email_subject": {
         "source": "text",
-        "text": "Action Required: Review Extracted Details for Case #{{case.caseNumber}} \u2014 Citizen Link"
+        "text": "Action Required: Review Your Document Details for Case #{{case.caseNumber}} \u2014 Citizen Link"
       },
       "email_body": {
         "source": "file",
@@ -343,11 +343,11 @@
       },
       "push_title": {
         "source": "text",
-        "text": "Details Extracted \u2014 Review Required"
+        "text": "Document Details Ready \u2014 Please Review"
       },
       "push_body": {
         "source": "text",
-        "text": "We scanned your {{case.document.type.name}} images. Tap to review the extracted details and confirm they are correct."
+        "text": "We've filled in the details from your {{case.document.type.name}} images. Tap to confirm they look right."
       },
       "push_data": {
         "source": "text",
@@ -381,7 +381,7 @@
     "slots": {
       "email_subject": {
         "source": "text",
-        "text": "Action Required: Document Scan Unsuccessful for Case #{{case.caseNumber}} \u2014 Citizen Link"
+        "text": "Action Required: Help Needed for Case #{{case.caseNumber}} \u2014 Citizen Link"
       },
       "email_body": {
         "source": "file",
@@ -389,11 +389,11 @@
       },
       "push_title": {
         "source": "text",
-        "text": "Document Scan Unsuccessful"
+        "text": "We Need Your Help"
       },
       "push_body": {
         "source": "text",
-        "text": "We had trouble scanning your {{case.document.type.name}} images for case #{{case.caseNumber}}. Tap to review your case and try again."
+        "text": "We couldn't read your {{case.document.type.name}} images for case #{{case.caseNumber}}. Tap to fill in the details yourself."
       },
       "push_data": {
         "source": "text",

@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { RegionService } from './region.service';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 
 @Controller('config')
 export class RegionController {
@@ -11,6 +12,7 @@ export class RegionController {
    * Clients (mobile/web) fetch this on startup to configure themselves.
    */
   @Get('public')
+  @AllowAnonymous()
   getPublicConfig() {
     return this.regionService.getPublicConfig();
   }
