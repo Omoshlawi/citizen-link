@@ -106,7 +106,7 @@
         {
           "level": "level3",
           "label": "Constituency / Ward",
-          "required": false
+          "required": true
         },
         { "level": "level4", "label": "Estate", "required": false },
         { "level": "level5", "label": "Village / Plot", "required": false }

@@ -223,16 +223,26 @@ export class AddressService {
     userId: string,
     query: CustomRepresentationQueryDto,
   ) {
-    const data = await this.prismaService.address.create({
-      data: {
-        ...createDto,
-        userId,
-        startDate: dayjs(createDto.startDate).toDate(),
-        endDate: createDto.endDate
-          ? dayjs(createDto.endDate).toDate()
-          : undefined,
-      },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    const data = await this.prismaService.$transaction(async (tx) => {
+      if (createDto.preferred) {
+        await tx.address.updateMany({
+          where: { userId, preferred: true, voided: false },
+          data: { preferred: false },
+        });
+      }
+      return tx.address.create({
+        data: {
+          ...createDto,
+          userId,
+          startDate: createDto.startDate
+            ? dayjs(createDto.startDate).toDate()
+            : new Date(),
+          endDate: createDto.endDate
+            ? dayjs(createDto.endDate).toDate()
+            : undefined,
+        },
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
     });
 
     return data;
@@ -244,10 +254,18 @@ export class AddressService {
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    const data = await this.prismaService.address.update({
-      where: { id, userId },
-      data: updateDto,
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    const data = await this.prismaService.$transaction(async (tx) => {
+      if (updateDto.preferred) {
+        await tx.address.updateMany({
+          where: { userId, preferred: true, voided: false, NOT: { id } },
+          data: { preferred: false },
+        });
+      }
+      return tx.address.update({
+        where: { id, userId },
+        data: updateDto,
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      });
     });
     return data;
   }

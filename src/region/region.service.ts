@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { RegionConfig } from './region.config';
 
 @Injectable()
 export class RegionService {
-  constructor(private readonly regionConfig: RegionConfig) {}
+  constructor(
+    private readonly regionConfig: RegionConfig,
+    private readonly prisma: PrismaService,
+  ) {}
 
   getCurrency(): string {
     return this.regionConfig.currency;
@@ -162,7 +166,12 @@ export class RegionService {
   // ── Public config ─────────────────────────────────────────────────────────
 
   /** Shape returned by GET /api/config/public — consumed by mobile/web clients. */
-  getPublicConfig() {
+  async getPublicConfig() {
+    const addressLocale = await this.prisma.addressLocale.findFirst({
+      where: { code: this.regionConfig.addressLocaleCode, voided: false },
+      select: { id: true, formatSpec: true },
+    });
+
     return {
       countryCode: this.regionConfig.countryCode,
       countryName: this.regionConfig.countryName,
@@ -170,6 +179,8 @@ export class RegionService {
       locale: this.regionConfig.locale,
       timezone: this.regionConfig.timezone,
       addressLocaleCode: this.regionConfig.addressLocaleCode,
+      addressLocaleId: addressLocale?.id ?? null,
+      addressLocaleSpec: addressLocale?.formatSpec ?? null,
       languages: this.regionConfig.languages,
       mapDefault: this.getMapDefault(),
       phoneRegex: this.regionConfig.phoneRegexRaw,
