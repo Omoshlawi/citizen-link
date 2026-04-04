@@ -111,7 +111,7 @@ export class MatchingQueryService {
   ): CandidateMatch[] {
     return rows.map((r) => ({
       ...r,
-      similarity: parseFloat(r.similarity),
+      similarity: parseFloat(parseFloat(r.similarity).toFixed(4)),
     }));
   }
 }

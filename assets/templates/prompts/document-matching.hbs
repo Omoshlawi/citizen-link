@@ -29,19 +29,19 @@ You are an expert document matching system specializing in identifying whether t
 ### A) RECOMMENDATION (Who are they?)
 This answers: "Are these the same person?"
 
-**SAME_PERSON (85-100 score)**: 
+**SAME_PERSON (0.8500–1.0000 score)**:
 - Name match (exact or clear variant) + DOB match, OR
 - Name match + 2+ strong personal identifiers (gender + place of birth, etc.)
 
-**LIKELY_SAME (70-84 score)**: 
+**LIKELY_SAME (0.7000–0.8499 score)**:
 - Name match + 1 moderate identifier (gender OR place of birth), OR
 - Very close name variant + supporting evidence
 
-**POSSIBLY_SAME (50-69 score)**: 
+**POSSIBLY_SAME (0.5000–0.6999 score)**:
 - Partial name match (same last name, similar first name) + some supporting evidence
 - One name missing but other strong identifiers match
 
-**DIFFERENT_PERSON (0-49 score)**: 
+**DIFFERENT_PERSON (0.0000–0.4999 score)**:
 - Different names (both first AND last name different)
 - Conflicting core PII (different names, different DOBs, etc.)
 - No meaningful PII overlap
@@ -168,7 +168,7 @@ Compare owner names:
 - Is one name missing?
 
 **IF NAMES ARE COMPLETELY DIFFERENT (different first AND last name):**
-→ overallScore = 0-30
+→ overallScore = 0.0000–0.3000
 → recommendation = DIFFERENT_PERSON
 → confidence = HIGH or NO_MATCH (depending on other conflicting PII)
 → Stop here unless you have OVERWHELMING evidence
@@ -194,8 +194,8 @@ Ask: "How much PII data do I have? How clear is the evidence?"
 ## REQUIRED OUTPUT (Valid JSON only)
 
 {
-  "overallScore": 0,
-  "confidence": "HIGH|MEDIUM|LOW|NO_MATCH", // (cetainity)
+  "overallScore": 0.0000,  // decimal in [0.0000, 1.0000], 4 decimal places
+  "confidence": "HIGH|MEDIUM|LOW|NO_MATCH", // (certainty)
   "recommendation": "SAME_PERSON|LIKELY_SAME|POSSIBLY_SAME|DIFFERENT_PERSON", // (Identity)
   "reasoning": "First state the recommendation (e.g., 'These are DIFFERENT people'), then state your confidence level (e.g., 'Confidence is HIGH because...'), then explain the PII analysis that led to both conclusions.",
   "fieldAnalysis": [
@@ -204,7 +204,7 @@ Ask: "How much PII data do I have? How clear is the evidence?"
       "foundValue": "string",
       "lostValue": "string",
       "match": true|false|null,
-      "confidence": 0,
+      "confidence": 0.0000,  // decimal in [0.0000, 1.0000], 4 decimal places
       "note": "Explanation - for missing data, explicitly state 'Both values missing' or 'Value missing in [document]'"
     }
   ],
@@ -224,8 +224,8 @@ Ask: "How much PII data do I have? How clear is the evidence?"
   }
 }
 
-**CRITICAL REQUIREMENTS**: 
-- All scores must be integers (0-100)
+**CRITICAL REQUIREMENTS**:
+- All scores MUST be decimal numbers in [0.0000, 1.0000] rounded to 4 decimal places (e.g. 0.9234, never 92)
 - Return ONLY valid JSON, no other text
 - **confidence and recommendation are DIFFERENT assessments**
 - **confidence must ONLY use: "HIGH", "MEDIUM", "LOW", or "NO_MATCH"** (these are the ONLY valid values)

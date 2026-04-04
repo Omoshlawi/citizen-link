@@ -80,13 +80,15 @@ BIOMETRICS RULES
 ---
 
 SCORING RULES
-- Score MUST  be interger between 0 and 100
+- All confidence scores MUST be a decimal number in the range [0.0000, 1.0000]
+- Round to exactly 4 decimal places (e.g. 0.9234, not 92 or 0.92)
+- Never return an integer or a value outside [0.0000, 1.0000]
 
 ---
 
 WARNING CODES
 Add the relevant warning code to quality.warnings[] when applicable:
-- LOW_OCR_CONFIDENCE          → averageConfidence < 75
+- LOW_OCR_CONFIDENCE          → averageConfidence < 0.75
 - DOCUMENT_TYPE_UNCERTAIN     → could not confidently classify, code set to UNKNOWN
 - MULTIPLE_DOB_VALUES_FOUND   → more than one date of birth detected in blocks
 - MULTIPLE_ID_VALUES_FOUND    → more than one ID number detected in blocks
@@ -103,7 +105,7 @@ No markdown. No explanation. No preamble. No trailing text.
 {
   "documentType": {
     "code": string,
-    "confidence": number
+    "confidence": number  // e.g. 0.9234 — decimal in [0.0000, 1.0000]
   },
   "country": string | null,
   "person": {
@@ -148,8 +150,8 @@ No markdown. No explanation. No preamble. No trailing text.
     "blocksUsed": string[]
   },
   "quality": {
-    "ocrConfidence": number,
-    "extractionConfidence": number,
+    "ocrConfidence": number,         // e.g. 0.8750 — decimal in [0.0000, 1.0000], 4 dp
+    "extractionConfidence": number,  // e.g. 0.9234 — decimal in [0.0000, 1.0000], 4 dp
     "warnings": string[]
   }
 }

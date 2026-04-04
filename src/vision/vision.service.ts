@@ -37,9 +37,11 @@ export class VisionService {
             (b) => b.type === 'text' && b.text?.length > 0,
           );
           const avgConf = textBlocks?.length
-            ? Math.round(
-                textBlocks.reduce((sum, b) => sum + b.confidence, 0) /
-                  textBlocks.length,
+            ? parseFloat(
+                (
+                  textBlocks.reduce((sum, b) => sum + b.confidence, 0) /
+                  textBlocks.length
+                ).toFixed(4),
               )
             : 0;
           // Build fullText from blocks in page order — more reliable than model output
@@ -108,9 +110,11 @@ export class VisionService {
             (b) => b.type === 'text' && b.text?.length > 0,
           );
           const avgConf = textBlocks?.length
-            ? Math.round(
-                textBlocks.reduce((sum, b) => sum + b.confidence, 0) /
-                  textBlocks.length,
+            ? parseFloat(
+                (
+                  textBlocks.reduce((sum, b) => sum + b.confidence, 0) /
+                  textBlocks.length
+                ).toFixed(4),
               )
             : 0;
           // Build fullText from blocks in page order — more reliable than model output

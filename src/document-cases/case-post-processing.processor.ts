@@ -14,6 +14,11 @@ import { DocumentCasesCreateService } from './document-cases.create.service';
 import { CASE_POST_PROCESSING_QUEUE } from './document-cases.constants';
 import { CaseExtractionJob } from './document-cases.interface';
 
+function clampConfidence(value: number | null | undefined): number | null {
+  if (value == null) return null;
+  return parseFloat(Math.min(1, Math.max(0, value)).toFixed(4));
+}
+
 type UserRow = {
   id: string;
   email: string | null;
@@ -122,9 +127,8 @@ export class CasePostProcessingProcessor extends WorkerHost {
         data: {
           extractionStatus: ExtractionStatus.COMPLETED,
           currentStep: null,
-          ocrConfidence: documentData.quality?.ocrConfidence ?? null,
-          extractionConfidence:
-            documentData.quality?.extractionConfidence ?? null,
+          ocrConfidence: clampConfidence(documentData.quality?.ocrConfidence),
+          extractionConfidence: clampConfidence(documentData.quality?.extractionConfidence),
           documentTypeCode: documentData.documentType?.code ?? null,
           warnings: documentData.quality?.warnings ?? [],
         },

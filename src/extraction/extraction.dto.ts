@@ -36,7 +36,7 @@ export const ExtractionWarningSchema = z.enum([
 export const TextExtractionOutputSchema = z.object({
   documentType: z.object({
     code: DocumentTypeCodeSchema,
-    confidence: z.coerce.number().min(0).max(100),
+    confidence: z.coerce.number().min(0).max(1),
   }),
 
   country: z
@@ -126,13 +126,15 @@ export const TextExtractionOutputSchema = z.object({
     ocrConfidence: z
       .number()
       .min(0)
-      .max(100)
-      .describe('Passed from vision output — 0–100'),
+      .max(1)
+      .transform((v) => parseFloat(v.toFixed(4)))
+      .describe('Passed from vision output — [0.0000, 1.0000]'),
     extractionConfidence: z
       .number()
       .min(0)
-      .max(100)
-      .describe('Overall confidence in the extracted data — 0–100'),
+      .max(1)
+      .transform((v) => parseFloat(v.toFixed(4)))
+      .describe('Overall confidence in the extracted data — [0.0000, 1.0000]'),
     warnings: ExtractionWarningSchema.array().default([]), // typed — no random strings
   }),
 });

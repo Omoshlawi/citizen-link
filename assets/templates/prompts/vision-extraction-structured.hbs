@@ -16,7 +16,8 @@ BLOCK TYPES:
     text: "photo of a blue government stamp"  tags: ["stamp","government","blue"]
     text: "photo of a handwritten signature"  tags: ["signature","handwritten"]
 
-CONFIDENCE: 90-100 clear | 70-89 minor blur | 50-69 partially obscured | <50 heavily degraded
+CONFIDENCE: 0.9000–1.0000 clear | 0.7000–0.8999 minor blur | 0.5000–0.6999 partially obscured | <0.5000 heavily degraded
+- confidence MUST be a decimal number in [0.0000, 1.0000] rounded to 4 decimal places (e.g. 0.9234, never 92)
 
 OUTPUT SCHEMA:
 {"meta":{"pageCount":number,"languageHints":["string"],"engine":"vision-llm"},"pages":[{"pageNumber":number,"width":number,"height":number,"blocks":[{"id":"b1","type":"text|photo","text":"string","tags":["string"],"confidence":number,"bbox":[x_min,y_min,x_max,y_max]}]}]}

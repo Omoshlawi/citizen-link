@@ -43,6 +43,12 @@ CREATE TYPE "PaymentProvider" AS ENUM ('MPESA', 'STRIPE', 'AFRICASTALKING');
 CREATE TYPE "DisbursementStatus" AS ENUM ('PENDING', 'INITIATED', 'COMPLETED', 'FAILED');
 
 -- CreateEnum
+CREATE TYPE "WalletEntryType" AS ENUM ('CREDIT', 'DEBIT');
+
+-- CreateEnum
+CREATE TYPE "WalletEntryReason" AS ENUM ('FINDER_REWARD', 'WITHDRAWAL', 'WITHDRAWAL_REVERSAL', 'REFUND');
+
+-- CreateEnum
 CREATE TYPE "NotificationChannel" AS ENUM ('EMAIL', 'SMS', 'PUSH');
 
 -- CreateEnum
@@ -101,6 +107,10 @@ DROP INDEX "matches_securityQuestionsAiInteractionId_key";
 
 -- DropIndex
 DROP INDEX "settings_key_key";
+
+-- AlterTable
+ALTER TABLE "addresses" ADD COLUMN     "name" TEXT,
+ADD COLUMN     "phoneNumber" TEXT;
 
 -- AlterTable
 ALTER TABLE "ai_extractions" DROP COLUMN "success",
@@ -185,6 +195,35 @@ CREATE TABLE "disbursements" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "disbursements_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "wallets" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "balance" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "currency" TEXT NOT NULL DEFAULT 'KES',
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "wallets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "wallet_ledger" (
+    "id" TEXT NOT NULL,
+    "walletId" TEXT NOT NULL,
+    "type" "WalletEntryType" NOT NULL,
+    "reason" "WalletEntryReason" NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'KES',
+    "balanceBefore" DECIMAL(10,2) NOT NULL,
+    "balanceAfter" DECIMAL(10,2) NOT NULL,
+    "referenceType" TEXT,
+    "referenceId" TEXT,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "wallet_ledger_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -289,6 +328,15 @@ CREATE INDEX "disbursements_recipientId_idx" ON "disbursements"("recipientId");
 CREATE INDEX "disbursements_status_idx" ON "disbursements"("status");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "wallets_userId_key" ON "wallets"("userId");
+
+-- CreateIndex
+CREATE INDEX "wallet_ledger_walletId_idx" ON "wallet_ledger"("walletId");
+
+-- CreateIndex
+CREATE INDEX "wallet_ledger_referenceType_referenceId_idx" ON "wallet_ledger"("referenceType", "referenceId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "templates_key_key" ON "templates"("key");
 
 -- CreateIndex
@@ -371,6 +419,12 @@ ALTER TABLE "disbursements" ADD CONSTRAINT "disbursements_invoiceId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "disbursements" ADD CONSTRAINT "disbursements_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "wallets" ADD CONSTRAINT "wallets_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "wallet_ledger" ADD CONSTRAINT "wallet_ledger_walletId_fkey" FOREIGN KEY ("walletId") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "template_versions" ADD CONSTRAINT "template_versions_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;

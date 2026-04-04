@@ -19,14 +19,14 @@ export const VisionExtractionOutputSchema = z.object({
           type: z.string(),
           text: z.string(),
           tags: z.array(z.string()).default([]),
-          confidence: z.number(),
+          confidence: z.number().min(0).max(1),
           bbox: z.array(z.number()),
         }),
       ),
     }),
   ),
   fullText: z.string(),
-  averageConfidence: z.number(),
+  averageConfidence: z.number().min(0).max(1),
 });
 
 export class VisionExtractionOutputDto extends createZodDto(

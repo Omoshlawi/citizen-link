@@ -63,8 +63,8 @@ export const QueryMatchesSchema = z.object({
     .optional()
     .describe('Case Uuid or Number of found document'),
   status: MatchStatusSchema.optional(),
-  minMatchScore: z.coerce.number().min(0).max(100).optional(),
-  maxMatchScore: z.coerce.number().min(0).max(100).optional(),
+  minMatchScore: z.coerce.number().min(0).max(1).optional(),
+  maxMatchScore: z.coerce.number().min(0).max(1).optional(),
   documentCaseId: z.uuid().optional(),
   search: z.string().optional(),
   userId: z
