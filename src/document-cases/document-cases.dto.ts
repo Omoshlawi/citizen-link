@@ -29,6 +29,9 @@ export const QueryDocumentCaseSchema = z
     caseNumber: z.string().optional(),
     documentType: z.uuid().optional(),
     caseType: z.enum(['FOUND', 'LOST']).optional(),
+    status: z
+      .enum(['DRAFT', 'SUBMITTED', 'VERIFIED', 'REJECTED', 'COMPLETED'])
+      .optional(),
     fullName: z.string().optional(),
     eventDateFrom: z.iso.date().optional(),
     eventDateTo: z.iso.date().optional(),
@@ -39,8 +42,8 @@ export const QueryDocumentCaseSchema = z
     documentNumber: z.string().optional(),
     docuemtExpiryDateFrom: z.iso.date().optional(),
     docuemtExpiryDateTo: z.iso.date().optional(),
-    docuemtIssueDateFrom: z.iso.date().optional(),
-    docuemtIssueDateTo: z.iso.date().optional(),
+    documentIssueDateFrom: z.iso.date().optional(),
+    documentIssueDateTo: z.iso.date().optional(),
     userId: z
       .string()
       .optional()

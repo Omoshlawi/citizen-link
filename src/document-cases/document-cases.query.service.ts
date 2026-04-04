@@ -10,7 +10,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { QueryDocumentCaseDto } from './document-cases.dto';
 import { UserSession } from '../auth/auth.types';
 import { isSuperUser } from '../app.utils';
-import { Prisma } from '../../generated/prisma/client';
+import {
+  FoundDocumentCaseStatus,
+  LostDocumentCaseStatus,
+  Prisma,
+} from '../../generated/prisma/client';
 
 @Injectable()
 export class DocumentCasesQueryService {
@@ -45,11 +49,11 @@ export class DocumentCasesQueryService {
                 : undefined,
             },
             issuanceDate: {
-              gte: query.docuemtIssueDateFrom
-                ? dayjs(query.docuemtIssueDateFrom).toDate()
+              gte: query.documentIssueDateFrom
+                ? dayjs(query.documentIssueDateFrom).toDate()
                 : undefined,
-              lte: query.docuemtIssueDateTo
-                ? dayjs(query.docuemtIssueDateTo).toDate()
+              lte: query.documentIssueDateTo
+                ? dayjs(query.documentIssueDateTo).toDate()
                 : undefined,
             },
           },
@@ -63,9 +67,17 @@ export class DocumentCasesQueryService {
             postalCode: query.postalCode,
           },
           foundDocumentCase:
-            query.caseType === 'FOUND' ? { isNot: null } : undefined,
+            query.caseType === 'FOUND'
+              ? query.status
+                ? { status: query.status as FoundDocumentCaseStatus }
+                : { isNot: null }
+              : undefined,
           lostDocumentCase:
-            query.caseType === 'LOST' ? { isNot: null } : undefined,
+            query.caseType === 'LOST'
+              ? query.status
+                ? { status: query.status as LostDocumentCaseStatus }
+                : { isNot: null }
+              : undefined,
           eventDate: query.eventDateFrom
             ? {
                 gte: dayjs(query.eventDateFrom).toDate(),
