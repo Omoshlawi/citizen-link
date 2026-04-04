@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lost Document Report Received — Citizen Link</title>
+  <title>Your Handover Code — Citizen Link</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f4f6f9; font-family:'Inter', Arial, sans-serif;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
@@ -23,47 +23,36 @@
             <td style="background-color:#ffffff; padding:40px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
               <p style="margin:0 0 8px; font-size:15px; color:#475569;">Hello {{case.user.name}},</p>
               <h1 style="margin:0 0 20px; font-size:22px; font-weight:700; color:#003b5a; line-height:1.3;">
-                Your Lost Document Report Has Been Received
+                A Staff Member Is Ready to Collect Your Document
               </h1>
-              <p style="margin:0 0 24px; font-size:15px; color:#475569; line-height:1.7;">
-                We've registered your lost <strong>{{case.document.type.name}}</strong> report. Our system is now actively scanning all found document submissions for a potential match.
+              <p style="margin:0 0 28px; font-size:15px; color:#475569; line-height:1.7;">
+                A CitizenLink staff member has initiated the handover process for case
+                <strong>#{{case.caseNumber}}</strong>. Share the code below with the
+                staff member in front of you to complete the handover.
               </p>
 
-              <!-- Case card -->
+              <!-- Code card -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-                style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:24px;">
+                style="background-color:#f0f9ff; border:2px solid #006397; border-radius:12px; margin-bottom:28px;">
                 <tr>
-                  <td style="padding:20px 24px;">
-                    <p style="margin:0 0 10px; font-size:11px; font-weight:600; color:#006397; letter-spacing:0.8px; text-transform:uppercase;">Your Case</p>
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td style="padding:4px 0; font-size:13px; color:#64748b; width:40%;">Case Number</td>
-                        <td style="padding:4px 0; font-size:13px; font-weight:600; color:#0f172a;">#{{case.caseNumber}}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:4px 0; font-size:13px; color:#64748b;">Document Type</td>
-                        <td style="padding:4px 0; font-size:13px; font-weight:600; color:#0f172a;">{{case.document.type.name}}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:4px 0; font-size:13px; color:#64748b;">Status</td>
-                        <td style="padding:4px 0; font-size:13px; font-weight:600; color:#1d9e75;">Searching for Match</td>
-                      </tr>
-                    </table>
+                  <td align="center" style="padding:28px 24px;">
+                    <p style="margin:0 0 8px; font-size:11px; font-weight:700; color:#006397; letter-spacing:1.2px; text-transform:uppercase;">Your Handover Code</p>
+                    <p style="margin:0; font-size:48px; font-weight:700; color:#003b5a; letter-spacing:10px; font-family:'Courier New', Courier, monospace;">{{collection.code}}</p>
+                    <p style="margin:10px 0 0; font-size:12px; color:#64748b;">Expires: {{collection.expiresAt}}</p>
                   </td>
                 </tr>
               </table>
 
-              <!-- What happens next -->
+              <!-- Security notice -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-                style="background-color:#f0f9ff; border-left:4px solid #006397; border-radius:0 8px 8px 0; margin-bottom:32px;">
+                style="background-color:#fff7ed; border-left:4px solid #f59e0b; border-radius:0 8px 8px 0; margin-bottom:28px;">
                 <tr>
-                  <td style="padding:16px 18px;">
-                    <p style="margin:0 0 8px; font-size:13px; font-weight:600; color:#0c4a6e;">What happens next</p>
-                    <ul style="margin:0; padding-left:18px; font-size:13px; color:#0c4a6e; line-height:1.8;">
-                      <li>Our system continuously compares your report against all found document submissions</li>
-                      <li>When a potential match is found, you will receive a notification to review and confirm</li>
-                      <li>You can update your case details at any time to improve matching accuracy</li>
-                    </ul>
+                  <td style="padding:14px 16px;">
+                    <p style="margin:0; font-size:13px; color:#92400e; line-height:1.6;">
+                      <strong>Important:</strong> Only share this code with the CitizenLink staff
+                      member standing in front of you. Do not share it via phone call, message,
+                      or with anyone else. If you did not expect this, contact support immediately.
+                    </p>
                   </td>
                 </tr>
               </table>
@@ -73,7 +62,7 @@
                 <tr>
                   <td align="center" style="border-radius:8px; background-color:#003b5a;">
                     <a href="citizenlinkapp://document-case/{{case.id}}"
-                      style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px; letter-spacing:-0.1px;">
+                      style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">
                       View Your Case →
                     </a>
                   </td>
@@ -81,7 +70,7 @@
               </table>
 
               <p style="margin:0; font-size:14px; color:#475569; line-height:1.7;">
-                We will notify you as soon as a match is found.<br />
+                Thank you for doing the right thing.<br />
                 <strong style="color:#003b5a;">The Citizen Link Team</strong>
               </p>
             </td>

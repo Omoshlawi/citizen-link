@@ -50,9 +50,12 @@ model User {
   phoneNumberVerified Boolean?
   twofactors          TwoFactor[]
   claimAttachments    ClaimAttachment[]
-  statusTransitions   StatusTransition[]
-  pushTokens          UserPushToken[]
-  templateVersions    TemplateVersion[]
+  statusTransitions        StatusTransition[]
+  pushTokens               UserPushToken[]
+  templateVersions         TemplateVersion[]
+  collectionsInitiated     DocumentCollection[] @relation("CollectionInitiatedBy")
+  collectionsConfirmed     DocumentCollection[] @relation("CollectionConfirmedBy")
+  collectionsCancelled     DocumentCollection[] @relation("CollectionCancelledBy")
 
   @@unique([email])
   @@unique([username])
@@ -656,7 +659,43 @@ model FoundDocumentCase {
   // For PICKUP: scheduled date+time when finder will be available at the collection address
   scheduledPickupAt   DateTime?
 
+  collections DocumentCollection[]
+
   @@map("found_document_cases")
+}
+
+model DocumentCollection {
+  id          String                   @id @default(uuid())
+  foundCaseId String
+  foundCase   FoundDocumentCase        @relation(fields: [foundCaseId], references: [id], onDelete: Cascade)
+  code        String // plaintext 6-digit numeric
+  status      DocumentCollectionStatus @default(PENDING)
+  expiresAt   DateTime
+  attempts    Int                      @default(0)
+  maxAttempts Int                      @default(3) // snapshot from settings at initiation time
+
+  initiatedById String
+  initiatedBy   User   @relation("CollectionInitiatedBy", fields: [initiatedById], references: [id])
+
+  confirmedById String?
+  confirmedBy   User?   @relation("CollectionConfirmedBy", fields: [confirmedById], references: [id])
+
+  cancelledById String?
+  cancelledBy   User?   @relation("CollectionCancelledBy", fields: [cancelledById], references: [id])
+  cancelReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([foundCaseId, status])
+  @@map("document_collections")
+}
+
+enum DocumentCollectionStatus {
+  PENDING // code issued, awaiting confirmation
+  CONFIRMED // code matched; case transitioned to SUBMITTED
+  EXPIRED // TTL elapsed or max attempts reached
+  CANCELLED // staff cancelled
 }
 
 enum LostDocumentCaseStatus {

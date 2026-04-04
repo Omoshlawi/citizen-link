@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -76,7 +77,14 @@ export class DocumentCasesService {
       where: { id: caseId },
       select: {
         lostDocumentCase: true,
-        foundDocumentCase: true,
+        foundDocumentCase: {
+          include: {
+            collections: {
+              where: { status: 'PENDING' },
+              take: 1,
+            },
+          },
+        },
       },
     });
     if (!documentCase) {
@@ -90,13 +98,19 @@ export class DocumentCasesService {
         "Can't Update Lost Document Case that is completed",
       );
     }
-    if (
-      documentCase.foundDocumentCase &&
-      documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
-    ) {
-      throw new BadRequestException(
-        "Can't Update Found Document Case that is not in draft status",
-      );
+    if (documentCase.foundDocumentCase) {
+      if (
+        documentCase.foundDocumentCase.status !== FoundDocumentCaseStatus.DRAFT
+      ) {
+        throw new BadRequestException(
+          "Can't Update Found Document Case that is not in draft status",
+        );
+      }
+      if (documentCase.foundDocumentCase.collections.length > 0) {
+        throw new ConflictException(
+          'Case is locked while a collection is in progress. Cancel the collection to edit.',
+        );
+      }
     }
     return documentCase;
   }
@@ -400,18 +414,6 @@ export class DocumentCasesService {
       user,
     );
   }
-  submitFoundDocumentCase(
-    foundCaseId: string,
-    query: CustomRepresentationQueryDto,
-    user: UserSession['user'],
-  ) {
-    return this.documentCasesWorkflowService.submitFoundCase(
-      foundCaseId,
-      query,
-      user,
-    );
-  }
-
   verifyFoundDocumentCase(
     foundCaseId: string,
     verifyDto: StatusTransitionReasonsDto,

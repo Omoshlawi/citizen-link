@@ -49,16 +49,108 @@
     "key": "notification.case.found.submitted",
     "type": "notification",
     "name": "Found Case Submitted",
-    "description": "Sent to the finder when their found document report is submitted and awaiting staff review.",
+    "description": "Sent to the finder when their found document has been physically collected by CitizenLink staff via code exchange.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Your Document Is With Us \u2014 Case #{{case.caseNumber}} \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/found-case-submitted.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Document Received \u2014 Thank You!"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your found {{case.document.type.name}} (case #{{case.caseNumber}}) is now in Citizen Link\u2019s care. We\u2019ll keep you updated."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
+    "key": "notification.case.found.collection.initiated",
+    "type": "notification",
+    "name": "Found Case Collection Initiated",
+    "description": "Sent to the finder when a CitizenLink staff member initiates collection — contains the 6-digit handover code.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Your Handover Code \u2014 Case #{{case.caseNumber}} \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/found-case-collection-initiated.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Handover Ready \u2014 Case #{{case.caseNumber}}"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Share code {{collection.code}} with the CitizenLink staff member in front of you."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
+    "key": "notification.case.found.collection.cancelled",
+    "type": "notification",
+    "name": "Found Case Collection Cancelled",
+    "description": "Sent to the finder when a staff member cancels an active collection.",
     "engine": "handlebars",
     "slots": {
       "push_title": {
         "source": "text",
-        "text": "Report Submitted \u2014 Under Review"
+        "text": "Collection Cancelled \u2014 Case #{{case.caseNumber}}"
       },
       "push_body": {
         "source": "text",
-        "text": "Your found {{case.document.type.name}} report (case #{{case.caseNumber}}) has been submitted and is awaiting verification."
+        "text": "Your document collection has been cancelled. Your case remains active \u2014 staff will contact you to reschedule."
       },
       "push_data": {
         "source": "text",

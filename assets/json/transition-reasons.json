@@ -282,10 +282,10 @@
     "entityType": "FoundDocumentCase",
     "fromStatus": "DRAFT",
     "toStatus": "SUBMITTED",
-    "code": "FINDER_REPORTED_FOUND_DOCUMENT",
+    "code": "STAFF_CONFIRMED_COLLECTION",
     "auto": true,
-    "label": "Finder reported found document",
-    "description": "Finder reported found document"
+    "label": "Staff confirmed collection",
+    "description": "Staff confirmed collection of found document from finder"
   },
   {
     "entityType": "FoundDocumentCase",

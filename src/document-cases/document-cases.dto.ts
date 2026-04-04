@@ -16,6 +16,7 @@ import { QueryAddressSchema } from '../address/address.dto';
 import { ApiProperty, PickType } from '@nestjs/swagger';
 import {
   DocumentCase,
+  DocumentCollectionStatus,
   FoundDocumentCase,
   FoundDocumentCaseStatus,
   LostDocumentCase,
@@ -193,6 +194,45 @@ export class SecurityQuestionDto {
   answer: string;
 }
 
+export class ActiveCollectionDto {
+  @ApiProperty()
+  id: string;
+  @ApiProperty({ enum: DocumentCollectionStatus })
+  status: DocumentCollectionStatus;
+  @ApiProperty()
+  expiresAt: Date;
+  @ApiProperty()
+  code: string;
+  @ApiProperty()
+  attempts: number;
+  @ApiProperty()
+  maxAttempts: number;
+  @ApiProperty()
+  createdAt: Date;
+}
+
+export class InitiateCollectionResponseDto {
+  @ApiProperty()
+  collectionId: string;
+  @ApiProperty()
+  expiresAt: Date;
+}
+
+export const ConfirmCollectionSchema = z.object({
+  code: z
+    .string()
+    .length(6)
+    .regex(/^\d{6}$/, 'Code must be 6 digits'),
+});
+export class ConfirmCollectionDto extends createZodDto(
+  ConfirmCollectionSchema,
+) {}
+
+export const CancelCollectionSchema = z.object({
+  reason: z.string().min(5, 'Reason must be at least 5 characters'),
+});
+export class CancelCollectionDto extends createZodDto(CancelCollectionSchema) {}
+
 export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
   @ApiProperty()
   pickupStationId: string | null;
@@ -216,6 +256,8 @@ export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
   caseId: string;
   @ApiProperty({ enum: FoundDocumentCaseStatus })
   status: FoundDocumentCaseStatus;
+  @ApiProperty({ type: ActiveCollectionDto, nullable: true })
+  activeCollection?: ActiveCollectionDto | null;
 }
 
 export class GetDocumentCaseResponseDto implements DocumentCase {

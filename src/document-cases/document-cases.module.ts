@@ -27,6 +27,7 @@ import { CaseVisionExtractionProcessor } from './case-vision-extraction.processo
 import { CaseTextExtractionProcessor } from './case-text-extraction.processor';
 import { CasePostProcessingProcessor } from './case-post-processing.processor';
 import { DocumentCasesTimelineService } from './document-cases.timeline.service';
+import { DocumentCasesCollectionService } from './document-cases.collection.service';
 
 @Module({
   imports: [
@@ -155,6 +156,7 @@ import { DocumentCasesTimelineService } from './document-cases.timeline.service'
     DocumentCasesCreateService,
     DocumentCasesQueryService,
     DocumentCasesWorkflowService,
+    DocumentCasesCollectionService,
     DocumentCaseGateway,
     DocumentCasesTimelineService,
   ],
