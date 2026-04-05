@@ -159,11 +159,7 @@
     },
     "schema": {
       "required": [],
-      "optional": [
-        "push_title",
-        "push_body",
-        "push_data"
-      ]
+      "optional": ["push_title", "push_body", "push_data"]
     },
     "metadata": {
       "channels": {
@@ -523,12 +519,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -545,12 +537,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -567,12 +555,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -589,12 +573,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -611,12 +591,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -633,12 +609,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -655,12 +627,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -677,12 +645,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -699,12 +663,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -721,12 +681,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -743,12 +699,8 @@
       }
     },
     "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
+      "required": ["user"],
+      "optional": ["system"]
     },
     "metadata": {}
   },
@@ -769,10 +721,7 @@
       }
     },
     "schema": {
-      "required": [
-        "email_subject",
-        "email_body"
-      ],
+      "required": ["email_subject", "email_body"],
       "optional": []
     },
     "metadata": {
@@ -800,10 +749,7 @@
       }
     },
     "schema": {
-      "required": [
-        "email_subject",
-        "email_body"
-      ],
+      "required": ["email_subject", "email_body"],
       "optional": []
     },
     "metadata": {
@@ -831,10 +777,7 @@
       }
     },
     "schema": {
-      "required": [
-        "email_subject",
-        "email_body"
-      ],
+      "required": ["email_subject", "email_body"],
       "optional": []
     },
     "metadata": {
@@ -908,10 +851,7 @@
       }
     },
     "schema": {
-      "required": [
-        "email_subject",
-        "email_body"
-      ],
+      "required": ["email_subject", "email_body"],
       "optional": []
     },
     "metadata": {
@@ -965,6 +905,32 @@
         "email": true,
         "sms": false,
         "push": true
+      }
+    }
+  },
+  {
+    "key": "mock.sms.otp.sign_up",
+    "type": "notification",
+    "name": "Mock Send SMS OTP on sign up",
+    "description": "Sent to the finder when their reward disbursement is created after an invoice is fully paid.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Mock OTP SMS to {{phoneNumber}}"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/mock-sms-send-otp.hbs"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": ["email_subject", "email_body"]
+    },
+    "metadata": {
+      "channels": {
+        "email": true
       }
     }
   }

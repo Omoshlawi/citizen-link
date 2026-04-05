@@ -30,6 +30,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { adminConfig } from './auth.contants';
 import { AuthExtendedController } from './auth.controller';
 import { AuthHookHook } from './auth.hooks';
+import { TemplatesModule, TemplatesService } from '../common/templates';
+import { EmailChannelService } from '../notifications/channels/email/email.channel.service';
 
 const HOOKS = [
   { metadataKey: BEFORE_HOOK_KEY, hookType: 'before' as const },
@@ -51,13 +53,15 @@ export class AuthModule {
 
   private static getAuthModule() {
     return AuthenticationModule.forRootAsync({
-      imports: [PrismaModule],
+      imports: [PrismaModule, TemplatesModule],
       useFactory(
         prisma: PrismaService,
         discover: DiscoveryService,
         reflector: Reflector,
         metadataScanner: MetadataScanner,
         notificationDispatch: NotificationDispatchService,
+        templateService: TemplatesService,
+        emailChannelService: EmailChannelService,
       ) {
         const providers = discover
           .getProviders()
@@ -138,17 +142,42 @@ export class AuthModule {
               jwt(),
               twoFactor({
                 otpOptions: {
-                  sendOTP({ user, otp }, request) {
+                  sendOTP: async ({ user, otp }, request) => {
                     // console.log('Data ---------', user);
-                    console.log('OTP ---------', otp);
+                    // console.log('OTP ---------', otp);
                     // console.log('Request ---------', request);
+                    await notificationDispatch.sendFromTemplate({
+                      templateKey: 'mock.sms.otp.sign_up',
+                      recipient: { email: 'mock.otpsigninsms@citizenlink.app' },
+                      data: {
+                        phoneNumber: (user as any).phoneNumber ?? user?.email,
+                        code: otp,
+                      },
+                      userId: user?.id ?? '',
+                      priority: NotificationPriority.HIGH,
+                      force: true,
+                      eventTitle: '2FA OTP',
+                      eventBody: `OTP Has been sent to email addresed to your number.Use it FOR 2FA`,
+                      eventDescription: `Sent when user IS DEALING WITH 2FA`,
+                    });
                   },
                 },
               }),
               phoneNumber({
-                sendOTP: ({ phoneNumber, code }, ctx) => {
-                  console.log('Phone Number ---------', phoneNumber);
-                  console.log('Code ---------', code);
+                sendOTP: async ({ phoneNumber, code }, ctx) => {
+                  // console.log('Phone Number ---------', phoneNumber);
+                  // console.log('Code ---------', code);
+                  // wHEN SIGNING IN WITH OTP,USER DONT EXIST HENCE CANT USE NOTIFICATION DISPATCH AS IT REQUIRES USER ID HENCE MUST SEND MANNUALLY
+                  const {
+                    slots: { email_subject, email_body },
+                  } = await templateService.renderAll('mock.sms.otp.sign_up', {
+                    data: { phoneNumber, code },
+                  });
+                  await emailChannelService.send({
+                    to: 'mock.otpsigninsms@citizenlink.app',
+                    subject: email_subject,
+                    html: email_body,
+                  });
                 },
                 // Optional: Auto-create user on verification
                 signUpOnVerification: {
@@ -220,6 +249,8 @@ export class AuthModule {
         Reflector,
         MetadataScanner,
         NotificationDispatchService,
+        TemplatesService,
+        EmailChannelService,
       ],
     });
   }

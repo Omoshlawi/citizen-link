@@ -43,7 +43,12 @@ export class NotificationsModule {
         NotificationReceiptProcessor,
       ],
       controllers: [NotificationsController],
-      exports: [NotificationDispatchService],
+      exports: [
+        NotificationDispatchService,
+        EmailChannelModule,
+        SmsChannelModule,
+        PushChannelModule,
+      ],
     };
   }
 

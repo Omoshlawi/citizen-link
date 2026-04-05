@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your OTP Code — Citizen Link</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:'Inter', Arial, sans-serif;">
+  <table width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#003b5a; border-radius:12px 12px 0 0; padding:28px 40px;">
+              <p style="margin:0; font-size:22px; font-weight:700; color:#ffffff;">
+                Citizen Link
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#ffffff; padding:40px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+
+              <p style="margin:0 0 8px; font-size:15px; color:#475569;">
+                Hello {{phoneNumber}},
+              </p>
+
+              <h1 style="margin:0 0 20px; font-size:22px; font-weight:700; color:#003b5a;">
+                Your Login Verification Code or  two-factor authentication (2FA) on your Citizen Link account.
+              </h1>
+
+              <p style="margin:0 0 28px; font-size:15px; color:#475569; line-height:1.7;">
+                Use the code below to sign in to your Citizen Link account OR two-factor authentication (2FA) on your Citizen Link account..
+              </p>
+
+              <!-- OTP -->
+              <table width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#f0f9ff; border:2px solid #006397; border-radius:12px; margin-bottom:28px;">
+                <tr>
+                  <td align="center" style="padding:28px 24px;">
+                    <p style="margin:0 0 8px; font-size:11px; font-weight:700; color:#006397; letter-spacing:1.2px; text-transform:uppercase;">
+                      Your OTP Code
+                    </p>
+                    <p style="margin:0; font-size:48px; font-weight:700; color:#003b5a; letter-spacing:10px; font-family:'Courier New', monospace;">
+                      {{code}}
+                    </p>
+                    <p style="margin:10px 0 0; font-size:12px; color:#64748b;">
+                      This code will expire shortly
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security -->
+              <table width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#fff7ed; border-left:4px solid #f59e0b; border-radius:0 8px 8px 0; margin-bottom:20px;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <p style="margin:0; font-size:13px; color:#92400e;">
+                      <strong>Important:</strong> Do not share this code with anyone.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Shared inbox notice -->
+              <table width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#f8fafc; border-left:4px solid #006397; border-radius:0 8px 8px 0; margin-bottom:28px;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <p style="margin:0; font-size:13px; color:#334155;">
+                      <strong>Note:</strong> This inbox is used to simulate SMS delivery during testing.
+                      If this code is not for your number ({{phoneNumber}}), please do not delete this email,
+                      as another user may need it to complete login.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0; font-size:14px; color:#475569;">
+                — Citizen Link Team
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 12px 12px; padding:20px;" align="center">
+              <p style="margin:0; font-size:11px; color:#94a3b8;">
+                This is an automated message. Do not reply.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

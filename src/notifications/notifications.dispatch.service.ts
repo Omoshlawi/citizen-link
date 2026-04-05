@@ -557,6 +557,15 @@ export class NotificationDispatchService {
       }
     }
 
+    // Phone-only accounts have a synthetic placeholder email — drop it so the EMAIL
+    // channel is silently skipped by the guard below (same path as "no email at all").
+    if (resolvedRecipient.email && this.isTempEmail(resolvedRecipient.email)) {
+      this.logger.log(
+        `Dropping EMAIL — user:${userId} has a temporary placeholder email (phone-only account)`,
+      );
+      resolvedRecipient.email = undefined;
+    }
+
     // Pre-load push tokens when PUSH is active and none are provided.
     // Tokens are fresh at enqueue time; stale ones are deactivated on send failure.
     if (
@@ -727,6 +736,11 @@ export class NotificationDispatchService {
       default:
         return '';
     }
+  }
+
+  /** Returns true when the email is the auto-generated placeholder for phone-only OTP accounts. */
+  private isTempEmail(email: string): boolean {
+    return /^\+?\d+@citizenlink\.app$/.test(email);
   }
 
   private resolveProviderName(channel: NotificationChannel): string {
