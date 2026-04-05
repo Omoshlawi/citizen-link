@@ -100,7 +100,7 @@ export class PushTokenService {
       where: {
         token: token,
       },
-      update: dto,
+      update: { userId: user.id, ...dto },
       create: {
         token,
         userId: user.id,
