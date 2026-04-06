@@ -17,6 +17,7 @@ import { ApiProperty, PickType } from '@nestjs/swagger';
 import {
   DocumentCase,
   DocumentCollectionStatus,
+  ExtractionStatus,
   FoundDocumentCase,
   FoundDocumentCaseStatus,
   LostDocumentCase,
@@ -56,8 +57,9 @@ export const QueryDocumentCaseSchema = z
       })
       .optional()
       .default(false),
+    extractionStatus: z.enum(ExtractionStatus).optional(),
   })
-  .merge(
+  .extend(
     QueryAddressSchema.pick({
       level1: true,
       level2: true,
@@ -67,7 +69,7 @@ export const QueryDocumentCaseSchema = z
       country: true,
       postalCode: true,
       location: true,
-    }),
+    }).shape,
   );
 
 export const DocumentCaseSchema = z.object({

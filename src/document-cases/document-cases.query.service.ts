@@ -13,6 +13,7 @@ import { isSuperUser } from '../app.utils';
 import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
+  ExtractionStatus,
   Prisma,
 } from '../../generated/prisma/client';
 
@@ -91,6 +92,9 @@ export class DocumentCasesQueryService {
               }
             : undefined,
           caseNumber: query.caseNumber,
+          extraction: query.extractionStatus
+            ? { extractionStatus: query.extractionStatus as ExtractionStatus }
+            : undefined,
         },
         {
           OR: query.search
