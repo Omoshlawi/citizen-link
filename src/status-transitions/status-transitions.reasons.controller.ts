@@ -25,6 +25,7 @@ import {
   DeleteQueryDto,
   OriginalUrl,
 } from '../common/query-builder';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 
 @Controller('status-transitions-reasons')
 export class StatusTransitionsReasonsController {
@@ -70,6 +71,7 @@ export class StatusTransitionsReasonsController {
   @ApiOperation({ summary: 'Get unique entity types' })
   @ApiOkResponse({ type: EntityTypeResponseDto })
   @ApiErrorsResponse()
+  @AllowAnonymous()
   getUniqueEntityTypes() {
     return this.transitionReasonsService.getUniqueEntityTypes();
   }
