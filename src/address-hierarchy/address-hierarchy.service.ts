@@ -44,7 +44,14 @@ export class AddressHierarchyService {
             ? [
                 {
                   name: {
-                    contains: query.search, //mode: 'insensitive'
+                    contains: query.search,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  nameLocal: {
+                    contains: query.search,
+                    mode: 'insensitive',
                   },
                 },
               ]
