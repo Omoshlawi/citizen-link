@@ -11,6 +11,7 @@ import {
   QueryStatusTransitionsResponseDto,
 } from './status-transitions.transitions.dto';
 import { StatusTransitionService } from './status-transition.service';
+import { RequireSystemPermission } from 'src/auth/auth.decorators';
 
 @Controller('status-transitions')
 export class StatusTransitionsController {
@@ -22,6 +23,7 @@ export class StatusTransitionsController {
   @ApiOperation({ summary: 'Query status transitions' })
   @ApiOkResponse({ type: QueryStatusTransitionsResponseDto })
   @ApiErrorsResponse()
+  @RequireSystemPermission({ statusTransition: ['view'] })
   findAll(
     @Query() query: QueryStatusTransitionsDto,
     @OriginalUrl() originalUrl: string,
@@ -33,6 +35,7 @@ export class StatusTransitionsController {
   @ApiOperation({ summary: 'Get status transition by id' })
   @ApiOkResponse({ type: GetStatusTransitionResponseDto })
   @ApiErrorsResponse({ notFound: true })
+  @RequireSystemPermission({ statusTransition: ['view'] })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: CustomRepresentationQueryDto,
