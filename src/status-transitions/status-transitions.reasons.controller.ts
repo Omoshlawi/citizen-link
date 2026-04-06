@@ -6,12 +6,17 @@ import {
   Query,
   Delete,
   Post,
+  Body,
+  Patch,
 } from '@nestjs/common';
 import { TransitionReasonsService } from './status-transitions.reasons.service';
 import {
+  CreateStatusTransitionReasonDto,
+  EntityTypeResponseDto,
   GetTransitionReasonResponseDto,
   QueryStatusTransitionReasonsDto,
   QueryTransitionReasonsResponseDto,
+  UpdateStatusTransitionReasonDto,
 } from './status-transitions.dto';
 import { ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ApiErrorsResponse } from '../app.decorators';
@@ -36,6 +41,37 @@ export class StatusTransitionsReasonsController {
     @OriginalUrl() originalUrl: string,
   ) {
     return this.transitionReasonsService.findAll(query, originalUrl);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create status transition reason' })
+  @ApiOkResponse({ type: GetTransitionReasonResponseDto })
+  @ApiErrorsResponse()
+  create(
+    @Body() dto: CreateStatusTransitionReasonDto,
+    @Query() query: CustomRepresentationQueryDto,
+  ) {
+    return this.transitionReasonsService.create(dto, query);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update status transition reason' })
+  @ApiOkResponse({ type: GetTransitionReasonResponseDto })
+  @ApiErrorsResponse()
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateStatusTransitionReasonDto,
+    @Query() query: CustomRepresentationQueryDto,
+  ) {
+    return this.transitionReasonsService.update(id, dto, query);
+  }
+
+  @Get('entity-types')
+  @ApiOperation({ summary: 'Get unique entity types' })
+  @ApiOkResponse({ type: EntityTypeResponseDto })
+  @ApiErrorsResponse()
+  getUniqueEntityTypes() {
+    return this.transitionReasonsService.getUniqueEntityTypes();
   }
 
   @Get(':id')

@@ -25,6 +25,7 @@ export const adminPluginAcl = createAccessControl({
   extraction: ['debug'],
   templates: ['create', 'update', 'delete', 'restore'],
   notification: ['delete', 'test'],
+  transitionReason: ['create', 'update', 'delete', 'restore', 'restore'],
 });
 
 const adminRole = adminPluginAcl.newRole({
@@ -45,6 +46,7 @@ const adminRole = adminPluginAcl.newRole({
   extraction: ['debug'],
   templates: ['create', 'update', 'delete', 'restore'],
   notification: ['delete', 'test'],
+  transitionReason: ['create', 'update', 'delete', 'restore', 'restore'],
   ...adminAc.statements,
 });
 

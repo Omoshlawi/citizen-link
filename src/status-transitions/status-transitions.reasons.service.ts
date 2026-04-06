@@ -8,7 +8,11 @@ import {
   SortService,
 } from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
-import { QueryStatusTransitionReasonsDto } from './status-transitions.dto';
+import {
+  CreateStatusTransitionReasonDto,
+  QueryStatusTransitionReasonsDto,
+  UpdateStatusTransitionReasonDto,
+} from './status-transitions.dto';
 
 @Injectable()
 export class TransitionReasonsService {
@@ -79,6 +83,30 @@ export class TransitionReasonsService {
     };
   }
 
+  async create(
+    dto: CreateStatusTransitionReasonDto,
+    query: CustomRepresentationQueryDto,
+  ) {
+    const data = await this.prisma.transitionReason.create({
+      data: dto,
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+    return data;
+  }
+
+  async update(
+    id: string,
+    dto: UpdateStatusTransitionReasonDto,
+    query: CustomRepresentationQueryDto,
+  ) {
+    const data = await this.prisma.transitionReason.update({
+      where: { id },
+      data: dto,
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+    return data;
+  }
+
   async findOne(id: string, query: CustomRepresentationQueryDto) {
     const data = await this.prisma.transitionReason.findUnique({
       where: { id },
@@ -112,5 +140,16 @@ export class TransitionReasonsService {
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
     return data;
+  }
+
+  async getUniqueEntityTypes() {
+    const data = await this.prisma.transitionReason.findMany({
+      select: { entityType: true },
+      distinct: ['entityType'],
+    });
+    return {
+      results: data.map((item) => item.entityType),
+      totalCount: data.length,
+    };
   }
 }

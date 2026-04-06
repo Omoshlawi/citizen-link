@@ -49,6 +49,28 @@ export class StatusTransitionReasonsDto extends createZodDto(
   StatusTransitionReasonsSchema,
 ) {}
 
+export const CreateStatusTransitionReasonSchema = z.object({
+  code: z.string(),
+  entityType: z.string().default('*'),
+  fromStatus: z.string().default('*'),
+  toStatus: z.string().default('*'),
+  auto: z.boolean().default(false),
+  label: z.string(),
+  description: z.string().optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+});
+
+export class CreateStatusTransitionReasonDto extends createZodDto(
+  CreateStatusTransitionReasonSchema,
+) {}
+
+export const UpdateStatusTransitionReasonSchema =
+  CreateStatusTransitionReasonSchema.partial();
+
+export class UpdateStatusTransitionReasonDto extends createZodDto(
+  UpdateStatusTransitionReasonSchema,
+) {}
+
 export class GetTransitionReasonResponseDto implements TransitionReason {
   @ApiProperty()
   metadata: JsonValue;
@@ -107,4 +129,12 @@ export class QueryTransitionReasonsResponseDto {
 
   @ApiProperty()
   prev: string | null;
+}
+
+export class EntityTypeResponseDto {
+  @ApiProperty({ isArray: true, type: String })
+  results: string[];
+
+  @ApiProperty()
+  totalCount: number;
 }
