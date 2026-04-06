@@ -10,6 +10,7 @@ export const adminPluginAcl = createAccessControl({
   ...defaultAdminStatements,
   documentType: ['create', 'update', 'delete', 'restore'],
   addressLocale: ['create', 'update', 'delete', 'restore'],
+  addressHierarchy: ['create', 'update', 'delete', 'restore'],
   pickupStation: ['create', 'update', 'delete', 'restore'],
   documentCase: ['verify', 'reject', 'update', 'delete', 'collect'],
   match: [
@@ -29,6 +30,7 @@ export const adminPluginAcl = createAccessControl({
 const adminRole = adminPluginAcl.newRole({
   documentType: ['create', 'update', 'delete', 'restore'],
   addressLocale: ['create', 'update', 'delete', 'restore'],
+  addressHierarchy: ['create', 'update', 'delete', 'restore'],
   pickupStation: ['create', 'update', 'delete', 'restore'],
   documentCase: ['verify', 'reject', 'update', 'delete', 'collect'],
   match: [
