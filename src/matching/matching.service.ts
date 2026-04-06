@@ -275,6 +275,22 @@ export class MatchingService {
               ]
             : undefined,
         },
+        {
+          status: query.status,
+        },
+        {
+          verdict: query.verdict,
+        },
+        {
+          finalScore:
+            query.minMatchScore !== undefined ||
+            query.maxMatchScore !== undefined
+              ? {
+                  gte: query.minMatchScore,
+                  lte: query.maxMatchScore,
+                }
+              : undefined,
+        },
       ],
     };
     const totalCount = await this.prismaService.match.count({ where: dbQuery });

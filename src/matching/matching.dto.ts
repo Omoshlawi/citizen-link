@@ -67,6 +67,7 @@ export const QueryMatchesSchema = z.object({
   maxMatchScore: z.coerce.number().min(0).max(1).optional(),
   documentCaseId: z.uuid().optional(),
   search: z.string().optional(),
+  verdict: MatchVerdictSchema.optional(),
   userId: z
     .string()
     .optional()
