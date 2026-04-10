@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from '../app.utils';
+import { BetterAuthWithPlugins } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
@@ -41,6 +42,7 @@ export class NotificationsService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   async findAll(
@@ -48,7 +50,9 @@ export class NotificationsService {
     user: UserSession['user'],
     originalUrl: string,
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { notification: ['list-any'] } },
+    });
     const dbQuery: Prisma.NotificationEventWhereInput = {
       voided: query?.includeVoided ? undefined : false,
       userId: isAdmin ? (query?.userId ?? undefined) : user.id,
@@ -97,7 +101,9 @@ export class NotificationsService {
   }
 
   async findOne(id: string, user: UserSession['user']) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { notification: ['view-any'] } },
+    });
     const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
       include: {
@@ -125,7 +131,9 @@ export class NotificationsService {
   }
 
   async getEventLogs(id: string, user: UserSession['user']) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { notification: ['view-any'] } },
+    });
     const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
       select: { userId: true },
@@ -143,7 +151,9 @@ export class NotificationsService {
   }
 
   async markRead(id: string, user: UserSession['user']) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { notification: ['manage-any'] } },
+    });
     const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
     });
@@ -165,7 +175,9 @@ export class NotificationsService {
   }
 
   async remove(id: string, user: UserSession['user'], query: DeleteQueryDto) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { notification: ['manage-any'] } },
+    });
     const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
     });
@@ -189,7 +201,9 @@ export class NotificationsService {
     user: UserSession['user'],
     _query: CustomRepresentationQueryDto,
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { notification: ['manage-any'] } },
+    });
     const event = await this.prisma.notificationEvent.findUnique({
       where: { id },
     });

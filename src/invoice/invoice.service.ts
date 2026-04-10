@@ -15,8 +15,8 @@ import {
   PaginationService,
   SortService,
 } from '../common/query-builder';
-import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from '../app.utils';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 
 @Injectable()
 export class InvoiceService {
@@ -26,6 +26,7 @@ export class InvoiceService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
   async create(
     createInvoiceDto: CreateInvoiceDto,
@@ -97,7 +98,9 @@ export class InvoiceService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { invoice: ['list-any'] } },
+    });
     const dbQuery: Prisma.InvoiceWhereInput = {
       AND: [
         {
@@ -136,7 +139,9 @@ export class InvoiceService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { invoice: ['list-any'] } },
+    });
 
     const data = await this.prismaService.invoice.findUnique({
       where: { id, claim: { userId: isAdmin ? undefined : user.id } },

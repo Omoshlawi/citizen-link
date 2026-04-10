@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
-import { UserSession } from '../auth/auth.types';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import { QueryPushTokenDto, SetPushTokenDto } from './push-token.dto';
 import { Prisma, UserPushToken } from '../../generated/prisma/client';
-import { isSuperUser } from '../app.utils';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
@@ -14,19 +15,37 @@ import { SortService } from '../common/query-builder/sort.service';
 
 @Injectable()
 export class PushTokenService {
+  private authService?: AuthService<BetterAuthWithPlugins>;
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly moduleRef: ModuleRef,
   ) {}
+
+  private getAuthService(): AuthService<BetterAuthWithPlugins> {
+    if (!this.authService) {
+      this.authService = this.moduleRef.get(AuthService, { strict: false });
+    }
+    return this.authService;
+  }
+
+  private async canListAnyPushTokens(userId: string): Promise<boolean> {
+    const authService = this.getAuthService();
+    const { success } = await authService.api.userHasPermission({
+      body: { userId, permission: { pushToken: ['list-any'] } },
+    });
+    return success;
+  }
 
   async findAll(
     query: QueryPushTokenDto,
     user: UserSession['user'],
     originalUrl: string,
   ) {
-    const isAdmin = isSuperUser(user);
+    const isAdmin = await this.canListAnyPushTokens(user.id);
     const dbQuery: Prisma.UserPushTokenWhereInput = {
       AND: [
         {
@@ -60,7 +79,7 @@ export class PushTokenService {
     user: UserSession['user'],
     query: DeleteQueryDto,
   ) {
-    const isAdmin = isSuperUser(user);
+    const isAdmin = await this.canListAnyPushTokens(user.id);
     let data: UserPushToken;
     if (query?.purge) {
       data = await this.prismaService.userPushToken.delete({
@@ -82,7 +101,7 @@ export class PushTokenService {
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {
-    const isAdmin = isSuperUser(user);
+    const isAdmin = await this.canListAnyPushTokens(user.id);
     const data = await this.prismaService.userPushToken.update({
       where: { token, userId: isAdmin ? undefined : user.id },
       data: { voided: false },

@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from '../app.utils';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 
 @Injectable()
 export class DocumentCasesTimelineService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
+  ) {}
 
   private async isClaimantAVerifiedOwner(caseId: string, userId: string) {
     return this.prismaService.claim.findFirst({
@@ -22,7 +25,9 @@ export class DocumentCasesTimelineService {
   }
 
   async getCaseTimeline(id: string, user: UserSession['user']) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { documentCase: ['view-any'] } },
+    });
     const isVerifiedOwner = await this.isClaimantAVerifiedOwner(id, user.id);
 
     const docCase = await this.prismaService.documentCase.findUnique({

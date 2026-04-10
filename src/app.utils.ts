@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import { UserSession } from './auth/auth.types';
 import dayjs from 'dayjs';
 import { Results } from './common/common.interfaces';
 /* eslint-disable @typescript-eslint/no-unsafe-return */
@@ -91,10 +90,6 @@ export const safeParseJson = <T, E = Error>(
   } catch (error) {
     return { success: false, error: error as E };
   }
-};
-
-export const isSuperUser = (user?: UserSession['user']) => {
-  return !!user?.role?.includes('admin');
 };
 
 export function parseDate(

@@ -10,7 +10,8 @@ import {
   WalletEntryReason,
   WalletEntryType,
 } from '../../generated/prisma/client';
-import { UserSession } from '../auth/auth.types';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
@@ -18,7 +19,7 @@ import {
   SortService,
 } from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
-import { isSuperUser, parseDate } from '../app.utils';
+import { parseDate } from '../app.utils';
 import { B2CCallbackBody, DarajaService } from '../payment/daraja.service';
 import {
   QueryDisbursementDto,
@@ -37,6 +38,7 @@ export class DisbursementService {
     private readonly sortService: SortService,
     private readonly darajaService: DarajaService,
     private readonly regionService: RegionService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   /**
@@ -49,7 +51,9 @@ export class DisbursementService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { disbursement: ['list-any'] } },
+    });
 
     const disbursement = await this.prismaService.disbursement.findUnique({
       where: { id },
@@ -277,7 +281,9 @@ export class DisbursementService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { disbursement: ['list-any'] } },
+    });
     const dbQuery: Prisma.DisbursementWhereInput = {
       AND: [
         {
@@ -317,7 +323,9 @@ export class DisbursementService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { disbursement: ['view-any'] } },
+    });
     const disbursement = await this.prismaService.disbursement.findUnique({
       where: { id, recipientId: isAdmin ? undefined : user.id },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),

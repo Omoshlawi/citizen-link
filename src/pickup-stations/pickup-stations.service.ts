@@ -13,8 +13,8 @@ import {
   QueryPickupStationDto,
   UpdatePickupStationDto,
 } from './pickup-station.dto';
-import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from '../app.utils';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import { pick } from 'lodash';
 import { PickupStation, Prisma } from '../../generated/prisma/client';
 import { RegionService } from '../region/region.service';
@@ -27,6 +27,7 @@ export class PickupStationsService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly regionService: RegionService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   async getAll(
@@ -34,7 +35,11 @@ export class PickupStationsService {
     originalUrl: string,
     user?: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = user
+      ? await this.authService.api.userHasPermission({
+          body: { userId: user.id, permission: { staffStationOperation: ['view'] } },
+        })
+      : { success: false };
     const dbQuery: Prisma.PickupStationWhereInput = {
       AND: [
         {

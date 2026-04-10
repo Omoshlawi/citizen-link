@@ -4,8 +4,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { isSuperUser, normalizeString, parseDate } from '../app.utils';
-import { UserSession } from '../auth/auth.types';
+import { normalizeString, parseDate } from '../app.utils';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
@@ -37,6 +38,7 @@ export class ClaimService {
     private readonly s3Service: S3Service,
     private readonly claimStatusTransitionService: ClaimStatusTransitionService,
     private readonly humanIdService: HumanIdService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   private async validateMatch(matchId: string, userId: string) {
@@ -233,7 +235,9 @@ export class ClaimService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { claim: ['list-any'] } },
+    });
     const dbQuery: Prisma.ClaimWhereInput = {
       AND: [
         {
@@ -303,7 +307,9 @@ export class ClaimService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { claim: ['list-any'] } },
+    });
     const data = await this.prismaService.claim.findUnique({
       where: {
         id,

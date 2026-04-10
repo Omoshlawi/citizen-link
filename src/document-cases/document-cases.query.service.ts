@@ -8,8 +8,8 @@ import {
 } from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueryDocumentCaseDto } from './document-cases.dto';
-import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from '../app.utils';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
@@ -24,13 +24,16 @@ export class DocumentCasesQueryService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
   async findAll(
     query: QueryDocumentCaseDto,
     user: UserSession['user'],
     originalUrl: string,
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { documentCase: ['list-any'] } },
+    });
     const dbQuery: Prisma.DocumentCaseWhereInput = {
       AND: [
         {
@@ -285,7 +288,9 @@ export class DocumentCasesQueryService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { documentCase: ['view-any'] } },
+    });
     const isVerifiedOwner = await this.isClaimantAVerifiedOwner(id, user.id);
     const data = await this.prismaService.documentCase.findUnique({
       where: { id, userId: isAdmin || isVerifiedOwner ? undefined : user.id },

@@ -14,9 +14,9 @@ import {
 } from './address.dto';
 import { Address, AddressType } from '../../generated/prisma/client';
 import dayjs from 'dayjs';
-import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from '../app.utils';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import { Prisma } from '../../generated/prisma/client';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 
 @Injectable()
 export class AddressService {
@@ -25,6 +25,7 @@ export class AddressService {
     private readonly sortService: SortService,
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   async getAll(
@@ -32,7 +33,9 @@ export class AddressService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { address: ['view-any'] } },
+    });
     const dbQuery: Prisma.AddressWhereInput = {
       AND: [
         {

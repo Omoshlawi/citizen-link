@@ -19,8 +19,8 @@ import {
   QueryMatchesForFoundCaseDto,
   QueryMatchesForLostCaseDto,
 } from './matching.dto';
-import { UserSession } from '../auth/auth.types';
-import { isSuperUser } from '../app.utils';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import { MatchingStatusTransitionService } from './matching.transitions.service';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import { MatchingVectorSearchService } from './matching.vector-search';
@@ -38,6 +38,7 @@ export class MatchingService {
     private readonly sortService: SortService,
     private readonly matchTransitionsService: MatchingStatusTransitionService,
     private readonly matchingVectorSearchService: MatchingVectorSearchService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   reject(
@@ -122,7 +123,9 @@ export class MatchingService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { match: ['list-any'] } },
+    });
     const dbQuery: Prisma.MatchWhereInput = {
       AND: [
         {
@@ -321,7 +324,9 @@ export class MatchingService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { match: ['list-any'] } },
+    });
     const data = await this.prismaService.match.findUnique({
       where: { id },
       ...this.representationService.buildCustomRepresentationQuery(

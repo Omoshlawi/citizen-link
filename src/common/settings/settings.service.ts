@@ -15,7 +15,8 @@ import {
   SortService,
 } from '../query-builder';
 import { UserSession } from '../../auth/auth.types';
-import { isSuperUser } from '../../app.utils';
+import { BetterAuthWithPlugins } from '../../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import { SettingsUtils } from './settings.utils';
 import { SystemSettingService } from './settings.system.service';
 import { UserSettingService } from './settings.user.service';
@@ -30,6 +31,7 @@ export class SettingsService {
     private readonly sortService: SortService,
     private readonly systemSettingService: SystemSettingService,
     private readonly userSettingService: UserSettingService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   async queryAll(
@@ -37,7 +39,9 @@ export class SettingsService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { setting: ['view-any'] } },
+    });
     const dbQuery: Prisma.SettingWhereInput = {
       AND: [
         {
@@ -94,7 +98,9 @@ export class SettingsService {
   }
 
   async queryObject(query: QuerySettingObjectDto, user: UserSession['user']) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { setting: ['view-any'] } },
+    });
     const dbQuery: Prisma.SettingWhereInput = {
       AND: [
         {
@@ -115,7 +121,9 @@ export class SettingsService {
     user: UserSession['user'],
     query: CustomRepresentationQueryDto,
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { setting: ['manage-system'] } },
+    });
     if (!isAdmin && data.isSystemSetting)
       throw new ForbiddenException(
         'You are not authorized to alter system settings',
@@ -146,7 +154,9 @@ export class SettingsService {
   }
 
   async setObjectSetting(data: SetSettingObjectDto, user: UserSession['user']) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { setting: ['manage-system'] } },
+    });
     if (!isAdmin && data.isSystemSetting)
       throw new ForbiddenException(
         'You are not authorized to alter system settings',
@@ -174,7 +184,9 @@ export class SettingsService {
     { keyOrPrefix, isSystemSetting }: DeleteSettingDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { setting: ['manage-system'] } },
+    });
     if (!isAdmin && isSystemSetting)
       throw new ForbiddenException(
         'You are not authorized to alter system settings',

@@ -7,7 +7,9 @@ import {
   SortService,
 } from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
-import { isSuperUser, parseDate } from '../app.utils';
+import { parseDate } from '../app.utils';
+import { BetterAuthWithPlugins } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import { QueryWalletLedgerDto } from './wallet.dto';
 import { RegionService } from '../region/region.service';
 
@@ -18,6 +20,7 @@ export class WalletService {
     private readonly paginationService: PaginationService,
     private readonly sortService: SortService,
     private readonly regionService: RegionService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   /**
@@ -25,7 +28,10 @@ export class WalletService {
    * Admins can pass userId to view any user's wallet.
    */
   async getWallet(user: UserSession['user'], userId?: string) {
-    const targetUserId = isSuperUser(user) && userId ? userId : user.id;
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { wallet: ['view-any'] } },
+    });
+    const targetUserId = isAdmin && userId ? userId : user.id;
 
     const wallet = await this.prismaService.wallet.findUnique({
       where: { userId: targetUserId },
@@ -54,7 +60,9 @@ export class WalletService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { wallet: ['view-any'] } },
+    });
     const targetUserId = isAdmin && query.userId ? query.userId : user.id;
 
     const wallet = await this.prismaService.wallet.findUnique({
@@ -110,7 +118,9 @@ export class WalletService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { wallet: ['view-any'] } },
+    });
 
     const entry = await this.prismaService.walletLedger.findUnique({
       where: { id },

@@ -8,7 +8,8 @@ import {
   HandoverStatus,
   Prisma,
 } from '../../generated/prisma/client';
-import { UserSession } from '../auth/auth.types';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
@@ -18,7 +19,7 @@ import {
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { isSuperUser, parseDate } from '../app.utils';
+import { parseDate } from '../app.utils';
 import { QueryHandoverDto, ScheduleHandoverDto } from './handover.dto';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { NotificationPriority } from '../notifications/notification.interfaces';
@@ -33,6 +34,7 @@ export class HandoverService {
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
     private readonly notificationService: NotificationDispatchService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   async scheduleHandover(
@@ -105,7 +107,9 @@ export class HandoverService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { handover: ['manage-any'] } },
+    });
     const dbQuery: Prisma.HandoverWhereInput = {
       AND: [
         {
@@ -147,7 +151,9 @@ export class HandoverService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { handover: ['manage-any'] } },
+    });
     const handover = await this.prismaService.handover.findUnique({
       where: { id, claim: isAdmin ? undefined : { userId: user.id } },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),

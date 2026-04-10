@@ -15,7 +15,8 @@ import {
   WalletEntryReason,
   WalletEntryType,
 } from '../../generated/prisma/client';
-import { UserSession } from '../auth/auth.types';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
@@ -25,7 +26,7 @@ import {
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { isSuperUser, parseDate } from '../app.utils';
+import { parseDate } from '../app.utils';
 import { DarajaService, StkCallbackBody } from './daraja.service';
 import { InitiatePaymentDto, QueryTransactionDto } from './transaction.dto';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
@@ -45,6 +46,7 @@ export class TransactionService {
     private readonly darajaService: DarajaService,
     private readonly notificationService: NotificationDispatchService,
     private readonly regionService: RegionService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   /**
@@ -57,7 +59,9 @@ export class TransactionService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAgent = isSuperUser(user);
+    const { success: isAgent } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { transaction: ['list-any'] } },
+    });
 
     // Fetch invoice with claim + claimant phone separately to keep types clean
     const invoice = await this.prismaService.invoice.findUnique({
@@ -352,7 +356,9 @@ export class TransactionService {
     originalUrl: string,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { transaction: ['list-any'] } },
+    });
     const dbQuery: Prisma.TransactionWhereInput = {
       AND: [
         {
@@ -394,7 +400,9 @@ export class TransactionService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isAdmin = isSuperUser(user);
+    const { success: isAdmin } = await this.authService.api.userHasPermission({
+      body: { userId: user.id, permission: { transaction: ['list-any'] } },
+    });
     const transaction = await this.prismaService.transaction.findUnique({
       where: { id, userId: isAdmin ? undefined : user.id },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
