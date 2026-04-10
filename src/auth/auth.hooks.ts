@@ -4,6 +4,6 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Hook()
 @Injectable()
-export class AuthHookHook {
+export class AuthHook {
   constructor(private readonly prismaService: PrismaService) {}
 }

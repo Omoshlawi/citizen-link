@@ -95,6 +95,7 @@ const adminRole = adminPluginAcl.newRole({
 // Base staff role
 const staffRole = adminPluginAcl.newRole({
   ...userAc.statements,
+  address: ['view-any'],
 });
 
 const userRole = adminPluginAcl.newRole({

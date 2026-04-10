@@ -29,7 +29,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { adminConfig } from './auth.contants';
 import { AuthExtendedController } from './auth.controller';
-import { AuthHookHook } from './auth.hooks';
+import { AuthHook } from './auth.hooks';
 import { TemplatesModule, TemplatesService } from '../common/templates';
 import { EmailChannelService } from '../notifications/channels/email/email.channel.service';
 
@@ -47,7 +47,7 @@ export class AuthModule {
       imports: [authModule, PrismaModule],
       exports: [authModule],
       controllers: [AuthExtendedController],
-      providers: [AuthHookHook],
+      providers: [AuthHook],
     };
   }
 
