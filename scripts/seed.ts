@@ -12,6 +12,7 @@ const scripts = [
   'seed-document-types.ts',
   'seed-pickup-stations.ts',
   'seed-transition-statuses.ts',
+  'seed-document-operations.ts',
   'seed-admin-user.ts',
   'seed-templates.ts',
 ];

@@ -268,15 +268,15 @@ export class DocumentCasesTimelineService {
     }
 
     // 9. Handover scheduled
-    events.push({
-      key: 'handover_scheduled',
-      timestamp: handover ? handover.scheduledDate.toISOString() : null,
-      status: !handover
-        ? 'pending'
-        : handover.status === 'SCHEDULED' || handover.status === 'IN_PROGRESS'
-          ? 'active'
-          : 'done',
-    });
+    // events.push({
+    //   key: 'handover_scheduled',
+    //   timestamp: handover ? handover.scheduledDate.toISOString() : null,
+    //   status: !handover
+    //     ? 'pending'
+    //     : handover.status === 'SCHEDULED' || handover.status === ''
+    //       ? 'active'
+    //       : 'done',
+    // });
 
     // 10. Case completed (document returned)
     events.push({

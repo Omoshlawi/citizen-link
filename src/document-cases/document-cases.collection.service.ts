@@ -10,6 +10,7 @@ import {
 import dayjs from 'dayjs';
 import z from 'zod';
 import {
+  CustodyStatus,
   DocumentCollectionStatus,
   ExtractionStatus,
   FoundDocumentCaseStatus,
@@ -210,7 +211,11 @@ export class DocumentCasesCollectionService {
       });
       await tx.foundDocumentCase.update({
         where: { id: foundCaseId },
-        data: { status: FoundDocumentCaseStatus.SUBMITTED },
+        data: {
+          status: FoundDocumentCaseStatus.SUBMITTED,
+          custodyStatus: CustodyStatus.IN_CUSTODY,
+          currentStationId: collection.foundCase.pickupStationId ?? null,
+        },
       });
       await tx.statusTransition.create({
         data: {

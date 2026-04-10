@@ -29,33 +29,37 @@ model User {
   displayUsername String?
 
   // relationshipd
-  sessions           Session[]
-  accounts           Account[]
-  notifications      NotificationLog[]
-  notificationEvents NotificationEvent[]
-  messages           Message[]
-  ratings            Rating[]
-  cases              DocumentCase[]
-  addresses          Address[]
-  userActivities     UserActivity[]
-  claims             Claim[]
+  sessions              Session[]
+  accounts              Account[]
+  notifications         NotificationLog[]
+  notificationEvents    NotificationEvent[]
+  messages              Message[]
+  ratings               Rating[]
+  cases                 DocumentCase[]
+  addresses             Address[]
+  userActivities        UserActivity[]
+  claims                Claim[]
   aiinteractions        AIInteraction[]
-  transactions          Transaction[]    @relation("TransactionPayer")
-  initiatedTransactions Transaction[]    @relation("TransactionInitiator")
+  transactions          Transaction[]       @relation("TransactionPayer")
+  initiatedTransactions Transaction[]       @relation("TransactionInitiator")
   disbursements         Disbursement[]
   wallet                Wallet?
 
-  twoFactorEnabled    Boolean?           @default(false)
-  phoneNumber         String?
-  phoneNumberVerified Boolean?
-  twofactors          TwoFactor[]
-  claimAttachments    ClaimAttachment[]
-  statusTransitions        StatusTransition[]
-  pushTokens               UserPushToken[]
-  templateVersions         TemplateVersion[]
-  collectionsInitiated     DocumentCollection[] @relation("CollectionInitiatedBy")
-  collectionsConfirmed     DocumentCollection[] @relation("CollectionConfirmedBy")
-  collectionsCancelled     DocumentCollection[] @relation("CollectionCancelledBy")
+  twoFactorEnabled     Boolean?             @default(false)
+  phoneNumber          String?
+  phoneNumberVerified  Boolean?
+  twofactors           TwoFactor[]
+  claimAttachments     ClaimAttachment[]
+  statusTransitions    StatusTransition[]
+  pushTokens           UserPushToken[]
+  templateVersions     TemplateVersion[]
+  collectionsInitiated DocumentCollection[] @relation("CollectionInitiatedBy")
+  collectionsConfirmed DocumentCollection[] @relation("CollectionConfirmedBy")
+  collectionsCancelled DocumentCollection[] @relation("CollectionCancelledBy")
+
+  staffStationOperations StaffStationOperation[]
+  grantedStaffOperations StaffStationOperation[] @relation("OperationGranter")
+  documentOperations     DocumentOperation[]
 
   @@unique([email])
   @@unique([username])
@@ -206,7 +210,7 @@ model Address {
   localeId String?
   locale   AddressLocale? @relation(fields: [localeId], references: [id])
 
-  cases DocumentCase[]
+  cases                       DocumentCase[]
   collectionAddressFoundCases FoundDocumentCase[] @relation("FoundCaseCollectionAddress")
   handovers                   Handover[]
 
@@ -661,6 +665,13 @@ model FoundDocumentCase {
 
   collections DocumentCollection[]
 
+  // Document custody tracking
+  custodyStatus    CustodyStatus @default(WITH_FINDER)
+  currentStationId String?
+  currentStation   PickupStation? @relation("CurrentCustodyStation", fields: [currentStationId], references: [id])
+
+  documentOperations DocumentOperation[]
+
   @@map("found_document_cases")
 }
 
@@ -706,7 +717,7 @@ enum LostDocumentCaseStatus {
 
 enum SubmissionMethod {
   DROPOFF // Finder will drop the document off at a partner pickup station
-  PICKUP  // An agent will be dispatched to collect the document from the finder
+  PICKUP // An agent will be dispatched to collect the document from the finder
 }
 
 enum FoundDocumentCaseStatus {
@@ -921,8 +932,15 @@ model PickupStation {
   operatingHours Json?
 
   // Relations
-  foundDocumentCases FoundDocumentCase[]
-  handovers          Handover[]
+  foundDocumentCases      FoundDocumentCase[]
+  handovers               Handover[]
+  currentCustodyDocuments FoundDocumentCase[]     @relation("CurrentCustodyStation")
+  stationOperationTypes   StationOperationType[]
+  staffStationOperations  StaffStationOperation[]
+  documentOperationsAt    DocumentOperation[]     @relation("OpStation")
+  documentOperationsFrom  DocumentOperation[]     @relation("OpFrom")
+  documentOperationsTo    DocumentOperation[]     @relation("OpTo")
+  documentOperationsReq   DocumentOperation[]     @relation("OpRequestedBy")
 
   @@map("pickup_stations")
 }
@@ -933,49 +951,99 @@ enum HandoverMethod {
 }
 
 model Handover {
-  id             String @id @default(uuid())
-  handoverNumber String @unique
+  id             String         @id @default(uuid())
+  handoverNumber String         @unique
+  claimId        String         @unique
+  claim          Claim          @relation(fields: [claimId], references: [id])
+  method         HandoverMethod
 
-  claimId String @unique
-  claim   Claim  @relation(fields: [claimId], references: [id])
+  // External Logistics Integration
+  trackingNumber     String? @unique // Number from the courier
+  courierProvider    String? // e.g., "DHL", "In-House", "Sendy"
+  externalShipmentId String? // The ID in the logistics system
 
-  method HandoverMethod
-
-  // PICKUP: station where the owner collects the document
-  pickupStationId String?
-  pickupStation   PickupStation? @relation(fields: [pickupStationId], references: [id])
-
-  // DELIVERY: address where the document is delivered to the owner
+  // Dynamic Locations
+  pickupStationId   String?
+  pickupStation     PickupStation? @relation(fields: [pickupStationId], references: [id])
   deliveryAddressId String?
-  deliveryAddress   Address? @relation(fields: [deliveryAddressId], references: [id])
-
-  // Scheduling
-  scheduledDate DateTime
-  completedAt   DateTime?
-
-  // Verification at handover
-  ownerVerified Boolean @default(false)
-
-  // Documentation
-  ownerSignature  String?
-  handoverNotes   String? @db.Text
+  deliveryAddress   Address?       @relation(fields: [deliveryAddressId], references: [id])
 
   status HandoverStatus @default(SCHEDULED)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // The "Logistics Feed" - This is what users actually track
+  events HandoverEvent[]
 
-  @@index([claimId])
-  @@index([status])
+  scheduledDate DateTime
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([trackingNumber])
   @@map("handovers")
+}
+
+model HandoverEvent {
+  id         String   @id @default(uuid())
+  handoverId String
+  handover   Handover @relation(fields: [handoverId], references: [id])
+
+  handledByType String? // "COURIER", "ADMIN", "SYSTEM"
+  handledById   String?
+
+  status       HandoverStatus
+  description  String? // e.g., "Picked up by courier", "Arrived at sorting center"
+  latitude     Float?
+  longitude    Float?
+  locationName String? // "CBD Nairobi"
+  timestamp    DateTime       @default(now())
+
+  @@index([handoverId])
+  @@map("handover_events")
 }
 
 enum HandoverStatus {
   SCHEDULED
-  IN_PROGRESS
+  // Handover has been created after claim verification.
+  // Document is already in system custody (verified).
+  // Next step: prepare for pickup or delivery.
+
+  READY_FOR_PICKUP
+  // Document is available at a pickup station or office.
+  // Owner has been notified to come collect it.
+
+  OUT_FOR_DELIVERY
+  // Document has left the station and is on its way to the owner.
+  // Used only for DELIVERY method.
+
+  DELIVERED
+  // Document has been handed over to the recipient (owner or proxy).
+  // Awaiting final confirmation (e.g., admin validation or system acknowledgment).
+
   COMPLETED
-  CANCELLED
+  // Handover process fully finalized.
+  // Owner has received and confirmed the document.
+  // Safe to trigger downstream actions (ratings, rewards, closure).
+
+  FAILED
+  // Delivery or pickup attempt failed.
+  // Examples: owner unreachable, incorrect address, logistics issue.
+  // Can be retried or escalated.
+
   NO_SHOW
+  // Owner did not show up to collect the document at the pickup station
+  // within the scheduled time window.
+
+  CANCELLED
+  // Handover was cancelled by admin or system.
+  // Examples: claim invalidated, duplicate, or operational decision.
+}
+
+enum CustodyStatus {
+  WITH_FINDER  // document is physically with the finder; FoundDocumentCase in DRAFT
+  IN_CUSTODY   // document is at a station
+  IN_TRANSIT   // document is between stations (transfer initiated, not yet received)
+  HANDED_OVER  // document returned to owner (pickup collected or delivery confirmed)
+  DISPOSED     // document written off (fake, damaged, unclaimed)
 }
 
 // 2. The Invoice acts as the "Bill" and tracks the lipa mdogo mdogo progress
@@ -1110,8 +1178,8 @@ model Disbursement {
   // Provider-specific data
   metadata Json?
 
-  initiatedAt  DateTime?
-  completedAt  DateTime?
+  initiatedAt DateTime?
+  completedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1123,35 +1191,35 @@ model Disbursement {
 }
 
 enum DisbursementStatus {
-  PENDING     // invoice paid, disbursement not yet initiated
-  INITIATED   // payment sent to provider
-  COMPLETED   // confirmed received by finder
-  FAILED      // provider rejected or timed out
+  PENDING // invoice paid, disbursement not yet initiated
+  INITIATED // payment sent to provider
+  COMPLETED // confirmed received by finder
+  FAILED // provider rejected or timed out
 }
 
 // Generic wallet — usable for finder rewards, refunds, in-app credits, etc.
 model Wallet {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance   Decimal  @default(0.00) @db.Decimal(10, 2)
-  currency  String   @default("KES")
+  id        String         @id @default(uuid())
+  userId    String         @unique
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Decimal        @default(0.00) @db.Decimal(10, 2)
+  currency  String         @default("KES")
   ledger    WalletLedger[]
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime       @updatedAt
 
   @@map("wallets")
 }
 
 enum WalletEntryType {
   CREDIT // balance increases
-  DEBIT  // balance decreases
+  DEBIT // balance decreases
 }
 
 enum WalletEntryReason {
-  FINDER_REWARD       // credited when disbursement created after invoice PAID
-  WITHDRAWAL          // debited when B2C payout initiated
+  FINDER_REWARD // credited when disbursement created after invoice PAID
+  WITHDRAWAL // debited when B2C payout initiated
   WITHDRAWAL_REVERSAL // credited back when B2C payout fails
-  REFUND              // reserved for future use
+  REFUND // reserved for future use
 }
 
 // Full audit trail of every balance change — balance can be reconstructed from ledger
@@ -1160,10 +1228,10 @@ model WalletLedger {
   walletId String
   wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
-  type   WalletEntryType
-  reason WalletEntryReason
-  amount   Decimal @db.Decimal(10, 2)
-  currency String  @default("KES")
+  type     WalletEntryType
+  reason   WalletEntryReason
+  amount   Decimal           @db.Decimal(10, 2)
+  currency String            @default("KES")
 
   // Snapshot before and after — enables full transparency
   balanceBefore Decimal @db.Decimal(10, 2)
@@ -1465,4 +1533,125 @@ enum NotificationStatus {
   SENT
   FAILED
   SKIPPED // user opted out / quiet hours
+}
+
+// ─── Document Custody Models ──────────────────────────────────────────────────
+
+// DB-configured operation type — code/prefix/flags instead of enum
+model DocumentOperationType {
+  id          String  @id @default(uuid())
+  code        String  @unique // "TRANSFER_OUT", "DISPOSAL", etc.
+  prefix      String  @unique // "TFO", "DSP" — used to generate operationNumber
+  name        String
+  description String?
+
+  // Validation behaviour flags
+  requiresDestinationStation Boolean @default(false)
+  requiresSourceStation      Boolean @default(false)
+  requiresNotes              Boolean @default(false)
+  isHighPrivilege            Boolean @default(false) // extra check (e.g. DISPOSAL)
+  isFinalOperation           Boolean @default(false) // custody becomes terminal after this
+
+  metadata  Json?
+  voided    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stationTypes    StationOperationType[]
+  staffOperations StaffStationOperation[]
+  operations      DocumentOperation[]
+
+  @@map("document_operation_types")
+}
+
+// Which operations are enabled at each station (station-level ceiling)
+model StationOperationType {
+  id        String        @id @default(uuid())
+  stationId String
+  station   PickupStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  operationTypeId String
+  operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id], onDelete: Cascade)
+
+  isEnabled Boolean  @default(true)
+  voided    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([stationId, operationTypeId])
+  @@index([stationId])
+  @@map("station_operation_types")
+}
+
+// Per-staff, per-station, per-operation grant (flat association)
+model StaffStationOperation {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stationId String
+  station   PickupStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  operationTypeId String
+  operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id], onDelete: Cascade)
+
+  grantedById String
+  grantedBy   User   @relation("OperationGranter", fields: [grantedById], references: [id])
+
+  voided     Boolean   @default(false)
+  voidedAt   DateTime?
+  voidedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, stationId, operationTypeId])
+  @@index([userId, stationId])
+  @@index([stationId])
+  @@map("staff_station_operations")
+}
+
+// Immutable operation ledger — never updated or deleted
+model DocumentOperation {
+  id              String @id @default(uuid())
+  operationNumber String @unique // generated from operationType.prefix via HumanIdService
+
+  foundCaseId String
+  foundCase   FoundDocumentCase @relation(fields: [foundCaseId], references: [id])
+
+  operationTypeId String
+  operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id])
+
+  // Station context (populated based on operation type)
+  stationId            String?
+  station              PickupStation? @relation("OpStation", fields: [stationId], references: [id])
+  fromStationId        String?
+  fromStation          PickupStation? @relation("OpFrom", fields: [fromStationId], references: [id])
+  toStationId          String?
+  toStation            PickupStation? @relation("OpTo", fields: [toStationId], references: [id])
+  requestedByStationId String?
+  requestedByStation   PickupStation? @relation("OpRequestedBy", fields: [requestedByStationId], references: [id])
+
+  performedById String
+  performedBy   User   @relation(fields: [performedById], references: [id])
+
+  // Paired operation link (TRANSFER_OUT ↔ TRANSFER_IN)
+  pairedOperationId String?            @unique
+  pairedOperation   DocumentOperation? @relation("OperationPair", fields: [pairedOperationId], references: [id])
+  pairedBy          DocumentOperation? @relation("OperationPair")
+
+  // Custody state snapshot at time of operation
+  custodyStatusBefore CustodyStatus
+  custodyStatusAfter  CustodyStatus
+
+  notes    String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([foundCaseId])
+  @@index([operationTypeId])
+  @@index([stationId])
+  @@map("document_operations")
 }

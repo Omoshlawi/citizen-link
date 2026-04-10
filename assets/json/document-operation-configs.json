@@ -1,0 +1,101 @@
+[
+  {
+    "code": "RECEIVED",
+    "prefix": "RCV",
+    "name": "Received at Station",
+    "description": "Document physically received and registered at this station.",
+    "requiresDestinationStation": false,
+    "requiresSourceStation": false,
+    "requiresNotes": false,
+    "isHighPrivilege": false,
+    "isFinalOperation": false
+  },
+  {
+    "code": "TRANSFER_OUT",
+    "prefix": "TFO",
+    "name": "Transfer Out",
+    "description": "Document dispatched from this station to another.",
+    "requiresDestinationStation": true,
+    "requiresSourceStation": false,
+    "requiresNotes": false,
+    "isHighPrivilege": false,
+    "isFinalOperation": false
+  },
+  {
+    "code": "TRANSFER_IN",
+    "prefix": "TFI",
+    "name": "Transfer In",
+    "description": "Document received from another station. Completes a Transfer Out.",
+    "requiresDestinationStation": false,
+    "requiresSourceStation": true,
+    "requiresNotes": false,
+    "isHighPrivilege": false,
+    "isFinalOperation": false
+  },
+  {
+    "code": "REQUISITION",
+    "prefix": "REQ",
+    "name": "Requisition",
+    "description": "Request that a document held at another station be sent here.",
+    "requiresDestinationStation": false,
+    "requiresSourceStation": false,
+    "requiresNotes": false,
+    "isHighPrivilege": false,
+    "isFinalOperation": false
+  },
+  {
+    "code": "HANDOVER",
+    "prefix": "HND",
+    "name": "Document Handover",
+    "description": "Document handed over to the verified owner.",
+    "requiresDestinationStation": false,
+    "requiresSourceStation": false,
+    "requiresNotes": false,
+    "isHighPrivilege": false,
+    "isFinalOperation": true
+  },
+  {
+    "code": "DISPOSAL",
+    "prefix": "DSP",
+    "name": "Disposal",
+    "description": "Document permanently removed from custody (fake, damaged, or unclaimed after expiry).",
+    "requiresDestinationStation": false,
+    "requiresSourceStation": false,
+    "requiresNotes": true,
+    "isHighPrivilege": true,
+    "isFinalOperation": true
+  },
+  {
+    "code": "RETURN",
+    "prefix": "RTN",
+    "name": "Return After Failed Delivery",
+    "description": "Document returned to station after a failed delivery or no-show.",
+    "requiresDestinationStation": false,
+    "requiresSourceStation": false,
+    "requiresNotes": false,
+    "isHighPrivilege": false,
+    "isFinalOperation": false
+  },
+  {
+    "code": "AUDIT",
+    "prefix": "AUD",
+    "name": "Location Audit",
+    "description": "Periodic confirmation that this document is physically present at this station.",
+    "requiresDestinationStation": false,
+    "requiresSourceStation": false,
+    "requiresNotes": false,
+    "isHighPrivilege": false,
+    "isFinalOperation": false
+  },
+  {
+    "code": "CONDITION_UPDATE",
+    "prefix": "CDU",
+    "name": "Condition Update",
+    "description": "Record updated physical condition of the document (e.g. water damage, torn).",
+    "requiresDestinationStation": false,
+    "requiresSourceStation": false,
+    "requiresNotes": true,
+    "isHighPrivilege": false,
+    "isFinalOperation": false
+  }
+]

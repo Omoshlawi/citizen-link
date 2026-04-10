@@ -15,6 +15,7 @@ import {
 import { QueryAddressSchema } from '../address/address.dto';
 import { ApiProperty, PickType } from '@nestjs/swagger';
 import {
+  CustodyStatus,
   DocumentCase,
   DocumentCollectionStatus,
   ExtractionStatus,
@@ -22,6 +23,7 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCase,
   LostDocumentCaseStatus,
+  SubmissionMethod,
 } from '../../generated/prisma/client';
 
 export const QueryDocumentCaseSchema = z
@@ -176,48 +178,48 @@ export class LostDocumentCaseResponseDto implements LostDocumentCase {
     description:
       'Indicates if the case was created through manual reporting or auto scanning',
   })
-  auto: boolean;
+  auto!: boolean;
   @ApiProperty()
-  id: string;
+  id!: string;
   @ApiProperty()
-  caseId: string;
+  caseId!: string;
   @ApiProperty({ enum: LostDocumentCaseStatus })
-  status: LostDocumentCaseStatus;
+  status!: LostDocumentCaseStatus;
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
   @ApiProperty()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 export class SecurityQuestionDto {
   @ApiProperty()
-  question: string;
+  question!: string;
   @ApiProperty()
-  answer: string;
+  answer!: string;
 }
 
 export class ActiveCollectionDto {
   @ApiProperty()
-  id: string;
+  id!: string;
   @ApiProperty({ enum: DocumentCollectionStatus })
-  status: DocumentCollectionStatus;
+  status!: DocumentCollectionStatus;
   @ApiProperty()
-  expiresAt: Date;
+  expiresAt!: Date;
   @ApiProperty()
-  code: string;
+  code!: string;
   @ApiProperty()
-  attempts: number;
+  attempts!: number;
   @ApiProperty()
-  maxAttempts: number;
+  maxAttempts!: number;
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
 }
 
 export class InitiateCollectionResponseDto {
   @ApiProperty()
-  collectionId: string;
+  collectionId!: string;
   @ApiProperty()
-  expiresAt: Date;
+  expiresAt!: Date;
 }
 
 export const ConfirmCollectionSchema = z.object({
@@ -237,73 +239,77 @@ export class CancelCollectionDto extends createZodDto(CancelCollectionSchema) {}
 
 export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
   @ApiProperty()
-  pickupStationId: string | null;
-  @ApiProperty({ enum: ['DROPOFF', 'PICKUP'], nullable: true })
-  submissionMethod: 'DROPOFF' | 'PICKUP' | null;
+  pickupStationId!: string | null;
+  @ApiProperty({ enum: SubmissionMethod, nullable: true })
+  submissionMethod!: 'DROPOFF' | 'PICKUP' | null;
   @ApiProperty({ nullable: true })
-  collectionAddressId: string | null;
+  collectionAddressId!: string | null;
   @ApiProperty({ nullable: true })
-  scheduledPickupAt: Date | null;
+  scheduledPickupAt!: Date | null;
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
   @ApiProperty()
-  updatedAt: Date;
+  updatedAt!: Date;
   @ApiProperty()
-  pointAwarded: number;
+  pointAwarded!: number;
   @ApiProperty({ isArray: true, type: SecurityQuestionDto })
   securityQuestion: any;
   @ApiProperty()
-  id: string;
+  id!: string;
   @ApiProperty()
-  caseId: string;
+  caseId!: string;
   @ApiProperty({ enum: FoundDocumentCaseStatus })
-  status: FoundDocumentCaseStatus;
-  @ApiProperty({ type: ActiveCollectionDto, nullable: true })
+  status!: FoundDocumentCaseStatus;
+  @ApiProperty({ required: false, enum: CustodyStatus })
+  custodyStatus!: CustodyStatus;
+  @ApiProperty({ required: false })
+  currentStationId!: string | null;
+  @ApiProperty({ type: ActiveCollectionDto, nullable: true, required: false })
   activeCollection?: ActiveCollectionDto | null;
 }
 
 export class GetDocumentCaseResponseDto implements DocumentCase {
   @ApiProperty()
-  caseNumber: string;
+  caseNumber!: string;
   @ApiProperty()
-  addressId: string;
+  addressId!: string;
   @ApiProperty()
-  description: string | null;
+  description!: string | null;
   @ApiProperty()
-  eventDate: Date;
+  eventDate!: Date;
   @ApiProperty()
-  tags: Array<string>;
+  tags!: Array<string>;
   @ApiProperty()
-  id: string;
+  id!: string;
   @ApiProperty()
-  userId: string;
+  userId!: string;
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
   @ApiProperty()
-  updatedAt: Date;
+  updatedAt!: Date;
   @ApiProperty()
-  voided: boolean;
+  voided!: boolean;
   @ApiProperty({ type: LostDocumentCaseResponseDto })
-  lostDocumentCase: LostDocumentCaseResponseDto;
+  lostDocumentCase!: LostDocumentCaseResponseDto;
   @ApiProperty({ type: FoundDocumentCaseResponseDto })
-  foundDocumentCase: FoundDocumentCaseResponseDto;
+  foundDocumentCase!: FoundDocumentCaseResponseDto;
   @ApiProperty({ type: GetCaseDocumentResponseDto })
-  document: GetCaseDocumentResponseDto;
+  document!: GetCaseDocumentResponseDto;
 }
 
 export class QueryDocumentCaseResponseDto {
   @ApiProperty({ isArray: true, type: GetDocumentCaseResponseDto })
-  results: GetDocumentCaseResponseDto[];
+  results!: GetDocumentCaseResponseDto[];
   @ApiProperty()
-  totalCount: number;
+  totalCount!: number;
   @ApiProperty()
-  totalPages: number;
+  totalPages!: number;
   @ApiProperty()
-  currentPage: number;
+  currentPage!: number;
   @ApiProperty()
-  pageSize: number;
+  pageSize!: number;
   @ApiProperty({ type: 'string' })
-  next: string | null;
+  next!: string | null;
   @ApiProperty({ type: 'string' })
   prev: string | null | undefined;
 }
@@ -315,16 +321,16 @@ export class QuerySimilarDocumentCaseResponsesDto extends PickType(
 
 export class TimelineEventDto {
   @ApiProperty()
-  key: string;
+  key!: string;
 
   @ApiProperty({ nullable: true, type: 'string' })
-  timestamp: string | null;
+  timestamp!: string | null;
 
   @ApiProperty({ enum: ['done', 'active', 'pending'] })
-  status: 'done' | 'active' | 'pending';
+  status!: 'done' | 'active' | 'pending';
 }
 
 export class CaseTimelineResponseDto {
   @ApiProperty({ isArray: true, type: TimelineEventDto })
-  events: TimelineEventDto[];
+  events!: TimelineEventDto[];
 }

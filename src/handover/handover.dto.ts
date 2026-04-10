@@ -29,9 +29,7 @@ export const ScheduleHandoverSchema = z
 export const QueryHandoverSchema = z.object({
   ...QueryBuilderSchema.shape,
   claimId: z.uuid().optional(),
-  status: z
-    .enum(['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'])
-    .optional(),
+  status: z.enum(HandoverStatus).optional(),
   method: z.enum(['PICKUP', 'DELIVERY']).optional(),
   scheduledDateFrom: z.iso.date().optional(),
   scheduledDateTo: z.iso.date().optional(),
@@ -41,55 +39,61 @@ export class ScheduleHandoverDto extends createZodDto(ScheduleHandoverSchema) {}
 export class QueryHandoverDto extends createZodDto(QueryHandoverSchema) {}
 
 export class GetHandoverResponseDto implements Handover {
+  @ApiProperty({ required: false, nullable: true })
+  trackingNumber!: string | null;
+  @ApiProperty({ required: false, nullable: true })
+  courierProvider!: string | null;
+  @ApiProperty({ required: false, nullable: true })
+  externalShipmentId!: string | null;
   @ApiProperty()
-  id: string;
+  id!: string;
   @ApiProperty()
-  handoverNumber: string;
+  handoverNumber!: string;
   @ApiProperty()
-  claimId: string;
+  claimId!: string;
   @ApiProperty({ enum: HandoverMethod })
-  method: HandoverMethod;
+  method!: HandoverMethod;
   @ApiProperty({ required: false })
-  pickupStationId: string | null;
+  pickupStationId!: string | null;
   @ApiProperty({ required: false })
-  deliveryAddressId: string | null;
+  deliveryAddressId!: string | null;
   @ApiProperty()
-  scheduledDate: Date;
+  scheduledDate!: Date;
   @ApiProperty({ required: false })
-  completedAt: Date | null;
+  completedAt!: Date | null;
   @ApiProperty()
-  ownerVerified: boolean;
+  ownerVerified!: boolean;
   @ApiProperty({ required: false })
-  ownerSignature: string | null;
+  ownerSignature!: string | null;
   @ApiProperty({ required: false })
-  handoverNotes: string | null;
+  handoverNotes!: string | null;
   @ApiProperty({ enum: HandoverStatus })
-  status: HandoverStatus;
+  status!: HandoverStatus;
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
   @ApiProperty()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 export class QueryHandoverResponseDto {
   @ApiProperty({ isArray: true, type: GetHandoverResponseDto })
-  results: GetHandoverResponseDto[];
+  results!: GetHandoverResponseDto[];
 
   @ApiProperty()
-  totalCount: number;
+  totalCount!: number;
 
   @ApiProperty()
-  totalPages: number;
+  totalPages!: number;
 
   @ApiProperty()
-  currentPage: number;
+  currentPage!: number;
 
   @ApiProperty()
-  pageSize: number;
+  pageSize!: number;
 
   @ApiProperty()
-  next: string | null;
+  next!: string | null;
 
   @ApiProperty()
-  prev: string | null;
+  prev!: string | null;
 }

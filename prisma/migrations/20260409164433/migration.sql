@@ -1,6 +1,7 @@
 /*
   Warnings:
 
+  - The values [IN_PROGRESS] on the enum `HandoverStatus` will be removed. If these variants are still used in the database, this will fail.
   - You are about to drop the column `success` on the `ai_extractions` table. All the data in the column will be lost.
   - You are about to drop the column `pickupAddressId` on the `claims` table. All the data in the column will be lost.
   - You are about to drop the column `pickupStationId` on the `claims` table. All the data in the column will be lost.
@@ -8,6 +9,9 @@
   - You are about to drop the column `extractionId` on the `document_cases` table. All the data in the column will be lost.
   - You are about to drop the column `finderPresent` on the `handovers` table. All the data in the column will be lost.
   - You are about to drop the column `finderSignature` on the `handovers` table. All the data in the column will be lost.
+  - You are about to drop the column `handoverNotes` on the `handovers` table. All the data in the column will be lost.
+  - You are about to drop the column `ownerSignature` on the `handovers` table. All the data in the column will be lost.
+  - You are about to drop the column `ownerVerified` on the `handovers` table. All the data in the column will be lost.
   - You are about to drop the column `aiInteractionId` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `aiScore` on the `matches` table. All the data in the column will be lost.
   - You are about to drop the column `aiVerificationResult` on the `matches` table. All the data in the column will be lost.
@@ -17,6 +21,7 @@
   - You are about to drop the `case_status_transitions` table. If the table is not empty, all the data it contains will be lost.
   - You are about to drop the `notifications` table. If the table is not empty, all the data it contains will be lost.
   - A unique constraint covering the columns `[caseId]` on the table `ai_extractions` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[trackingNumber]` on the table `handovers` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[key,userId]` on the table `settings` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[checkoutRequestId]` on the table `transactions` will be added. If there are existing duplicate values, this will fail.
   - Added the required column `caseId` to the `ai_extractions` table without a default value. This is not possible if the table is not empty.
@@ -31,10 +36,16 @@ CREATE TYPE "ExtractionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', '
 CREATE TYPE "ExtractionStep" AS ENUM ('VISION', 'TEXT', 'POST_PROCESSING');
 
 -- CreateEnum
+CREATE TYPE "DocumentCollectionStatus" AS ENUM ('PENDING', 'CONFIRMED', 'EXPIRED', 'CANCELLED');
+
+-- CreateEnum
 CREATE TYPE "SubmissionMethod" AS ENUM ('DROPOFF', 'PICKUP');
 
 -- CreateEnum
 CREATE TYPE "HandoverMethod" AS ENUM ('PICKUP', 'DELIVERY');
+
+-- CreateEnum
+CREATE TYPE "CustodyStatus" AS ENUM ('WITH_FINDER', 'IN_CUSTODY', 'IN_TRANSIT', 'HANDED_OVER', 'DISPOSED');
 
 -- CreateEnum
 CREATE TYPE "PaymentProvider" AS ENUM ('MPESA', 'STRIPE', 'AFRICASTALKING');
@@ -53,6 +64,17 @@ CREATE TYPE "NotificationChannel" AS ENUM ('EMAIL', 'SMS', 'PUSH');
 
 -- CreateEnum
 CREATE TYPE "NotificationStatus" AS ENUM ('PENDING', 'QUEUED', 'SENT', 'FAILED', 'SKIPPED');
+
+-- AlterEnum
+BEGIN;
+CREATE TYPE "HandoverStatus_new" AS ENUM ('SCHEDULED', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED', 'FAILED', 'NO_SHOW', 'CANCELLED');
+ALTER TABLE "public"."handovers" ALTER COLUMN "status" DROP DEFAULT;
+ALTER TABLE "handovers" ALTER COLUMN "status" TYPE "HandoverStatus_new" USING ("status"::text::"HandoverStatus_new");
+ALTER TYPE "HandoverStatus" RENAME TO "HandoverStatus_old";
+ALTER TYPE "HandoverStatus_new" RENAME TO "HandoverStatus";
+DROP TYPE "public"."HandoverStatus_old";
+ALTER TABLE "handovers" ALTER COLUMN "status" SET DEFAULT 'SCHEDULED';
+COMMIT;
 
 -- AlterEnum
 ALTER TYPE "InvoiceStatus" ADD VALUE 'OVERDUE';
@@ -100,6 +122,12 @@ DROP INDEX "document_embedding_ada_idx";
 DROP INDEX "document_embedding_idx";
 
 -- DropIndex
+DROP INDEX "handovers_claimId_idx";
+
+-- DropIndex
+DROP INDEX "handovers_status_idx";
+
+-- DropIndex
 DROP INDEX "matches_aiInteractionId_key";
 
 -- DropIndex
@@ -128,14 +156,22 @@ ALTER TABLE "document_cases" DROP COLUMN "extractionId";
 
 -- AlterTable
 ALTER TABLE "found_document_cases" ADD COLUMN     "collectionAddressId" TEXT,
+ADD COLUMN     "currentStationId" TEXT,
+ADD COLUMN     "custodyStatus" "CustodyStatus" NOT NULL DEFAULT 'WITH_FINDER',
 ADD COLUMN     "scheduledPickupAt" TIMESTAMP(3),
 ADD COLUMN     "submissionMethod" "SubmissionMethod";
 
 -- AlterTable
 ALTER TABLE "handovers" DROP COLUMN "finderPresent",
 DROP COLUMN "finderSignature",
+DROP COLUMN "handoverNotes",
+DROP COLUMN "ownerSignature",
+DROP COLUMN "ownerVerified",
+ADD COLUMN     "courierProvider" TEXT,
 ADD COLUMN     "deliveryAddressId" TEXT,
+ADD COLUMN     "externalShipmentId" TEXT,
 ADD COLUMN     "method" "HandoverMethod" NOT NULL,
+ADD COLUMN     "trackingNumber" TEXT,
 ALTER COLUMN "pickupStationId" DROP NOT NULL;
 
 -- AlterTable
@@ -175,6 +211,41 @@ DROP TYPE "ActorType";
 
 -- DropEnum
 DROP TYPE "CaseType";
+
+-- CreateTable
+CREATE TABLE "document_collections" (
+    "id" TEXT NOT NULL,
+    "foundCaseId" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "status" "DocumentCollectionStatus" NOT NULL DEFAULT 'PENDING',
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "maxAttempts" INTEGER NOT NULL DEFAULT 3,
+    "initiatedById" TEXT NOT NULL,
+    "confirmedById" TEXT,
+    "cancelledById" TEXT,
+    "cancelReason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "document_collections_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "handover_events" (
+    "id" TEXT NOT NULL,
+    "handoverId" TEXT NOT NULL,
+    "handledByType" TEXT,
+    "handledById" TEXT,
+    "status" "HandoverStatus" NOT NULL,
+    "description" TEXT,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "locationName" TEXT,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "handover_events_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "disbursements" (
@@ -315,6 +386,82 @@ CREATE TABLE "user_push_tokens" (
     CONSTRAINT "user_push_tokens_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "document_operation_types" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "prefix" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "requiresDestinationStation" BOOLEAN NOT NULL DEFAULT false,
+    "requiresSourceStation" BOOLEAN NOT NULL DEFAULT false,
+    "requiresNotes" BOOLEAN NOT NULL DEFAULT false,
+    "isHighPrivilege" BOOLEAN NOT NULL DEFAULT false,
+    "isFinalOperation" BOOLEAN NOT NULL DEFAULT false,
+    "metadata" JSONB,
+    "voided" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "document_operation_types_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "station_operation_types" (
+    "id" TEXT NOT NULL,
+    "stationId" TEXT NOT NULL,
+    "operationTypeId" TEXT NOT NULL,
+    "isEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "voided" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "station_operation_types_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "staff_station_operations" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "stationId" TEXT NOT NULL,
+    "operationTypeId" TEXT NOT NULL,
+    "grantedById" TEXT NOT NULL,
+    "voided" BOOLEAN NOT NULL DEFAULT false,
+    "voidedAt" TIMESTAMP(3),
+    "voidedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "staff_station_operations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "document_operations" (
+    "id" TEXT NOT NULL,
+    "operationNumber" TEXT NOT NULL,
+    "foundCaseId" TEXT NOT NULL,
+    "operationTypeId" TEXT NOT NULL,
+    "stationId" TEXT,
+    "fromStationId" TEXT,
+    "toStationId" TEXT,
+    "requestedByStationId" TEXT,
+    "performedById" TEXT NOT NULL,
+    "pairedOperationId" TEXT,
+    "custodyStatusBefore" "CustodyStatus" NOT NULL,
+    "custodyStatusAfter" "CustodyStatus" NOT NULL,
+    "notes" TEXT,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "document_operations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "document_collections_foundCaseId_status_idx" ON "document_collections"("foundCaseId", "status");
+
+-- CreateIndex
+CREATE INDEX "handover_events_handoverId_idx" ON "handover_events"("handoverId");
+
 -- CreateIndex
 CREATE UNIQUE INDEX "disbursements_disbursementNumber_key" ON "disbursements"("disbursementNumber");
 
@@ -373,7 +520,49 @@ CREATE UNIQUE INDEX "user_push_tokens_token_key" ON "user_push_tokens"("token");
 CREATE INDEX "user_push_tokens_userId_idx" ON "user_push_tokens"("userId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "document_operation_types_code_key" ON "document_operation_types"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "document_operation_types_prefix_key" ON "document_operation_types"("prefix");
+
+-- CreateIndex
+CREATE INDEX "station_operation_types_stationId_idx" ON "station_operation_types"("stationId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "station_operation_types_stationId_operationTypeId_key" ON "station_operation_types"("stationId", "operationTypeId");
+
+-- CreateIndex
+CREATE INDEX "staff_station_operations_userId_stationId_idx" ON "staff_station_operations"("userId", "stationId");
+
+-- CreateIndex
+CREATE INDEX "staff_station_operations_stationId_idx" ON "staff_station_operations"("stationId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "staff_station_operations_userId_stationId_operationTypeId_key" ON "staff_station_operations"("userId", "stationId", "operationTypeId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "document_operations_operationNumber_key" ON "document_operations"("operationNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "document_operations_pairedOperationId_key" ON "document_operations"("pairedOperationId");
+
+-- CreateIndex
+CREATE INDEX "document_operations_foundCaseId_idx" ON "document_operations"("foundCaseId");
+
+-- CreateIndex
+CREATE INDEX "document_operations_operationTypeId_idx" ON "document_operations"("operationTypeId");
+
+-- CreateIndex
+CREATE INDEX "document_operations_stationId_idx" ON "document_operations"("stationId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "ai_extractions_caseId_key" ON "ai_extractions"("caseId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "handovers_trackingNumber_key" ON "handovers"("trackingNumber");
+
+-- CreateIndex
+CREATE INDEX "handovers_trackingNumber_idx" ON "handovers"("trackingNumber");
 
 -- CreateIndex
 CREATE INDEX "invoices_dueDate_idx" ON "invoices"("dueDate");
@@ -397,10 +586,28 @@ ALTER TABLE "ai_extractions" ADD CONSTRAINT "ai_extractions_caseId_fkey" FOREIGN
 ALTER TABLE "found_document_cases" ADD CONSTRAINT "found_document_cases_collectionAddressId_fkey" FOREIGN KEY ("collectionAddressId") REFERENCES "addresses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "found_document_cases" ADD CONSTRAINT "found_document_cases_currentStationId_fkey" FOREIGN KEY ("currentStationId") REFERENCES "pickup_stations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_collections" ADD CONSTRAINT "document_collections_foundCaseId_fkey" FOREIGN KEY ("foundCaseId") REFERENCES "found_document_cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_collections" ADD CONSTRAINT "document_collections_initiatedById_fkey" FOREIGN KEY ("initiatedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_collections" ADD CONSTRAINT "document_collections_confirmedById_fkey" FOREIGN KEY ("confirmedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_collections" ADD CONSTRAINT "document_collections_cancelledById_fkey" FOREIGN KEY ("cancelledById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "handovers" ADD CONSTRAINT "handovers_pickupStationId_fkey" FOREIGN KEY ("pickupStationId") REFERENCES "pickup_stations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "handovers" ADD CONSTRAINT "handovers_deliveryAddressId_fkey" FOREIGN KEY ("deliveryAddressId") REFERENCES "addresses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "handover_events" ADD CONSTRAINT "handover_events_handoverId_fkey" FOREIGN KEY ("handoverId") REFERENCES "handovers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_claimId_fkey" FOREIGN KEY ("claimId") REFERENCES "claims"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -449,3 +656,45 @@ ALTER TABLE "notification_logs" ADD CONSTRAINT "notification_logs_userId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "user_push_tokens" ADD CONSTRAINT "user_push_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "station_operation_types" ADD CONSTRAINT "station_operation_types_stationId_fkey" FOREIGN KEY ("stationId") REFERENCES "pickup_stations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "station_operation_types" ADD CONSTRAINT "station_operation_types_operationTypeId_fkey" FOREIGN KEY ("operationTypeId") REFERENCES "document_operation_types"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "staff_station_operations" ADD CONSTRAINT "staff_station_operations_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "staff_station_operations" ADD CONSTRAINT "staff_station_operations_stationId_fkey" FOREIGN KEY ("stationId") REFERENCES "pickup_stations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "staff_station_operations" ADD CONSTRAINT "staff_station_operations_operationTypeId_fkey" FOREIGN KEY ("operationTypeId") REFERENCES "document_operation_types"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "staff_station_operations" ADD CONSTRAINT "staff_station_operations_grantedById_fkey" FOREIGN KEY ("grantedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_operations" ADD CONSTRAINT "document_operations_foundCaseId_fkey" FOREIGN KEY ("foundCaseId") REFERENCES "found_document_cases"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_operations" ADD CONSTRAINT "document_operations_operationTypeId_fkey" FOREIGN KEY ("operationTypeId") REFERENCES "document_operation_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_operations" ADD CONSTRAINT "document_operations_stationId_fkey" FOREIGN KEY ("stationId") REFERENCES "pickup_stations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_operations" ADD CONSTRAINT "document_operations_fromStationId_fkey" FOREIGN KEY ("fromStationId") REFERENCES "pickup_stations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_operations" ADD CONSTRAINT "document_operations_toStationId_fkey" FOREIGN KEY ("toStationId") REFERENCES "pickup_stations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_operations" ADD CONSTRAINT "document_operations_requestedByStationId_fkey" FOREIGN KEY ("requestedByStationId") REFERENCES "pickup_stations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_operations" ADD CONSTRAINT "document_operations_performedById_fkey" FOREIGN KEY ("performedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_operations" ADD CONSTRAINT "document_operations_pairedOperationId_fkey" FOREIGN KEY ("pairedOperationId") REFERENCES "document_operations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
