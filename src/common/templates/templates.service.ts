@@ -381,7 +381,7 @@ export class TemplatesService implements OnModuleInit {
       'default',
       (value: unknown, fallback: string) => value ?? fallback,
     );
-    /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Handlebars.registerHelper('date', (d: Date | string, _fmt?: string) =>
       this.regionService.formatDate(d),
@@ -392,7 +392,7 @@ export class TemplatesService implements OnModuleInit {
     Handlebars.registerHelper('currency', (amount: number) =>
       this.regionService.formatCurrency(amount),
     );
-    /* eslint-enable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
+
     Handlebars.registerHelper('json', (obj: unknown) =>
       JSON.stringify(obj, null, 2),
     );

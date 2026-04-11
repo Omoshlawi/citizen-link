@@ -15,7 +15,6 @@ import {
 } from './pickup-station.dto';
 import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import { AuthService } from '@thallesp/nestjs-better-auth';
-import { pick } from 'lodash';
 import { PickupStation, Prisma } from '../../generated/prisma/client';
 import { RegionService } from '../region/region.service';
 
@@ -37,7 +36,10 @@ export class PickupStationsService {
   ) {
     const { success: isAdmin } = user
       ? await this.authService.api.userHasPermission({
-          body: { userId: user.id, permission: { staffStationOperation: ['view'] } },
+          body: {
+            userId: user.id,
+            permission: { staffStationOperation: ['view'] },
+          },
         })
       : { success: false };
     const dbQuery: Prisma.PickupStationWhereInput = {

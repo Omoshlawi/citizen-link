@@ -60,6 +60,8 @@ export const QueryDocumentCaseSchema = z
       .optional()
       .default(false),
     extractionStatus: z.enum(ExtractionStatus).optional(),
+    submissionMethod: z.enum(SubmissionMethod).optional(),
+    custodyStatus: z.enum(CustodyStatus).optional(),
   })
   .extend(
     QueryAddressSchema.pick({

@@ -128,7 +128,9 @@ export class CasePostProcessingProcessor extends WorkerHost {
           extractionStatus: ExtractionStatus.COMPLETED,
           currentStep: null,
           ocrConfidence: clampConfidence(documentData.quality?.ocrConfidence),
-          extractionConfidence: clampConfidence(documentData.quality?.extractionConfidence),
+          extractionConfidence: clampConfidence(
+            documentData.quality?.extractionConfidence,
+          ),
           documentTypeCode: documentData.documentType?.code ?? null,
           warnings: documentData.quality?.warnings ?? [],
         },

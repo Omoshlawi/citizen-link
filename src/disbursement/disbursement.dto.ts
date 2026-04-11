@@ -62,4 +62,3 @@ export class QueryDisbursementResponseDto {
   @ApiProperty() next: string | null;
   @ApiProperty() prev: string | null;
 }
-

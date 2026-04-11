@@ -14,6 +14,8 @@ import {
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
   ExtractionStatus,
+  SubmissionMethod,
+  CustodyStatus,
   Prisma,
 } from '../../generated/prisma/client';
 
@@ -72,15 +74,22 @@ export class DocumentCasesQueryService {
           },
           foundDocumentCase:
             query.caseType === 'FOUND'
-              ? query.status
-                ? { status: query.status as FoundDocumentCaseStatus }
-                : { isNot: null }
+              ? {
+                  AND: [
+                    {
+                      status: query.status as FoundDocumentCaseStatus,
+                      submissionMethod:
+                        query.submissionMethod as SubmissionMethod,
+                      custodyStatus: query.custodyStatus as CustodyStatus,
+                    },
+                  ],
+                }
               : undefined,
           lostDocumentCase:
             query.caseType === 'LOST'
-              ? query.status
-                ? { status: query.status as LostDocumentCaseStatus }
-                : { isNot: null }
+              ? {
+                  AND: [{ status: query.status as LostDocumentCaseStatus }],
+                }
               : undefined,
           eventDate: query.eventDateFrom
             ? {
