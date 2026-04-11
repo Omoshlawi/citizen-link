@@ -80,7 +80,10 @@ export class S3Controller {
     @Res() res: Response,
   ): Promise<void> {
     const { stream, contentType, contentLength } =
-      await this.s3Service.streamFile(query.fileName, 'cases');
+      await this.s3Service.streamFile(
+        query.fileName,
+        query.failed ? 'tmp' : 'cases',
+      );
 
     res.setHeader('Content-Type', contentType);
     res.setHeader(

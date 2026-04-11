@@ -17,26 +17,36 @@ export class GetUploadUrlDto extends createZodDto(GetUploadUrlSchema) {}
 
 export class GetUploadUrlResponseDto {
   @ApiProperty({ description: 'The signed URL for uploading a file' })
-  url: string;
+  url!: string;
   @ApiProperty({ description: 'The key for the file' })
-  key: string;
+  key!: string;
 }
 
 export class GetDownloadUrlDto extends createZodDto(GetDownloadUrlSchema) {}
 export class GetDownloadUrlResponseDto {
   @ApiProperty({ description: 'The signed URL for downloading a file' })
-  url: string;
+  url!: string;
 }
 
 export const StreamDocumentSchema = z.object({
   fileName: z.string().nonempty().describe('File name'),
+  failed: z
+    .stringbool({
+      falsy: ['0', 'false'],
+      truthy: ['1', 'true'],
+    })
+    .optional()
+    .default(false)
+    .describe(
+      'Weather streaming file that failed extraction - Decides the bucket where the doc is',
+    ),
 });
 
 export class StreamDocumentDto extends createZodDto(StreamDocumentSchema) {}
 
 export class UploadFileResponseDto {
   @ApiProperty({ description: 'The key of the uploaded file' })
-  key: string;
+  key!: string;
 }
 
 export class UploadFilesResponseDto {
@@ -44,5 +54,5 @@ export class UploadFilesResponseDto {
     description: 'The keys of the uploaded files',
     type: [String],
   })
-  keys: string[];
+  keys!: string[];
 }
