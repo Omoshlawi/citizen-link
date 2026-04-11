@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -11,138 +13,180 @@ import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
 import { UserSession } from '../auth/auth.types';
-import { OriginalUrl } from '../common/query-builder';
+import { CustomRepresentationQueryDto, OriginalUrl } from '../common/query-builder';
 import {
-  ConfirmTransferDto,
-  CreateRequisitionDto,
+  AddOperationItemDto,
+  CancelOperationDto,
+  CreateDocumentOperationDto,
   GetDocumentOperationResponseDto,
   GetDocumentOperationsListDto,
-  InitiateTransferDto,
-  QueryDocumentOperationsDto,
-  RecordAuditDto,
-  RecordConditionUpdateDto,
-  RecordDisposalDto,
-  RecordHandoverDto,
-  RecordReceivedDto,
-  RecordReturnDto,
+  QueryDocumentOperationsListDto,
+  RejectOperationDto,
+  SkipOperationItemDto,
+  UpdateDocumentOperationDto,
 } from './document-custody.dto';
-import { DocumentCustodyOperationsService } from './document-custody-operations.service';
-import { DocumentCustodyQueryService } from './document-custody-query.service';
+import { DocumentCustodyService } from './document-custody.service';
 
 @Controller('document-custody')
 export class DocumentCustodyController {
-  constructor(
-    private readonly operationsService: DocumentCustodyOperationsService,
-    private readonly queryService: DocumentCustodyQueryService,
-  ) {}
+  constructor(private readonly custodyService: DocumentCustodyService) {}
 
-  @Post(':foundCaseId/receive')
-  @ApiOperation({ summary: 'Record document received at station' })
-  @ApiOkResponse({ type: GetDocumentOperationResponseDto })
-  @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  recordReceived(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: RecordReceivedDto,
-    @Session() { user }: UserSession,
+  // ── Operation CRUD ────────────────────────────────────────────────────────────
+
+  @Get('operations')
+  @ApiOperation({ summary: 'List document custody operations' })
+  @ApiOkResponse({ type: GetDocumentOperationsListDto })
+  @ApiErrorsResponse()
+  listOperations(
+    @Query() query: QueryDocumentOperationsListDto,
+    @OriginalUrl() originalUrl: string,
   ) {
-    return this.operationsService.recordReceived(foundCaseId, dto, user);
+    return this.custodyService.findMany(query, originalUrl);
   }
 
-  @Post(':foundCaseId/transfer')
-  @ApiOperation({ summary: 'Initiate a document transfer to another station' })
+  @Post('operations')
+  @ApiOperation({ summary: 'Create a new DRAFT custody operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  initiateTransfer(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: InitiateTransferDto,
+  createOperation(
+    @Body() dto: CreateDocumentOperationDto,
     @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.operationsService.initiateTransfer(foundCaseId, dto, user);
+    return this.custodyService.create(dto, user, query);
   }
 
-  @Post(':foundCaseId/transfer/confirm')
-  @ApiOperation({ summary: 'Confirm receipt of a transferred document' })
+  @Get('operations/:id')
+  @ApiOperation({ summary: 'Get a custody operation by ID' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
-  @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  confirmTransfer(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: ConfirmTransferDto,
-    @Session() { user }: UserSession,
+  @ApiErrorsResponse()
+  getOperation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.operationsService.confirmTransfer(foundCaseId, dto, user);
+    return this.custodyService.findOne(id, query);
   }
 
-  @Post(':foundCaseId/requisition')
-  @ApiOperation({ summary: 'Create a requisition for a document' })
+  @Patch('operations/:id')
+  @ApiOperation({ summary: 'Edit a DRAFT custody operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  createRequisition(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: CreateRequisitionDto,
+  updateOperation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateDocumentOperationDto,
     @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.operationsService.createRequisition(foundCaseId, dto, user);
+    return this.custodyService.update(id, dto, user, query);
   }
 
-  @Post(':foundCaseId/handover')
-  @ApiOperation({ summary: 'Record document handover to owner' })
+  // ── Item Management ───────────────────────────────────────────────────────────
+
+  @Post('operations/:id/items')
+  @ApiOperation({ summary: 'Add a found document to a DRAFT operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  recordHandover(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: RecordHandoverDto,
+  addItem(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AddOperationItemDto,
     @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.operationsService.recordHandover(foundCaseId, dto, user);
+    return this.custodyService.addItem(id, dto, user, query);
   }
 
-  @Post(':foundCaseId/dispose')
-  @ApiOperation({ summary: 'Record document disposal' })
+  @Delete('operations/:id/items/:itemId')
+  @ApiOperation({ summary: 'Remove a document from a DRAFT operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  recordDisposal(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: RecordDisposalDto,
+  removeItem(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.operationsService.recordDisposal(foundCaseId, dto, user);
+    return this.custodyService.removeItem(id, itemId, user, query);
   }
 
-  @Post(':foundCaseId/return')
-  @ApiOperation({ summary: 'Record document return to station' })
+  @Post('operations/:id/items/:itemId/skip')
+  @ApiOperation({ summary: 'Skip a PENDING item (exclude it from execution)' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  recordReturn(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: RecordReturnDto,
+  skipItem(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @Body() dto: SkipOperationItemDto,
     @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.operationsService.recordReturn(foundCaseId, dto, user);
+    return this.custodyService.skipItem(id, itemId, dto, user, query);
   }
 
-  @Post(':foundCaseId/audit')
-  @ApiOperation({ summary: 'Record a location audit for a document' })
+  // ── Lifecycle Transitions ─────────────────────────────────────────────────────
+
+  @Post('operations/:id/submit')
+  @ApiOperation({ summary: 'Submit operation for supervisor approval' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  recordAudit(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: RecordAuditDto,
+  submitOperation(
+    @Param('id', ParseUUIDPipe) id: string,
     @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.operationsService.recordAudit(foundCaseId, dto, user);
+    return this.custodyService.submit(id, user, query);
   }
 
-  @Post(':foundCaseId/condition')
-  @ApiOperation({ summary: 'Record a condition update for a document' })
+  @Post('operations/:id/approve')
+  @ApiOperation({ summary: 'Approve a submitted operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
-  recordConditionUpdate(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: RecordConditionUpdateDto,
+  approveOperation(
+    @Param('id', ParseUUIDPipe) id: string,
     @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
   ) {
-    return this.operationsService.recordConditionUpdate(foundCaseId, dto, user);
+    return this.custodyService.approve(id, user, query);
   }
+
+  @Post('operations/:id/reject')
+  @ApiOperation({ summary: 'Reject a submitted operation (returns to DRAFT)' })
+  @ApiOkResponse({ type: GetDocumentOperationResponseDto })
+  @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  rejectOperation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RejectOperationDto,
+    @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
+  ) {
+    return this.custodyService.reject(id, dto, user, query);
+  }
+
+  @Post('operations/:id/execute')
+  @ApiOperation({ summary: 'Execute operation — applies custody transitions' })
+  @ApiOkResponse({ type: GetDocumentOperationResponseDto })
+  @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  executeOperation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
+  ) {
+    return this.custodyService.execute(id, user, query);
+  }
+
+  @Post('operations/:id/cancel')
+  @ApiOperation({ summary: 'Cancel an operation' })
+  @ApiOkResponse({ type: GetDocumentOperationResponseDto })
+  @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  cancelOperation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CancelOperationDto,
+    @Session() { user }: UserSession,
+    @Query() query: CustomRepresentationQueryDto,
+  ) {
+    return this.custodyService.cancel(id, dto, user, query);
+  }
+
+  // ── Per-case history (used by CustodyDetailPage) ──────────────────────────────
 
   @Get(':foundCaseId/history')
   @ApiOperation({ summary: 'Get operation history for a found document case' })
@@ -150,9 +194,9 @@ export class DocumentCustodyController {
   @ApiErrorsResponse()
   getHistory(
     @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Query() query: QueryDocumentOperationsDto,
+    @Query() query: QueryDocumentOperationsListDto,
     @OriginalUrl() originalUrl: string,
   ) {
-    return this.queryService.getHistory(foundCaseId, query, originalUrl);
+    return this.custodyService.getHistory(foundCaseId, query, originalUrl);
   }
 }

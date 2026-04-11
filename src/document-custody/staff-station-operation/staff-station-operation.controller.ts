@@ -25,7 +25,7 @@ import {
   GetStaffStationOperationResponseDto,
   GetStaffStationOperationsListDto,
   QueryStaffStationOperationsDto,
-} from '../document-custody.dto';
+} from './staff-station-operation.dto';
 import { StaffStationOperationService } from './staff-station-operation.service';
 
 @Controller('staff-station-operations')

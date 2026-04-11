@@ -24,7 +24,7 @@ import {
   GetStationOperationTypesListDto,
   QueryStationOperationTypesDto,
   UpdateStationOperationTypeDto,
-} from '../document-custody.dto';
+} from './station-operation-type.dto';
 import { StationOperationTypeService } from './station-operation-type.service';
 
 @Controller('pickup-stations/:stationId/operation-types')

@@ -358,5 +358,125 @@
     "auto": false,
     "label": "Other",
     "description": "Other reason not listed."
+  },
+
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "DRAFT",
+    "toStatus": "SUBMITTED",
+    "code": "STAFF_SUBMITTED",
+    "auto": false,
+    "label": "Submitted for approval",
+    "description": "Staff submitted operation for supervisor approval."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "APPROVED",
+    "code": "SUPERVISOR_APPROVED",
+    "auto": false,
+    "label": "Approved",
+    "description": "Supervisor approved the operation for execution."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "*",
+    "toStatus": "COMPLETED",
+    "code": "OPERATION_EXECUTED",
+    "auto": true,
+    "label": "Executed",
+    "description": "Operation was executed and custody transitions applied to all items."
+  },
+
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "REJECTED",
+    "code": "INCORRECT_DESTINATION",
+    "auto": false,
+    "label": "Incorrect destination",
+    "description": "Transfer targets the wrong or unexpected station."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "REJECTED",
+    "code": "CASE_STATUS_MISMATCH",
+    "auto": false,
+    "label": "Case status mismatch",
+    "description": "One or more found cases are not in a valid state for this operation."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "REJECTED",
+    "code": "DUPLICATE_OPERATION",
+    "auto": false,
+    "label": "Duplicate operation",
+    "description": "A similar operation already exists or is currently in progress."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "REJECTED",
+    "code": "INCOMPLETE_DOCUMENTATION",
+    "auto": false,
+    "label": "Incomplete documentation",
+    "description": "Required notes or supporting information is missing."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "REJECTED",
+    "code": "POLICY_VIOLATION",
+    "auto": false,
+    "label": "Policy violation",
+    "description": "Violates custody policy (e.g., attempting to dispose a document with active claims)."
+  },
+
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "*",
+    "toStatus": "CANCELLED",
+    "code": "DOCUMENT_CLAIMED",
+    "auto": false,
+    "label": "Document claimed",
+    "description": "The document owner claimed the document before the operation completed."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "*",
+    "toStatus": "CANCELLED",
+    "code": "STATION_UNAVAILABLE",
+    "auto": false,
+    "label": "Station unavailable",
+    "description": "The destination station is temporarily closed or unreachable."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "*",
+    "toStatus": "CANCELLED",
+    "code": "CREATED_IN_ERROR",
+    "auto": false,
+    "label": "Created in error",
+    "description": "Operation was created by mistake."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "*",
+    "toStatus": "CANCELLED",
+    "code": "DUPLICATE_OPERATION",
+    "auto": false,
+    "label": "Duplicate operation",
+    "description": "This operation is superseded by another."
+  },
+  {
+    "entityType": "DocumentOperation",
+    "fromStatus": "*",
+    "toStatus": "CANCELLED",
+    "code": "CIRCUMSTANCES_CHANGED",
+    "auto": false,
+    "label": "Circumstances changed",
+    "description": "Conditions changed (e.g., document found damaged, case voided)."
   }
 ]

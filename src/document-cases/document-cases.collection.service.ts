@@ -145,7 +145,7 @@ export class DocumentCasesCollectionService {
   async confirmCollection(
     foundCaseId: string,
     dto: ConfirmCollectionDto,
-    user: UserSession['user'],
+    { user, session }: UserSession,
   ) {
     const collection = await this.getActiveCollection(foundCaseId);
     if (!collection)
@@ -214,7 +214,7 @@ export class DocumentCasesCollectionService {
         data: {
           status: FoundDocumentCaseStatus.SUBMITTED,
           custodyStatus: CustodyStatus.IN_CUSTODY,
-          currentStationId: collection.foundCase.pickupStationId ?? null,
+          currentStationId: session.stationId,
         },
       });
       await tx.statusTransition.create({

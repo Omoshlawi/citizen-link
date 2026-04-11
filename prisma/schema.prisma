@@ -59,7 +59,7 @@ model User {
 
   staffStationOperations StaffStationOperation[]
   grantedStaffOperations StaffStationOperation[] @relation("OperationGranter")
-  documentOperations     DocumentOperation[]
+  createdOperations      DocumentOperation[]     @relation("OpCreator")
 
   @@unique([email])
   @@unique([username])
@@ -672,7 +672,7 @@ model FoundDocumentCase {
   currentStationId String?
   currentStation   PickupStation? @relation("CurrentCustodyStation", fields: [currentStationId], references: [id])
 
-  documentOperations DocumentOperation[]
+  operationItems DocumentOperationItem[]
 
   @@map("found_document_cases")
 }
@@ -1614,46 +1614,94 @@ model StaffStationOperation {
   @@map("staff_station_operations")
 }
 
-// Immutable operation ledger — never updated or deleted
 model DocumentOperation {
-  id              String @id @default(uuid())
-  operationNumber String @unique // generated from operationType.prefix via HumanIdService
+  id String @id @default(uuid())
+
+  operationNumber String @unique
+
+  //  Type
+  operationTypeId String
+  operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id])
+
+  //  Batch root (now FIRST-CLASS, not optional thinking)
+  // One operation = one batch
+  // Items are separate
+  items DocumentOperationItem[]
+
+  // Station context
+  stationId String?
+  station   PickupStation? @relation("OpStation", fields: [stationId], references: [id])
+
+  fromStationId String?
+  fromStation   PickupStation? @relation("OpFrom", fields: [fromStationId], references: [id])
+
+  toStationId String?
+  toStation   PickupStation? @relation("OpTo", fields: [toStationId], references: [id])
+
+  requestedByStationId String?
+  requestedByStation   PickupStation? @relation("OpRequestedBy", fields: [requestedByStationId], references: [id])
+
+  //  Actor
+  createdById String
+  createdBy   User   @relation("OpCreator", fields: [createdById], references: [id])
+
+  // Lifecycle status (CRITICAL)
+  status DocumentOperationStatus
+
+  // Info
+  notes    String?
+  metadata Json?
+
+  //  Lifecycle timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime? // kept for efficient date-range queries; all other lifecycle audit via StatusTransition
+
+  @@index([operationTypeId])
+  @@index([status])
+  @@index([stationId])
+  @@map("document_operations")
+}
+
+enum DocumentOperationStatus {
+  DRAFT       // being built, fully editable
+  SUBMITTED   // submitted for supervisor approval (high-privilege ops)
+  APPROVED    // approved, ready to execute
+  IN_PROGRESS // execution started (items being processed)
+  COMPLETED   // all items done, custody transitions applied
+  CANCELLED   // cancelled before completion
+  REJECTED    // rejected by approver — returns to DRAFT so staff can fix and resubmit
+}
+
+enum DocumentOperationItemStatus {
+  PENDING   // in the operation queue, not yet processed
+  COMPLETED // custody transition successfully applied
+  FAILED    // processing failed (partial-success scenarios)
+  SKIPPED   // excluded from execution
+}
+
+
+model DocumentOperationItem {
+  id String @id @default(uuid())
+
+  operationId String
+  operation   DocumentOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
 
   foundCaseId String
   foundCase   FoundDocumentCase @relation(fields: [foundCaseId], references: [id])
 
-  operationTypeId String
-  operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id])
+  // Optional per-item status (for partial success scenarios)
+  status DocumentOperationItemStatus
 
-  // Station context (populated based on operation type)
-  stationId            String?
-  station              PickupStation? @relation("OpStation", fields: [stationId], references: [id])
-  fromStationId        String?
-  fromStation          PickupStation? @relation("OpFrom", fields: [fromStationId], references: [id])
-  toStationId          String?
-  toStation            PickupStation? @relation("OpTo", fields: [toStationId], references: [id])
-  requestedByStationId String?
-  requestedByStation   PickupStation? @relation("OpRequestedBy", fields: [requestedByStationId], references: [id])
+  // Snapshot at time of execution (not creation)
+  custodyStatusBefore CustodyStatus?
+  custodyStatusAfter  CustodyStatus?
 
-  performedById String
-  performedBy   User   @relation(fields: [performedById], references: [id])
-
-  // Paired operation link (TRANSFER_OUT ↔ TRANSFER_IN)
-  pairedOperationId String?            @unique
-  pairedOperation   DocumentOperation? @relation("OperationPair", fields: [pairedOperationId], references: [id])
-  pairedBy          DocumentOperation? @relation("OperationPair")
-
-  // Custody state snapshot at time of operation
-  custodyStatusBefore CustodyStatus
-  custodyStatusAfter  CustodyStatus
-
-  notes    String?
-  metadata Json?
+  notes String?
 
   createdAt DateTime @default(now())
 
+  @@unique([operationId, foundCaseId]) // no duplicates in same operation
   @@index([foundCaseId])
-  @@index([operationTypeId])
-  @@index([stationId])
-  @@map("document_operations")
+  @@map("document_operation_items")
 }

@@ -4,353 +4,108 @@ import z from 'zod';
 import {
   CustodyStatus,
   DocumentOperation,
-  DocumentOperationType,
-  StaffStationOperation,
-  StationOperationType,
+  DocumentOperationItem,
+  DocumentOperationItemStatus,
+  DocumentOperationStatus,
 } from '../../generated/prisma/client';
 import { JsonValue } from '@prisma/client/runtime/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-//  Custody Operation DTOs
+// ── Request schemas ───────────────────────────────────────────────────────────
 
-export const RecordReceivedSchema = z.object({
-  stationId: z.uuid(),
-  notes: z.string().optional(),
-});
-
-export const InitiateTransferSchema = z.object({
-  toStationId: z.uuid(),
-  notes: z.string().optional(),
-});
-
-export const ConfirmTransferSchema = z.object({
-  pairedOperationId: z.uuid(),
-  notes: z.string().optional(),
-});
-
-export const CreateRequisitionSchema = z.object({
-  requestingStationId: z.uuid(),
-  notes: z.string().optional(),
-});
-
-export const RecordHandoverSchema = z.object({
-  stationId: z.uuid(),
-  notes: z.string().optional(),
-});
-
-export const RecordDisposalSchema = z.object({
-  stationId: z.uuid(),
-  notes: z.string().min(1, 'Notes are required for disposal'),
-});
-
-export const RecordReturnSchema = z.object({
-  stationId: z.uuid(),
-  notes: z.string().optional(),
-});
-
-export const RecordAuditSchema = z.object({
-  stationId: z.uuid(),
-  notes: z.string().optional(),
-});
-
-export const RecordConditionUpdateSchema = z.object({
-  stationId: z.uuid(),
-  notes: z.string().min(1, 'Notes are required for condition updates'),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
-
-export class RecordReceivedDto extends createZodDto(RecordReceivedSchema) {}
-export class InitiateTransferDto extends createZodDto(InitiateTransferSchema) {}
-export class ConfirmTransferDto extends createZodDto(ConfirmTransferSchema) {}
-export class CreateRequisitionDto extends createZodDto(
-  CreateRequisitionSchema,
-) {}
-export class RecordHandoverDto extends createZodDto(RecordHandoverSchema) {}
-export class RecordDisposalDto extends createZodDto(RecordDisposalSchema) {}
-export class RecordReturnDto extends createZodDto(RecordReturnSchema) {}
-export class RecordAuditDto extends createZodDto(RecordAuditSchema) {}
-export class RecordConditionUpdateDto extends createZodDto(
-  RecordConditionUpdateSchema,
-) {}
-
-//  Query DTOs
-
-export const QueryDocumentOperationsSchema = z.object({
-  ...QueryBuilderSchema.shape,
-  foundCaseId: z.uuid().optional(),
-  operationTypeId: z.uuid().optional(),
-  stationId: z.uuid().optional(),
-  performedById: z.uuid().optional(),
-});
-
-export class QueryDocumentOperationsDto extends createZodDto(
-  QueryDocumentOperationsSchema,
-) {}
-
-//  DocumentOperationType DTOs ──
-
-export const CreateDocumentOperationTypeSchema = z.object({
-  code: z.string().min(1),
-  prefix: z.string().min(1),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  requiresDestinationStation: z.boolean().default(false),
-  requiresSourceStation: z.boolean().default(false),
-  requiresNotes: z.boolean().default(false),
-  isHighPrivilege: z.boolean().default(false),
-  isFinalOperation: z.boolean().default(false),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
-
-export const UpdateDocumentOperationTypeSchema =
-  CreateDocumentOperationTypeSchema.partial();
-
-export const QueryDocumentOperationTypesSchema = z.object({
-  ...QueryBuilderSchema.shape,
-  search: z.string().optional(),
-  includeVoided: z
-    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
-    .optional()
-    .default(false),
-});
-
-export class CreateDocumentOperationTypeDto extends createZodDto(
-  CreateDocumentOperationTypeSchema,
-) {}
-export class UpdateDocumentOperationTypeDto extends createZodDto(
-  UpdateDocumentOperationTypeSchema,
-) {}
-export class QueryDocumentOperationTypesDto extends createZodDto(
-  QueryDocumentOperationTypesSchema,
-) {}
-
-//  StationOperationType DTOs
-
-export const CreateStationOperationTypeSchema = z.object({
+export const CreateDocumentOperationSchema = z.object({
   operationTypeId: z.uuid(),
-  isEnabled: z.boolean().default(true),
-});
-
-export const UpdateStationOperationTypeSchema = z.object({
-  isEnabled: z.boolean(),
-});
-
-export const QueryStationOperationTypesSchema = z.object({
-  ...QueryBuilderSchema.shape,
-  includeVoided: z
-    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
-    .optional()
-    .default(false),
-});
-
-export class CreateStationOperationTypeDto extends createZodDto(
-  CreateStationOperationTypeSchema,
-) {}
-export class UpdateStationOperationTypeDto extends createZodDto(
-  UpdateStationOperationTypeSchema,
-) {}
-export class QueryStationOperationTypesDto extends createZodDto(
-  QueryStationOperationTypesSchema,
-) {}
-
-//  StaffStationOperation DTOs
-
-export const CreateStaffStationOperationSchema = z.object({
-  userId: z.string().nonempty(),
-  stationId: z.uuid(),
-  operationTypeIds: z.array(z.uuid()).min(1),
-});
-
-export const QueryStaffStationOperationsSchema = z.object({
-  ...QueryBuilderSchema.shape,
-  userId: z.uuid().optional(),
+  foundCaseIds: z.array(z.uuid()).min(1, 'At least one document is required'),
   stationId: z.uuid().optional(),
-  operationTypeId: z.uuid().optional(),
-  includeVoided: z
-    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
-    .optional()
-    .default(false),
+  fromStationId: z.uuid().optional(),
+  toStationId: z.uuid().optional(),
+  requestedByStationId: z.uuid().optional(),
+  notes: z.string().optional(),
 });
 
-export class CreateStaffStationOperationDto extends createZodDto(
-  CreateStaffStationOperationSchema,
-) {}
-export class QueryStaffStationOperationsDto extends createZodDto(
-  QueryStaffStationOperationsSchema,
+export const UpdateDocumentOperationSchema = z.object({
+  stationId: z.uuid().optional().nullable(),
+  fromStationId: z.uuid().optional().nullable(),
+  toStationId: z.uuid().optional().nullable(),
+  requestedByStationId: z.uuid().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const AddOperationItemSchema = z.object({
+  foundCaseId: z.uuid(),
+  notes: z.string().optional(),
+});
+
+export const SkipOperationItemSchema = z.object({
+  comment: z.string().optional(),
+});
+
+export const RejectOperationSchema = z.object({
+  reasonCode: z.string().min(1),
+  comment: z.string().optional(),
+});
+
+export const CancelOperationSchema = z.object({
+  reasonCode: z.string().min(1),
+  comment: z.string().optional(),
+});
+
+export const QueryDocumentOperationsListSchema = z.object({
+  ...QueryBuilderSchema.shape,
+  operationTypeId: z.uuid().optional(),
+  status: z.nativeEnum(DocumentOperationStatus).optional(),
+  stationId: z.uuid().optional(),
+  createdById: z.uuid().optional(),
+  search: z.string().optional(),
+});
+
+// ── Request DTOs ──────────────────────────────────────────────────────────────
+
+export class CreateDocumentOperationDto extends createZodDto(CreateDocumentOperationSchema) {}
+export class UpdateDocumentOperationDto extends createZodDto(UpdateDocumentOperationSchema) {}
+export class AddOperationItemDto extends createZodDto(AddOperationItemSchema) {}
+export class SkipOperationItemDto extends createZodDto(SkipOperationItemSchema) {}
+export class RejectOperationDto extends createZodDto(RejectOperationSchema) {}
+export class CancelOperationDto extends createZodDto(CancelOperationSchema) {}
+export class QueryDocumentOperationsListDto extends createZodDto(
+  QueryDocumentOperationsListSchema,
 ) {}
 
-// Response DTOs
+// ── Response DTOs ─────────────────────────────────────────────────────────────
+
+export class GetDocumentOperationItemResponseDto implements DocumentOperationItem {
+  @ApiProperty() id!: string;
+  @ApiProperty() operationId!: string;
+  @ApiProperty() foundCaseId!: string;
+  @ApiProperty({ enum: DocumentOperationItemStatus }) status!: DocumentOperationItemStatus;
+  @ApiProperty({ enum: CustodyStatus, required: false, nullable: true })
+  custodyStatusBefore!: CustodyStatus | null;
+  @ApiProperty({ enum: CustodyStatus, required: false, nullable: true })
+  custodyStatusAfter!: CustodyStatus | null;
+  @ApiPropertyOptional({ nullable: true }) notes!: string | null;
+  @ApiProperty() createdAt!: Date;
+}
 
 export class GetDocumentOperationResponseDto implements DocumentOperation {
-  @ApiProperty()
-  id!: string;
-  @ApiProperty()
-  operationNumber!: string;
-  @ApiProperty()
-  foundCaseId!: string;
-  @ApiProperty()
-  operationTypeId!: string;
-  @ApiProperty({ required: false })
-  stationId!: string | null;
-  @ApiProperty({ required: false })
-  fromStationId!: string | null;
-  @ApiProperty({ required: false })
-  toStationId!: string | null;
-  @ApiProperty({ required: false })
-  requestedByStationId!: string | null;
-  @ApiProperty()
-  performedById!: string;
-  @ApiProperty({ required: false })
-  pairedOperationId!: string | null;
-  @ApiProperty({ enum: CustodyStatus })
-  custodyStatusBefore!: CustodyStatus;
-  @ApiProperty({ enum: CustodyStatus })
-  custodyStatusAfter!: CustodyStatus;
-  @ApiProperty({ required: false })
-  notes!: string | null;
-  @ApiProperty({ required: false })
-  metadata!: JsonValue;
-  @ApiProperty()
-  createdAt!: Date;
+  @ApiProperty() id!: string;
+  @ApiProperty() operationNumber!: string;
+  @ApiProperty() operationTypeId!: string;
+  @ApiProperty({ enum: DocumentOperationStatus }) status!: DocumentOperationStatus;
+  @ApiPropertyOptional({ nullable: true }) stationId!: string | null;
+  @ApiPropertyOptional({ nullable: true }) fromStationId!: string | null;
+  @ApiPropertyOptional({ nullable: true }) toStationId!: string | null;
+  @ApiPropertyOptional({ nullable: true }) requestedByStationId!: string | null;
+  @ApiProperty() createdById!: string;
+  @ApiPropertyOptional({ nullable: true }) notes!: string | null;
+  @ApiPropertyOptional({ nullable: true }) metadata!: JsonValue;
+  @ApiPropertyOptional({ nullable: true }) completedAt!: Date | null;
+  @ApiProperty() createdAt!: Date;
+  @ApiProperty() updatedAt!: Date;
+  @ApiProperty({ type: [GetDocumentOperationItemResponseDto] })
+  items!: GetDocumentOperationItemResponseDto[];
 }
-
-export class GetDocumentOperationTypeResponseDto
-  implements DocumentOperationType
-{
-  @ApiProperty()
-  id!: string;
-  @ApiProperty()
-  code!: string;
-  @ApiProperty()
-  prefix!: string;
-  @ApiProperty()
-  name!: string;
-  @ApiProperty({ required: false })
-  description!: string | null;
-  @ApiProperty()
-  requiresDestinationStation!: boolean;
-  @ApiProperty()
-  requiresSourceStation!: boolean;
-  @ApiProperty()
-  requiresNotes!: boolean;
-  @ApiProperty()
-  isHighPrivilege!: boolean;
-  @ApiProperty()
-  isFinalOperation!: boolean;
-  @ApiProperty({ required: false })
-  metadata!: JsonValue;
-  @ApiProperty()
-  voided!: boolean;
-  @ApiProperty()
-  createdAt!: Date;
-  @ApiProperty()
-  updatedAt!: Date;
-}
-
-export class GetStationOperationTypeResponseDto
-  implements StationOperationType
-{
-  @ApiProperty()
-  id!: string;
-  @ApiProperty()
-  stationId!: string;
-  @ApiProperty()
-  operationTypeId!: string;
-  @ApiProperty()
-  isEnabled!: boolean;
-  @ApiProperty()
-  voided!: boolean;
-  @ApiProperty()
-  createdAt!: Date;
-  @ApiProperty()
-  updatedAt!: Date;
-}
-//  My Stations─
-
-export class MyStationOperationDto {
-  @ApiProperty()
-  id!: string;
-
-  @ApiProperty()
-  code!: string;
-
-  @ApiProperty()
-  name!: string;
-}
-
-export class MyStationDto {
-  @ApiProperty()
-  id!: string;
-
-  @ApiProperty()
-  code!: string;
-
-  @ApiProperty()
-  name!: string;
-
-  @ApiProperty()
-  level1!: string;
-
-  @ApiPropertyOptional({ nullable: true })
-  level2!: string | null;
-
-  @ApiProperty({ type: MyStationOperationDto, isArray: true })
-  operations!: MyStationOperationDto[];
-}
-
-export class GetMyStationsResponseDto {
-  @ApiProperty({ type: [MyStationDto] })
-  results!: MyStationDto[];
-
-  @ApiProperty()
-  totalCount!: number;
-}
-
-// Staff Station Operation
-
-export class GetStaffStationOperationResponseDto
-  implements StaffStationOperation
-{
-  @ApiProperty()
-  id!: string;
-  @ApiProperty()
-  userId!: string;
-  @ApiProperty()
-  stationId!: string;
-  @ApiProperty()
-  operationTypeId!: string;
-  @ApiProperty()
-  grantedById!: string;
-  @ApiProperty()
-  voided!: boolean;
-  @ApiProperty({ required: false })
-  voidedAt!: Date | null;
-  @ApiProperty({ required: false })
-  voidedById!: string | null;
-  @ApiProperty()
-  createdAt!: Date;
-  @ApiProperty()
-  updatedAt!: Date;
-}
-
-// Paginated list response DTOs
 
 export class GetDocumentOperationsListDto extends PaginatedListBase {
   @ApiProperty({ type: [GetDocumentOperationResponseDto] })
   results!: GetDocumentOperationResponseDto[];
-}
-
-export class GetDocumentOperationTypesListDto extends PaginatedListBase {
-  @ApiProperty({ type: [GetDocumentOperationTypeResponseDto] })
-  results!: GetDocumentOperationTypeResponseDto[];
-}
-
-export class GetStationOperationTypesListDto extends PaginatedListBase {
-  @ApiProperty({ type: [GetStationOperationTypeResponseDto] })
-  results!: GetStationOperationTypeResponseDto[];
-}
-
-export class GetStaffStationOperationsListDto extends PaginatedListBase {
-  @ApiProperty({ type: [GetStaffStationOperationResponseDto] })
-  results!: GetStaffStationOperationResponseDto[];
 }

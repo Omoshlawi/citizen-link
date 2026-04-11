@@ -12,7 +12,7 @@ import {
   CreateDocumentOperationTypeDto,
   QueryDocumentOperationTypesDto,
   UpdateDocumentOperationTypeDto,
-} from '../document-custody.dto';
+} from './document-operation-type.dto';
 
 @Injectable()
 export class DocumentOperationTypeService {

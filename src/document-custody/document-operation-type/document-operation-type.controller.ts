@@ -24,7 +24,7 @@ import {
   GetDocumentOperationTypesListDto,
   QueryDocumentOperationTypesDto,
   UpdateDocumentOperationTypeDto,
-} from '../document-custody.dto';
+} from './document-operation-type.dto';
 import { DocumentOperationTypeService } from './document-operation-type.service';
 
 @Controller('document-operation-types')

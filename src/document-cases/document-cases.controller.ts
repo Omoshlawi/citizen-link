@@ -126,9 +126,9 @@ export class DocumentCasesController {
   confirmCollection(
     @Param('id') id: string,
     @Body() dto: ConfirmCollectionDto,
-    @Session() { user }: UserSession,
+    @Session() userSession: UserSession,
   ) {
-    return this.collectionService.confirmCollection(id, dto, user);
+    return this.collectionService.confirmCollection(id, dto, userSession);
   }
 
   @Post('found/:id/collect/cancel')

@@ -12,7 +12,7 @@ import {
   CreateStationOperationTypeDto,
   QueryStationOperationTypesDto,
   UpdateStationOperationTypeDto,
-} from '../document-custody.dto';
+} from './station-operation-type.dto';
 
 @Injectable()
 export class StationOperationTypeService {
