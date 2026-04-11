@@ -21,7 +21,9 @@ import {
 } from '../../common/query-builder';
 import {
   CreateStaffStationOperationDto,
+  GetMyStationsResponseDto,
   GetStaffStationOperationResponseDto,
+  GetStaffStationOperationsListDto,
   QueryStaffStationOperationsDto,
 } from '../document-custody.dto';
 import { StaffStationOperationService } from './staff-station-operation.service';
@@ -30,8 +32,19 @@ import { StaffStationOperationService } from './staff-station-operation.service'
 export class StaffStationOperationController {
   constructor(private readonly service: StaffStationOperationService) {}
 
+  @Get('mine')
+  @ApiOperation({
+    summary: 'Get stations the current user is assigned to (deduplicated)',
+  })
+  @ApiOkResponse({ type: GetMyStationsResponseDto })
+  @ApiErrorsResponse()
+  findMyStations(@Session() { user }: UserSession) {
+    return this.service.findMyStations(user.id);
+  }
+
   @Get()
   @ApiOperation({ summary: 'List staff station operation grants' })
+  @ApiOkResponse({ type: GetStaffStationOperationsListDto })
   @ApiErrorsResponse()
   @RequireSystemPermission({ staffStationOperation: ['view'] })
   findAll(

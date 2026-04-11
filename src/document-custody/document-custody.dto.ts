@@ -1,5 +1,5 @@
 import { createZodDto } from 'nestjs-zod';
-import { QueryBuilderSchema } from '../common/query-builder';
+import { PaginatedListBase, QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
 import {
   CustodyStatus,
@@ -9,9 +9,9 @@ import {
   StationOperationType,
 } from '../../generated/prisma/client';
 import { JsonValue } from '@prisma/client/runtime/client';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-// ─── Custody Operation DTOs ───────────────────────────────────────────────────
+//  Custody Operation DTOs
 
 export const RecordReceivedSchema = z.object({
   stationId: z.uuid(),
@@ -73,7 +73,7 @@ export class RecordConditionUpdateDto extends createZodDto(
   RecordConditionUpdateSchema,
 ) {}
 
-// ─── Query DTOs ───────────────────────────────────────────────────────────────
+//  Query DTOs
 
 export const QueryDocumentOperationsSchema = z.object({
   ...QueryBuilderSchema.shape,
@@ -87,7 +87,7 @@ export class QueryDocumentOperationsDto extends createZodDto(
   QueryDocumentOperationsSchema,
 ) {}
 
-// ─── DocumentOperationType DTOs ───────────────────────────────────────────────
+//  DocumentOperationType DTOs ──
 
 export const CreateDocumentOperationTypeSchema = z.object({
   code: z.string().min(1),
@@ -124,7 +124,7 @@ export class QueryDocumentOperationTypesDto extends createZodDto(
   QueryDocumentOperationTypesSchema,
 ) {}
 
-// ─── StationOperationType DTOs ────────────────────────────────────────────────
+//  StationOperationType DTOs
 
 export const CreateStationOperationTypeSchema = z.object({
   operationTypeId: z.uuid(),
@@ -153,7 +153,7 @@ export class QueryStationOperationTypesDto extends createZodDto(
   QueryStationOperationTypesSchema,
 ) {}
 
-// ─── StaffStationOperation DTOs ───────────────────────────────────────────────
+//  StaffStationOperation DTOs
 
 export const CreateStaffStationOperationSchema = z.object({
   userId: z.string().nonempty(),
@@ -179,7 +179,7 @@ export class QueryStaffStationOperationsDto extends createZodDto(
   QueryStaffStationOperationsSchema,
 ) {}
 
-// ─── Response DTOs ────────────────────────────────────────────────────────────
+// Response DTOs
 
 export class GetDocumentOperationResponseDto implements DocumentOperation {
   @ApiProperty()
@@ -265,6 +265,48 @@ export class GetStationOperationTypeResponseDto
   @ApiProperty()
   updatedAt!: Date;
 }
+//  My Stations─
+
+export class MyStationOperationDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  code!: string;
+
+  @ApiProperty()
+  name!: string;
+}
+
+export class MyStationDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  code!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  level1!: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  level2!: string | null;
+
+  @ApiProperty({ type: MyStationOperationDto, isArray: true })
+  operations!: MyStationOperationDto[];
+}
+
+export class GetMyStationsResponseDto {
+  @ApiProperty({ type: [MyStationDto] })
+  results!: MyStationDto[];
+
+  @ApiProperty()
+  totalCount!: number;
+}
+
+// Staff Station Operation
 
 export class GetStaffStationOperationResponseDto
   implements StaffStationOperation
@@ -289,4 +331,26 @@ export class GetStaffStationOperationResponseDto
   createdAt!: Date;
   @ApiProperty()
   updatedAt!: Date;
+}
+
+// Paginated list response DTOs
+
+export class GetDocumentOperationsListDto extends PaginatedListBase {
+  @ApiProperty({ type: [GetDocumentOperationResponseDto] })
+  results!: GetDocumentOperationResponseDto[];
+}
+
+export class GetDocumentOperationTypesListDto extends PaginatedListBase {
+  @ApiProperty({ type: [GetDocumentOperationTypeResponseDto] })
+  results!: GetDocumentOperationTypeResponseDto[];
+}
+
+export class GetStationOperationTypesListDto extends PaginatedListBase {
+  @ApiProperty({ type: [GetStationOperationTypeResponseDto] })
+  results!: GetStationOperationTypeResponseDto[];
+}
+
+export class GetStaffStationOperationsListDto extends PaginatedListBase {
+  @ApiProperty({ type: [GetStaffStationOperationResponseDto] })
+  results!: GetStaffStationOperationResponseDto[];
 }

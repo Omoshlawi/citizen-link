@@ -16,6 +16,7 @@ import {
   ConfirmTransferDto,
   CreateRequisitionDto,
   GetDocumentOperationResponseDto,
+  GetDocumentOperationsListDto,
   InitiateTransferDto,
   QueryDocumentOperationsDto,
   RecordAuditDto,
@@ -145,6 +146,7 @@ export class DocumentCustodyController {
 
   @Get(':foundCaseId/history')
   @ApiOperation({ summary: 'Get operation history for a found document case' })
+  @ApiOkResponse({ type: GetDocumentOperationsListDto })
   @ApiErrorsResponse()
   getHistory(
     @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,

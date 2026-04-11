@@ -147,6 +147,7 @@ export class SettingsService {
         value: data.value,
         description: data.description,
         updatedBy: user.id,
+        ...(data.isPublic !== undefined ? { isPublic: data.isPublic } : {}),
       },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });

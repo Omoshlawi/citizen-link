@@ -5,3 +5,4 @@ export * from './query-builder.types';
 export * from './query-builder.utils';
 export * from './representation.service';
 export * from './sort.service';
+export * from './pagination.dto';

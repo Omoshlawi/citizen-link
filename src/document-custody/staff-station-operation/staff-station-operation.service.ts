@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateStaffStationOperationDto,
+  MyStationDto,
   QueryStaffStationOperationsDto,
 } from '../document-custody.dto';
 
@@ -21,6 +22,40 @@ export class StaffStationOperationService {
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
   ) {}
+
+  async findMyStations(userId: string) {
+    const stations = await this.prisma.pickupStation.findMany({
+      where: {
+        staffStationOperations: { some: { userId, voided: false } },
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        level1: true,
+        level2: true,
+        staffStationOperations: {
+          where: { userId, voided: false },
+          select: {
+            operationType: { select: { id: true, code: true, name: true } },
+          },
+        },
+      },
+    });
+
+    const results: MyStationDto[] = stations.map((s) => ({
+      id: s.id,
+      name: s.name,
+      code: s.code,
+      level1: s.level1,
+      level2: s.level2 ?? null,
+      operations: s.staffStationOperations
+        .map((g) => g.operationType)
+        .filter((op): op is MyStationDto['operations'][number] => op !== null),
+    }));
+
+    return { results, totalCount: results.length };
+  }
 
   async findAll(query: QueryStaffStationOperationsDto, originalUrl: string) {
     const dbQuery: Prisma.StaffStationOperationWhereInput = {

@@ -21,6 +21,7 @@ import {
 import {
   CreateStationOperationTypeDto,
   GetStationOperationTypeResponseDto,
+  GetStationOperationTypesListDto,
   QueryStationOperationTypesDto,
   UpdateStationOperationTypeDto,
 } from '../document-custody.dto';
@@ -32,7 +33,7 @@ export class StationOperationTypeController {
 
   @Get()
   @ApiOperation({ summary: 'List operation types for a station' })
-  @ApiOkResponse({ type: [GetStationOperationTypeResponseDto] })
+  @ApiOkResponse({ type: GetStationOperationTypesListDto })
   @ApiErrorsResponse()
   findAll(
     @Param('stationId', ParseUUIDPipe) stationId: string,
@@ -70,6 +71,7 @@ export class StationOperationTypeController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Void or purge a station operation type' })
+  @ApiOkResponse({ type: GetStationOperationTypeResponseDto })
   @ApiErrorsResponse()
   @RequireSystemPermission({ stationOperationType: ['manage'] })
   remove(

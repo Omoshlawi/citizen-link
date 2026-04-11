@@ -97,6 +97,16 @@ export class AuthModule {
             database: prismaAdapter(prisma, {
               provider: 'postgresql',
             }),
+            session: {
+              additionalFields: {
+                stationId: {
+                  type: 'string',
+                  required: false,
+                  defaultValue: null,
+                  input: true,
+                },
+              },
+            },
             user: {
               changeEmail: {
                 enabled: true,

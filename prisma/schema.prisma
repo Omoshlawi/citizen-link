@@ -81,6 +81,8 @@ model Session {
 
   impersonatedBy String?
 
+  stationId String?
+
   @@unique([token])
   @@index([userId])
   @@map("session")
@@ -666,7 +668,7 @@ model FoundDocumentCase {
   collections DocumentCollection[]
 
   // Document custody tracking
-  custodyStatus    CustodyStatus @default(WITH_FINDER)
+  custodyStatus    CustodyStatus  @default(WITH_FINDER)
   currentStationId String?
   currentStation   PickupStation? @relation("CurrentCustodyStation", fields: [currentStationId], references: [id])
 
@@ -1039,11 +1041,11 @@ enum HandoverStatus {
 }
 
 enum CustodyStatus {
-  WITH_FINDER  // document is physically with the finder; FoundDocumentCase in DRAFT
-  IN_CUSTODY   // document is at a station
-  IN_TRANSIT   // document is between stations (transfer initiated, not yet received)
-  HANDED_OVER  // document returned to owner (pickup collected or delivery confirmed)
-  DISPOSED     // document written off (fake, damaged, unclaimed)
+  WITH_FINDER // document is physically with the finder; FoundDocumentCase in DRAFT
+  IN_CUSTODY // document is at a station
+  IN_TRANSIT // document is between stations (transfer initiated, not yet received)
+  HANDED_OVER // document returned to owner (pickup collected or delivery confirmed)
+  DISPOSED // document written off (fake, damaged, unclaimed)
 }
 
 // 2. The Invoice acts as the "Bill" and tracks the lipa mdogo mdogo progress

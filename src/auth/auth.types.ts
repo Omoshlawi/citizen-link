@@ -33,6 +33,6 @@ export interface UserSession extends BetterAuthUserSession {
   session: BetterAuthUserSession['session'] & {
     activeOrganizationId?: string;
     impersonatedBy?: string;
-    // Add any other session fields as needed
+    stationId?: string | null;
   };
 }

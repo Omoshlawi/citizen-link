@@ -21,6 +21,7 @@ import {
 import {
   CreateDocumentOperationTypeDto,
   GetDocumentOperationTypeResponseDto,
+  GetDocumentOperationTypesListDto,
   QueryDocumentOperationTypesDto,
   UpdateDocumentOperationTypeDto,
 } from '../document-custody.dto';
@@ -32,7 +33,7 @@ export class DocumentOperationTypeController {
 
   @Get()
   @ApiOperation({ summary: 'List document operation types' })
-  @ApiOkResponse({ type: [GetDocumentOperationTypeResponseDto] })
+  @ApiOkResponse({ type: GetDocumentOperationTypesListDto })
   @ApiErrorsResponse()
   findAll(
     @Query() query: QueryDocumentOperationTypesDto,
@@ -79,6 +80,7 @@ export class DocumentOperationTypeController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Void or purge a document operation type' })
+  @ApiOkResponse({ type: GetDocumentOperationTypeResponseDto })
   @ApiErrorsResponse()
   @RequireSystemPermission({ documentOperationType: ['manage'] })
   remove(
