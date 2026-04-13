@@ -28,6 +28,13 @@ export class DocumentCustodyTransitionsService {
     private readonly representationService: CustomRepresentationService,
   ) {}
 
+  /**
+   * Submit an operation for approval
+   * @param id
+   * @param user
+   * @param v
+   * @returns
+   */
   async submit(id: string, user: UserSession['user'], v?: string) {
     const op = await this.prisma.documentOperation.findUnique({
       where: { id },
@@ -35,7 +42,9 @@ export class DocumentCustodyTransitionsService {
     });
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== DocumentOperationStatus.DRAFT)
-      throw new ConflictException('Only DRAFT operations can be submitted');
+      throw new ConflictException(
+        `Only ${DocumentOperationStatus.DRAFT} operations can be submitted`,
+      );
     if (op.items.length === 0)
       throw new BadRequestException('Cannot submit an operation with no items');
 
@@ -60,13 +69,22 @@ export class DocumentCustodyTransitionsService {
     });
   }
 
+  /**
+   * Approve an operation
+   * @param id
+   * @param user
+   * @param v
+   * @returns
+   */
   async approve(id: string, user: UserSession['user'], v?: string) {
     const op = await this.prisma.documentOperation.findUnique({
       where: { id },
     });
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== DocumentOperationStatus.SUBMITTED)
-      throw new ConflictException('Only SUBMITTED operations can be approved');
+      throw new ConflictException(
+        `Only ${DocumentOperationStatus.SUBMITTED} operations can be approved`,
+      );
 
     const rep = this.representationService.buildCustomRepresentationQuery(
       v ?? this.defaultRep,
@@ -89,6 +107,15 @@ export class DocumentCustodyTransitionsService {
     });
   }
 
+  /**
+   * Reject an operation
+   * Return the operation back to draft for the staff to fix and resubmit
+   * @param id
+   * @param dto
+   * @param user
+   * @param v
+   * @returns
+   */
   async reject(
     id: string,
     dto: RejectOperationDto,
@@ -100,7 +127,9 @@ export class DocumentCustodyTransitionsService {
     });
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== DocumentOperationStatus.SUBMITTED)
-      throw new ConflictException('Only SUBMITTED operations can be rejected');
+      throw new ConflictException(
+        `Only ${DocumentOperationStatus.SUBMITTED} operations can be rejected`,
+      );
 
     const rep = this.representationService.buildCustomRepresentationQuery(
       v ?? this.defaultRep,
@@ -134,6 +163,13 @@ export class DocumentCustodyTransitionsService {
     });
   }
 
+  /**
+   * Execute an operation
+   * @param id
+   * @param user
+   * @param v
+   * @returns
+   */
   async execute(id: string, user: UserSession['user'], v?: string) {
     const op = await this.prisma.documentOperation.findUnique({
       where: { id },
@@ -147,7 +183,7 @@ export class DocumentCustodyTransitionsService {
     ];
     if (!validStatuses.includes(op.status as (typeof validStatuses)[number]))
       throw new ConflictException(
-        'Only DRAFT or APPROVED operations can be executed',
+        `Only ${DocumentOperationStatus.DRAFT} or ${DocumentOperationStatus.APPROVED} operations can be executed`,
       );
 
     if (
@@ -224,6 +260,14 @@ export class DocumentCustodyTransitionsService {
     });
   }
 
+  /**
+   * Cancel an operation
+   * @param id
+   * @param dto
+   * @param user
+   * @param v
+   * @returns
+   */
   async cancel(
     id: string,
     dto: CancelOperationDto,
@@ -268,7 +312,7 @@ export class DocumentCustodyTransitionsService {
     });
   }
 
-  // ── Internal helpers ──────────────────────────────────────────────────────────
+  //  Internal helpers
 
   private async logTransition(
     tx: Prisma.TransactionClient,

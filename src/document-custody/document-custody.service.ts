@@ -29,6 +29,7 @@ import {
 } from './document-custody.dto';
 import { DEFAULT_OPERATION_REP } from './document-custody.constants';
 import { DocumentCustodyTransitionsService } from './document-custody-transitions.service';
+import { EntityPrefix } from '../human-id/human-id.constants';
 
 @Injectable()
 export class DocumentCustodyService {
@@ -43,36 +44,54 @@ export class DocumentCustodyService {
     private readonly transitionsService: DocumentCustodyTransitionsService,
   ) {}
 
-  // ── Queries ──────────────────────────────────────────────────────────────────
+  //  Queries
 
   async findMany(query: QueryDocumentOperationsListDto, originalUrl: string) {
     const where: Prisma.DocumentOperationWhereInput = {
-      ...(query.operationTypeId && { operationTypeId: query.operationTypeId }),
-      ...(query.status && { status: query.status }),
-      ...(query.stationId && {
-        OR: [
-          { stationId: query.stationId },
-          { fromStationId: query.stationId },
-          { toStationId: query.stationId },
-        ],
-      }),
-      ...(query.createdById && { createdById: query.createdById }),
-      ...(query.search && {
-        OR: [
-          { operationNumber: { contains: query.search, mode: 'insensitive' } },
-          {
-            items: {
-              some: {
-                foundCase: {
-                  case: {
-                    caseNumber: { contains: query.search, mode: 'insensitive' },
+      AND: [
+        {
+          ...(query.operationTypeId && {
+            operationTypeId: query.operationTypeId,
+          }),
+          ...(query.status && { status: query.status }),
+          ...(query.createdById && { createdById: query.createdById }),
+        },
+        {
+          ...(query.stationId && {
+            OR: [
+              { stationId: query.stationId },
+              { fromStationId: query.stationId },
+              { toStationId: query.stationId },
+            ],
+          }),
+        },
+        {
+          ...(query.search && {
+            OR: [
+              {
+                operationNumber: {
+                  contains: query.search,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                items: {
+                  some: {
+                    foundCase: {
+                      case: {
+                        caseNumber: {
+                          contains: query.search,
+                          mode: 'insensitive',
+                        },
+                      },
+                    },
                   },
                 },
               },
-            },
-          },
-        ],
-      }),
+            ],
+          }),
+        },
+      ],
     };
 
     const totalCount = await this.prisma.documentOperation.count({ where });
@@ -141,7 +160,7 @@ export class DocumentCustodyService {
     };
   }
 
-  // ── Create / Edit ─────────────────────────────────────────────────────────────
+  //  Create / Edit
 
   async create(
     dto: CreateDocumentOperationDto,
@@ -153,9 +172,8 @@ export class DocumentCustodyService {
     });
     if (!opType)
       throw new BadRequestException('Invalid or voided operation type');
-
     const operationNumber = await this.humanId.generate({
-      prefix: opType.prefix as any,
+      prefix: opType.prefix as EntityPrefix,
     });
 
     return this.prisma.documentOperation.create({
@@ -314,7 +332,7 @@ export class DocumentCustodyService {
     return this.findOne(id, query);
   }
 
-  // ── Lifecycle Transitions (delegated) ────────────────────────────────────────
+  //  Lifecycle Transitions (delegated)
 
   submit(
     id: string,

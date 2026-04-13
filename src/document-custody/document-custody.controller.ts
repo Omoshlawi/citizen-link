@@ -13,7 +13,10 @@ import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
 import { UserSession } from '../auth/auth.types';
-import { CustomRepresentationQueryDto, OriginalUrl } from '../common/query-builder';
+import {
+  CustomRepresentationQueryDto,
+  OriginalUrl,
+} from '../common/query-builder';
 import {
   AddOperationItemDto,
   CancelOperationDto,
@@ -31,7 +34,7 @@ import { DocumentCustodyService } from './document-custody.service';
 export class DocumentCustodyController {
   constructor(private readonly custodyService: DocumentCustodyService) {}
 
-  // ── Operation CRUD ────────────────────────────────────────────────────────────
+  //  Operation CRUD
 
   @Get('operations')
   @ApiOperation({ summary: 'List document custody operations' })
@@ -80,7 +83,7 @@ export class DocumentCustodyController {
     return this.custodyService.update(id, dto, user, query);
   }
 
-  // ── Item Management ───────────────────────────────────────────────────────────
+  //  Item Management
 
   @Post('operations/:id/items')
   @ApiOperation({ summary: 'Add a found document to a DRAFT operation' })
@@ -122,7 +125,7 @@ export class DocumentCustodyController {
     return this.custodyService.skipItem(id, itemId, dto, user, query);
   }
 
-  // ── Lifecycle Transitions ─────────────────────────────────────────────────────
+  //  Lifecycle Transitions
 
   @Post('operations/:id/submit')
   @ApiOperation({ summary: 'Submit operation for supervisor approval' })
@@ -186,7 +189,7 @@ export class DocumentCustodyController {
     return this.custodyService.cancel(id, dto, user, query);
   }
 
-  // ── Per-case history (used by CustodyDetailPage) ──────────────────────────────
+  //  Per-case history (used by CustodyDetailPage)
 
   @Get(':foundCaseId/history')
   @ApiOperation({ summary: 'Get operation history for a found document case' })

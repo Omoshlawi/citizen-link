@@ -27,9 +27,6 @@ import { StaffStationOperationService } from './staff-station-operation/staff-st
     StationOperationTypeService,
     StaffStationOperationService,
   ],
-  exports: [
-    DocumentCustodyPermissionService,
-    DocumentCustodyService,
-  ],
+  exports: [DocumentCustodyPermissionService, DocumentCustodyService],
 })
 export class DocumentCustodyModule {}

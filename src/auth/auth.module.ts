@@ -32,6 +32,7 @@ import { AuthExtendedController } from './auth.controller';
 import { AuthHook } from './auth.hooks';
 import { TemplatesModule, TemplatesService } from '../common/templates';
 import { EmailChannelService } from '../notifications/channels/email/email.channel.service';
+import { AppConfig } from 'src/app.config';
 
 const HOOKS = [
   { metadataKey: BEFORE_HOOK_KEY, hookType: 'before' as const },
@@ -62,6 +63,7 @@ export class AuthModule {
         notificationDispatch: NotificationDispatchService,
         templateService: TemplatesService,
         emailChannelService: EmailChannelService,
+        appConfig: AppConfig,
       ) {
         const providers = discover
           .getProviders()
@@ -115,7 +117,7 @@ export class AuthModule {
                   _,
                 ) {
                   const deepLink = `citizenlinkapp://change-email-verify?token=${token}`;
-                  const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/change-email-verify?token=${token}`;
+                  const verificationUrl = `${appConfig.frontEndUrl}/change-email-verify?token=${token}`;
                   const year = new Date().getFullYear();
                   // 1. Verification email → new address (proves ownership)
                   await notificationDispatch.sendFromTemplate({
@@ -206,7 +208,7 @@ export class AuthModule {
               enabled: true,
               async sendResetPassword({ user, token }, _) {
                 const deepLink = `citizenlinkapp://auth/reset-password?token=${token}`;
-                const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+                const resetUrl = `${appConfig.frontEndUrl}/reset-password?token=${token}`;
                 await notificationDispatch.sendFromTemplate({
                   templateKey: 'auth.password.reset',
                   recipient: { email: user.email },
@@ -227,15 +229,16 @@ export class AuthModule {
               requireEmailVerification: true,
             },
             emailVerification: {
-              async sendVerificationEmail({ user, token, url }, _) {
+              async sendVerificationEmail({ user, token }, _) {
                 const deepLink = `citizenlinkapp://auth/verify-email?token=${token}`;
+                const verificationUrl = `${appConfig.frontEndUrl}/verify-email?token=${token}`;
                 await notificationDispatch.sendFromTemplate({
                   templateKey: 'auth.email.verification',
                   recipient: { email: user.email },
                   data: {
                     user,
                     deepLink,
-                    verificationUrl: url,
+                    verificationUrl,
                     year: new Date().getFullYear(),
                   },
                   userId: user.id,
@@ -261,6 +264,7 @@ export class AuthModule {
         NotificationDispatchService,
         TemplatesService,
         EmailChannelService,
+        AppConfig,
       ],
     });
   }
