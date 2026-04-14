@@ -1,5 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import { Prisma } from '../../../generated/prisma/client';
+import { BetterAuthWithPlugins } from '../../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
@@ -21,6 +27,7 @@ export class StaffStationOperationService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
   async findMyStations(userId: string) {
@@ -113,6 +120,18 @@ export class StaffStationOperationService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     query: CustomRepresentationQueryDto,
   ) {
+    const { success: canManageOperations } =
+      await this.authService.api.userHasPermission({
+        body: {
+          userId: dto.userId,
+          permission: { documentOperation: ['manage'] },
+        },
+      });
+    if (!canManageOperations)
+      throw new BadRequestException(
+        'User does not have the required staff permissions to be granted station operations',
+      );
+
     return Promise.all(
       dto.operationTypeIds.map((operationTypeId) =>
         // Upsert: re-activate if previously voided

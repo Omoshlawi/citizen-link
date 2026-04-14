@@ -36,6 +36,7 @@ export const adminPluginAcl = createAccessControl({
   notification: ['list-any', 'view-any', 'manage-any', 'delete', 'test'],
   transitionReason: ['create', 'update', 'delete', 'restore'],
   statusTransition: ['view'],
+  documentOperation: ['manage', 'approve', 'reject'],
   documentOperationType: ['manage'],
   stationOperationType: ['manage'],
   staffStationOperation: ['view', 'manage'],
@@ -78,6 +79,7 @@ const adminRole = adminPluginAcl.newRole({
   notification: ['list-any', 'view-any', 'manage-any', 'delete', 'test'],
   transitionReason: ['create', 'update', 'delete', 'restore'],
   statusTransition: ['view'],
+  documentOperation: ['manage', 'approve', 'reject'],
   documentOperationType: ['manage'],
   stationOperationType: ['manage'],
   staffStationOperation: ['view', 'manage'],
@@ -96,6 +98,7 @@ const adminRole = adminPluginAcl.newRole({
 const staffRole = adminPluginAcl.newRole({
   ...userAc.statements,
   address: ['view-any'],
+  documentOperation: ['manage'],
 });
 
 const userRole = adminPluginAcl.newRole({
@@ -156,10 +159,15 @@ const extractionDebuggerRole = adminPluginAcl.newRole({
 
 const stationManagerRole = adminPluginAcl.newRole({
   staffStationOperation: ['view', 'manage'],
+  documentOperation: ['manage', 'approve', 'reject'],
   documentOperationType: ['manage'],
   stationOperationType: ['manage'],
   handover: ['manage-any'],
   pushToken: ['list-any'],
+});
+
+const operationApproverRole = adminPluginAcl.newRole({
+  documentOperation: ['manage', 'approve', 'reject'],
 });
 
 const financeOfficerRole = adminPluginAcl.newRole({
@@ -189,6 +197,7 @@ export const adminPluginRoles = {
   'notification-admin': notificationAdminRole,
   'extraction-debugger': extractionDebuggerRole,
   'station-manager': stationManagerRole,
+  'operation-approver': operationApproverRole,
   'finance-officer': financeOfficerRole,
   'system-admin': systemAdminRole,
 };

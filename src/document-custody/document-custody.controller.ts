@@ -29,6 +29,7 @@ import {
   UpdateDocumentOperationDto,
 } from './document-custody.dto';
 import { DocumentCustodyService } from './document-custody.service';
+import { RequireSystemPermission } from 'src/auth/auth.decorators';
 
 @Controller('document-custody')
 export class DocumentCustodyController {
@@ -40,6 +41,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'List document custody operations' })
   @ApiOkResponse({ type: GetDocumentOperationsListDto })
   @ApiErrorsResponse()
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   listOperations(
     @Query() query: QueryDocumentOperationsListDto,
     @OriginalUrl() originalUrl: string,
@@ -51,6 +53,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Create a new DRAFT custody operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   createOperation(
     @Body() dto: CreateDocumentOperationDto,
     @Session() { user }: UserSession,
@@ -63,6 +66,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Get a custody operation by ID' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse()
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   getOperation(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: CustomRepresentationQueryDto,
@@ -74,6 +78,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Edit a DRAFT custody operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   updateOperation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateDocumentOperationDto,
@@ -89,6 +94,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Add a found document to a DRAFT operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   addItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AddOperationItemDto,
@@ -102,6 +108,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Remove a document from a DRAFT operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   removeItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
@@ -115,6 +122,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Skip a PENDING item (exclude it from execution)' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   skipItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
@@ -131,6 +139,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Submit operation for supervisor approval' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   submitOperation(
     @Param('id', ParseUUIDPipe) id: string,
     @Session() { user }: UserSession,
@@ -143,6 +152,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Approve a submitted operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['approve'] })
   approveOperation(
     @Param('id', ParseUUIDPipe) id: string,
     @Session() { user }: UserSession,
@@ -155,6 +165,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Reject a submitted operation (returns to DRAFT)' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['reject'] })
   rejectOperation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectOperationDto,
@@ -168,6 +179,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Execute operation — applies custody transitions' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   executeOperation(
     @Param('id', ParseUUIDPipe) id: string,
     @Session() { user }: UserSession,
@@ -180,6 +192,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Cancel an operation' })
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   cancelOperation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CancelOperationDto,
@@ -195,6 +208,7 @@ export class DocumentCustodyController {
   @ApiOperation({ summary: 'Get operation history for a found document case' })
   @ApiOkResponse({ type: GetDocumentOperationsListDto })
   @ApiErrorsResponse()
+  @RequireSystemPermission({ documentOperation: ['manage'] })
   getHistory(
     @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
     @Query() query: QueryDocumentOperationsListDto,

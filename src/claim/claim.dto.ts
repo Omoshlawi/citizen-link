@@ -46,9 +46,7 @@ export const QueryClaimSchema = z.object({
   caseId: z.uuid().optional(),
   createdAtFrom: z.iso.date().optional(),
   createdAtTo: z.iso.date().optional(),
-  status: z
-    .enum(['PENDING', 'VERIFIED', 'REJECTED', 'CANCELLED', 'DISPUTED'])
-    .optional(),
+  status: z.enum(ClaimStatus).optional(),
 });
 
 export class CreateClaimDto extends createZodDto(
@@ -65,42 +63,42 @@ export class ClaimVerificationDto extends createZodDto(
 
 export class GetClaimResponseDto implements Claim {
   @ApiProperty()
-  matchId: string;
+  matchId!: string;
   @ApiProperty({ type: 'string' })
-  claimNumber: string;
+  claimNumber!: string;
   @ApiProperty()
-  userId: string;
+  userId!: string;
   @ApiProperty()
-  foundDocumentCaseId: string;
+  foundDocumentCaseId!: string;
   @ApiProperty({ enum: ClaimStatus })
-  status: ClaimStatus;
+  status!: ClaimStatus;
   @ApiProperty()
-  id: string;
+  id!: string;
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
   @ApiProperty()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 export class QueryClaimResponseDto {
   @ApiProperty({ isArray: true, type: GetClaimResponseDto })
-  results: GetClaimResponseDto[];
+  results!: GetClaimResponseDto[];
 
   @ApiProperty()
-  totalCount: number;
+  totalCount!: number;
 
   @ApiProperty()
-  totalPages: number;
+  totalPages!: number;
 
   @ApiProperty()
-  currentPage: number;
+  currentPage!: number;
 
   @ApiProperty()
-  pageSize: number;
+  pageSize!: number;
 
   @ApiProperty()
-  next: string | null;
+  next!: string | null;
 
   @ApiProperty()
-  prev: string | null;
+  prev!: string | null;
 }
