@@ -1,6 +1,6 @@
 [
   {
-    "code": "RECEIVED",
+    "code": "RECEIPT",
     "prefix": "RCV",
     "name": "Received at Station",
     "description": "Document physically received and registered at this station.",

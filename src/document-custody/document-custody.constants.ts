@@ -1,6 +1,17 @@
 import { CustodyStatus, Prisma } from '../../generated/prisma/client';
 import { CustodyOperationCode } from './operations/custody-operation-code.enum';
 
+// ── Station field roles ───────────────────────────────────────────────────────
+// stationId            — the station executing / hosting this operation
+// fromStationId        — source station; required when opType.requiresSourceStation
+//                        (TRANSFER_IN: the station that dispatched the doc)
+// toStationId          — destination station; required when opType.requiresDestinationStation
+//                        (TRANSFER_OUT: the station the doc is being sent to)
+// requestedByStationId — station that requested this operation (REQUISITION)
+//
+// Enforcement: DocumentCustodyService.validateStationRequirements() (create/update)
+//              and DocumentCustodyTransitionsService.submit() (pre-submit guard).
+
 // ── Custody transition map ────────────────────────────────────────────────────
 // Defines how each operation code mutates a found case's custody status.
 // Operations not listed here (AUDIT, CONDITION_UPDATE, REQUISITION) are
@@ -13,7 +24,7 @@ export type CustodyTransitionFn = (
 ) => Promise<{ before: CustodyStatus; after: CustodyStatus }>;
 
 export const CUSTODY_TRANSITION: Record<string, CustodyTransitionFn> = {
-  [CustodyOperationCode.RECEIVED]: async (tx, item, op) => {
+  [CustodyOperationCode.RECEIPT]: async (tx, item, op) => {
     const fc = await tx.foundDocumentCase.findUniqueOrThrow({
       where: { id: item.foundCaseId },
     });

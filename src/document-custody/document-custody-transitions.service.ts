@@ -18,6 +18,7 @@ import {
   CUSTODY_TRANSITION,
   DEFAULT_OPERATION_REP,
 } from './document-custody.constants';
+import { DocumentCustodyPermissionService } from './document-custody-permission.service';
 
 @Injectable()
 export class DocumentCustodyTransitionsService {
@@ -26,6 +27,7 @@ export class DocumentCustodyTransitionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly representationService: CustomRepresentationService,
+    private readonly permissionService: DocumentCustodyPermissionService,
   ) {}
 
   /**
@@ -47,6 +49,19 @@ export class DocumentCustodyTransitionsService {
       );
     if (op.items.length === 0)
       throw new BadRequestException('Cannot submit an operation with no items');
+
+    if (op.operationType.requiresSourceStation && !op.fromStationId)
+      throw new BadRequestException(
+        `${op.operationType.code} requires a source station (fromStationId)`,
+      );
+    if (op.operationType.requiresDestinationStation && !op.toStationId)
+      throw new BadRequestException(
+        `${op.operationType.code} requires a destination station (toStationId)`,
+      );
+    if (op.operationType.requiresNotes && !op.notes?.trim())
+      throw new BadRequestException(`${op.operationType.code} requires notes`);
+
+    await this.permissionService.assertPermissionForOperation(user.id, op);
 
     const rep = this.representationService.buildCustomRepresentationQuery(
       v ?? this.defaultRep,
@@ -194,6 +209,8 @@ export class DocumentCustodyTransitionsService {
         'This operation type requires supervisor approval before execution',
       );
 
+    await this.permissionService.assertPermissionForOperation(user.id, op);
+
     if (op.items.length === 0)
       throw new BadRequestException(
         'Cannot execute an operation with no items',
@@ -276,6 +293,7 @@ export class DocumentCustodyTransitionsService {
   ) {
     const op = await this.prisma.documentOperation.findUnique({
       where: { id },
+      include: { operationType: true },
     });
     if (!op) throw new NotFoundException('Operation not found');
 
@@ -289,6 +307,8 @@ export class DocumentCustodyTransitionsService {
       throw new ConflictException(
         'Completed or already cancelled operations cannot be cancelled',
       );
+
+    await this.permissionService.assertPermissionForOperation(user.id, op);
 
     const rep = this.representationService.buildCustomRepresentationQuery(
       v ?? this.defaultRep,

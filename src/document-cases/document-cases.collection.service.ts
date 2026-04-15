@@ -201,6 +201,7 @@ export class DocumentCasesCollectionService {
 
     // Atomic transition
     const updatedCase = await this.prisma.$transaction(async (tx) => {
+      // Transition collection to confirmed
       await tx.documentCollection.update({
         where: { id: collection.id },
         data: {
@@ -209,6 +210,7 @@ export class DocumentCasesCollectionService {
           attempts: collection.attempts + 1,
         },
       });
+      // Make foun case as in custody and transition status to submitted
       await tx.foundDocumentCase.update({
         where: { id: foundCaseId },
         data: {
@@ -217,6 +219,7 @@ export class DocumentCasesCollectionService {
           currentStationId: session.stationId,
         },
       });
+      // Log Draft -> Submited status transition
       await tx.statusTransition.create({
         data: {
           entityType: 'FoundDocumentCase',
@@ -227,6 +230,7 @@ export class DocumentCasesCollectionService {
           reasonId: reason?.id,
         },
       });
+      //TODO: Create recipt operation
       return tx.documentCase.findUnique({
         where: { id: collection.foundCase.caseId },
         include: {

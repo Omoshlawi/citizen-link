@@ -3,7 +3,7 @@
  * Update here only — all services reference this enum instead of raw strings.
  */
 export enum CustodyOperationCode {
-  RECEIVED = 'RECEIVED',
+  RECEIPT = 'RECEIPT',
   TRANSFER_OUT = 'TRANSFER_OUT',
   TRANSFER_IN = 'TRANSFER_IN',
   REQUISITION = 'REQUISITION',

@@ -1548,7 +1548,7 @@ model DocumentOperationType {
   description String?
 
   // Validation behaviour flags
-  requiresDestinationStation Boolean @default(false)
+  requiresDestinationStation Boolean @default(false) // 
   requiresSourceStation      Boolean @default(false)
   requiresNotes              Boolean @default(false)
   isHighPrivilege            Boolean @default(false) // extra check (e.g. DISPOSAL)

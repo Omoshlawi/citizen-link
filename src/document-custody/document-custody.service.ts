@@ -28,6 +28,7 @@ import {
   UpdateDocumentOperationDto,
 } from './document-custody.dto';
 import { DEFAULT_OPERATION_REP } from './document-custody.constants';
+import { DocumentCustodyPermissionService } from './document-custody-permission.service';
 import { DocumentCustodyTransitionsService } from './document-custody-transitions.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 
@@ -42,6 +43,7 @@ export class DocumentCustodyService {
     private readonly sortService: SortService,
     private readonly representationService: CustomRepresentationService,
     private readonly transitionsService: DocumentCustodyTransitionsService,
+    private readonly permissionService: DocumentCustodyPermissionService,
   ) {}
 
   //  Queries
@@ -160,6 +162,33 @@ export class DocumentCustodyService {
     };
   }
 
+  //  Validation
+
+  private validateStationRequirements(
+    opType: {
+      code: string;
+      requiresSourceStation: boolean;
+      requiresDestinationStation: boolean;
+      requiresNotes: boolean;
+    },
+    fields: {
+      fromStationId?: string | null;
+      toStationId?: string | null;
+      notes?: string | null;
+    },
+  ): void {
+    if (opType.requiresSourceStation && !fields.fromStationId)
+      throw new BadRequestException(
+        `${opType.code} requires a source station (fromStationId)`,
+      );
+    if (opType.requiresDestinationStation && !fields.toStationId)
+      throw new BadRequestException(
+        `${opType.code} requires a destination station (toStationId)`,
+      );
+    if (opType.requiresNotes && !fields.notes?.trim())
+      throw new BadRequestException(`${opType.code} requires notes`);
+  }
+
   //  Create / Edit
 
   async create(
@@ -172,6 +201,15 @@ export class DocumentCustodyService {
     });
     if (!opType)
       throw new BadRequestException('Invalid or voided operation type');
+
+    this.validateStationRequirements(opType, dto);
+
+    await this.permissionService.assertPermissionForOperation(user.id, {
+      stationId: dto.stationId ?? null,
+      fromStationId: dto.fromStationId ?? null,
+      operationType: { code: opType.code },
+    });
+
     const operationNumber = await this.humanId.generate({
       prefix: opType.prefix as EntityPrefix,
     });
@@ -203,15 +241,34 @@ export class DocumentCustodyService {
   async update(
     id: string,
     dto: UpdateDocumentOperationDto,
-    _user: UserSession['user'],
+    user: UserSession['user'],
     query?: CustomRepresentationQueryDto,
   ) {
     const op = await this.prisma.documentOperation.findUnique({
       where: { id },
+      include: { operationType: true },
     });
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== DocumentOperationStatus.DRAFT)
       throw new ConflictException('Only DRAFT operations can be edited');
+
+    const effectiveStationId =
+      dto.stationId !== undefined ? dto.stationId : op.stationId;
+    const effectiveFromStationId =
+      dto.fromStationId !== undefined ? dto.fromStationId : op.fromStationId;
+
+    this.validateStationRequirements(op.operationType, {
+      fromStationId: effectiveFromStationId,
+      toStationId:
+        dto.toStationId !== undefined ? dto.toStationId : op.toStationId,
+      notes: dto.notes !== undefined ? dto.notes : op.notes,
+    });
+
+    await this.permissionService.assertPermissionForOperation(user.id, {
+      stationId: effectiveStationId ?? null,
+      fromStationId: effectiveFromStationId ?? null,
+      operationType: op.operationType,
+    });
 
     return this.prisma.documentOperation.update({
       where: { id },
@@ -237,17 +294,20 @@ export class DocumentCustodyService {
   async addItem(
     id: string,
     dto: AddOperationItemDto,
-    _user: UserSession['user'],
+    user: UserSession['user'],
     query?: CustomRepresentationQueryDto,
   ) {
     const op = await this.prisma.documentOperation.findUnique({
       where: { id },
+      include: { operationType: true },
     });
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== DocumentOperationStatus.DRAFT)
       throw new ConflictException(
         'Items can only be added to DRAFT operations',
       );
+
+    await this.permissionService.assertPermissionForOperation(user.id, op);
 
     const exists = await this.prisma.documentOperationItem.findUnique({
       where: {
@@ -275,17 +335,20 @@ export class DocumentCustodyService {
   async removeItem(
     id: string,
     itemId: string,
-    _user: UserSession['user'],
+    user: UserSession['user'],
     query?: CustomRepresentationQueryDto,
   ) {
     const op = await this.prisma.documentOperation.findUnique({
       where: { id },
+      include: { operationType: true },
     });
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== DocumentOperationStatus.DRAFT)
       throw new ConflictException(
         'Items can only be removed from DRAFT operations',
       );
+
+    await this.permissionService.assertPermissionForOperation(user.id, op);
 
     const item = await this.prisma.documentOperationItem.findFirst({
       where: { id: itemId, operationId: id },
@@ -300,11 +363,12 @@ export class DocumentCustodyService {
     id: string,
     itemId: string,
     dto: SkipOperationItemDto,
-    _user: UserSession['user'],
+    user: UserSession['user'],
     query?: CustomRepresentationQueryDto,
   ) {
     const op = await this.prisma.documentOperation.findUnique({
       where: { id },
+      include: { operationType: true },
     });
     if (!op) throw new NotFoundException('Operation not found');
     if (
@@ -314,6 +378,8 @@ export class DocumentCustodyService {
       throw new ConflictException(
         'Items can only be skipped on DRAFT or APPROVED operations',
       );
+
+    await this.permissionService.assertPermissionForOperation(user.id, op);
 
     const item = await this.prisma.documentOperationItem.findFirst({
       where: { id: itemId, operationId: id },
