@@ -99,6 +99,8 @@ const staffRole = adminPluginAcl.newRole({
   ...userAc.statements,
   address: ['view-any'],
   documentOperation: ['manage'],
+  documentCase: ['list-any', 'view-any'],
+  match: ['list-any', 'query-case-matches', 'create'],
 });
 
 const userRole = adminPluginAcl.newRole({

@@ -28,6 +28,7 @@ import {
   UpdateDocumentOperationDto,
 } from './document-custody.dto';
 import { DEFAULT_OPERATION_REP } from './document-custody.constants';
+import { CustodyOperationCode } from './operations/custody-operation-code.enum';
 import { DocumentCustodyPermissionService } from './document-custody-permission.service';
 import { DocumentCustodyTransitionsService } from './document-custody-transitions.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
@@ -203,6 +204,24 @@ export class DocumentCustodyService {
       throw new BadRequestException('Invalid or voided operation type');
 
     this.validateStationRequirements(opType, dto);
+
+    if (
+      (opType.code as CustodyOperationCode) ===
+        CustodyOperationCode.REQUISITION &&
+      dto.fromStationId
+    ) {
+      const mismatched = await this.prisma.foundDocumentCase.findMany({
+        where: {
+          id: { in: dto.foundCaseIds },
+          currentStationId: { not: dto.fromStationId },
+        },
+        select: { id: true },
+      });
+      if (mismatched.length > 0)
+        throw new BadRequestException(
+          'All selected documents must be currently held at the specified source station',
+        );
+    }
 
     await this.permissionService.assertPermissionForOperation(user.id, {
       stationId: dto.stationId ?? null,

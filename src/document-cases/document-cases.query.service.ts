@@ -81,6 +81,7 @@ export class DocumentCasesQueryService {
                       submissionMethod:
                         query.submissionMethod as SubmissionMethod,
                       custodyStatus: query.custodyStatus as CustodyStatus,
+                      currentStationId: query.currentStationId,
                     },
                   ],
                 }

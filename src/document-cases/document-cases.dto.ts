@@ -62,6 +62,10 @@ export const QueryDocumentCaseSchema = z
     extractionStatus: z.enum(ExtractionStatus).optional(),
     submissionMethod: z.enum(SubmissionMethod).optional(),
     custodyStatus: z.enum(CustodyStatus).optional(),
+    currentStationId: z
+      .uuid()
+      .optional()
+      .describe('Filter found cases by their current custody station'),
   })
   .extend(
     QueryAddressSchema.pick({

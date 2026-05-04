@@ -41,31 +41,35 @@ async function seedDocumentOperations(): Promise<void> {
   console.log(`🔧 Seeding ${configs.length} document operation types...`);
 
   // 1. Upsert operation types by code
+  //    Note: we use findUnique + update/create instead of upsert because the Prisma
+  //    pg adapter can raise a spurious unique-constraint error on `prefix` during
+  //    upsert when the model has more than one unique field.
   for (const config of configs) {
-    await prisma.documentOperationType.upsert({
+    const existing = await prisma.documentOperationType.findUnique({
       where: { code: config.code },
-      update: {
-        prefix: config.prefix,
-        name: config.name,
-        description: config.description,
-        requiresDestinationStation: config.requiresDestinationStation,
-        requiresSourceStation: config.requiresSourceStation,
-        requiresNotes: config.requiresNotes,
-        isHighPrivilege: config.isHighPrivilege,
-        isFinalOperation: config.isFinalOperation,
-      },
-      create: {
-        code: config.code,
-        prefix: config.prefix,
-        name: config.name,
-        description: config.description,
-        requiresDestinationStation: config.requiresDestinationStation,
-        requiresSourceStation: config.requiresSourceStation,
-        requiresNotes: config.requiresNotes,
-        isHighPrivilege: config.isHighPrivilege,
-        isFinalOperation: config.isFinalOperation,
-      },
     });
+
+    const payload = {
+      prefix: config.prefix,
+      name: config.name,
+      description: config.description,
+      requiresDestinationStation: config.requiresDestinationStation,
+      requiresSourceStation: config.requiresSourceStation,
+      requiresNotes: config.requiresNotes,
+      isHighPrivilege: config.isHighPrivilege,
+      isFinalOperation: config.isFinalOperation,
+    };
+
+    if (existing) {
+      await prisma.documentOperationType.update({
+        where: { code: config.code },
+        data: payload,
+      });
+    } else {
+      await prisma.documentOperationType.create({
+        data: { code: config.code, ...payload },
+      });
+    }
 
     console.log(
       `  ✅ Upserted operation type: ${config.code} (${config.prefix})`,
