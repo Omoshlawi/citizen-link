@@ -21,6 +21,8 @@ import {
   AddOperationItemDto,
   CancelOperationDto,
   CreateDocumentOperationDto,
+  GetAllowedOperationsDto,
+  GetAllowedOperationsResponseDto,
   GetDocumentOperationResponseDto,
   GetDocumentOperationsListDto,
   QueryDocumentOperationsListDto,
@@ -47,6 +49,20 @@ export class DocumentCustodyController {
     @OriginalUrl() originalUrl: string,
   ) {
     return this.custodyService.findMany(query, originalUrl);
+  }
+
+  @Get('allowed-operations')
+  @ApiOperation({
+    summary:
+      'Get allowed operations for the current user or specified user at a specific station',
+  })
+  @ApiOkResponse({ type: GetAllowedOperationsResponseDto })
+  @ApiErrorsResponse()
+  getAllowedOperations(
+    @Query() dto: GetAllowedOperationsDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.custodyService.getAllowedOperations(dto, user);
   }
 
   @Post('operations')

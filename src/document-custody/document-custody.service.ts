@@ -22,6 +22,7 @@ import {
   AddOperationItemDto,
   CancelOperationDto,
   CreateDocumentOperationDto,
+  GetAllowedOperationsDto,
   QueryDocumentOperationsListDto,
   RejectOperationDto,
   SkipOperationItemDto,
@@ -126,6 +127,17 @@ export class DocumentCustodyService {
     });
     if (!op) throw new NotFoundException('Operation not found');
     return op;
+  }
+
+  async getAllowedOperations(
+    dto: GetAllowedOperationsDto,
+    user: UserSession['user'],
+  ) {
+    const allowedOperations = await this.permissionService.getAllowedOperations(
+      dto,
+      user,
+    );
+    return { allowedOperations };
   }
 
   /** Operation history for a specific found case (used by CustodyDetailPage). */

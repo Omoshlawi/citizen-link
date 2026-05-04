@@ -10,7 +10,10 @@ import { AddressModule } from './address/address.module';
 import { AppController } from './app.controller';
 import { ZodValidationExceptionFilter } from './app.exceptionfilter';
 import { AppService } from './app.service';
-import { RequireSystemPermissionsGuard } from './auth/auth.guards';
+import {
+  RequireActiveStationGuard,
+  RequireSystemPermissionsGuard,
+} from './auth/auth.guards';
 import { AuthModule } from './auth/auth.module';
 import { CaseDocumentsModule } from './case-documents/case-documents.module';
 import { ChatBotModule } from './chat-bot/chat-bot.module';
@@ -137,6 +140,7 @@ import { RegionModule } from './region/region.module';
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: RequireSystemPermissionsGuard },
+    { provide: APP_GUARD, useClass: RequireActiveStationGuard },
     {
       provide: APP_PIPE,
       useClass: ZodValidationPipe,

@@ -97,6 +97,16 @@ export const QueryDocumentOperationsListSchema = z.object({
   search: z.string().optional(),
 });
 
+export const GetAllowedOperationsSchema = z.object({
+  stationId: z.uuid(),
+  userId: z
+    .uuid()
+    .optional()
+    .describe(
+      'Admin use only. If not provided, the user ID will be taken from the session.',
+    ),
+});
+
 // ── Request DTOs ──────────────────────────────────────────────────────────────
 
 export class CreateDocumentOperationDto extends createZodDto(
@@ -175,3 +185,25 @@ export class GetDocumentOperationsListDto extends PaginatedListBase {
   @ApiProperty({ type: [GetDocumentOperationResponseDto] })
   results!: GetDocumentOperationResponseDto[];
 }
+
+export class GetDocumentOperationTypeResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ nullable: true }) description!: string | null;
+  @ApiProperty() prefix!: string;
+  @ApiProperty() requiresDestinationStation!: boolean;
+  @ApiProperty() requiresSourceStation!: boolean;
+  @ApiProperty() requiresNotes!: boolean;
+  @ApiProperty() isHighPrivilege!: boolean;
+  @ApiProperty() isFinalOperation!: boolean;
+}
+
+export class GetAllowedOperationsResponseDto {
+  @ApiProperty({ type: [GetDocumentOperationTypeResponseDto] })
+  allowedOperations!: GetDocumentOperationTypeResponseDto[];
+}
+
+export class GetAllowedOperationsDto extends createZodDto(
+  GetAllowedOperationsSchema,
+) {}
