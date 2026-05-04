@@ -100,7 +100,7 @@ export const QueryDocumentOperationsListSchema = z.object({
 export const GetAllowedOperationsSchema = z.object({
   stationId: z.uuid(),
   userId: z
-    .uuid()
+    .string()
     .optional()
     .describe(
       'Admin use only. If not provided, the user ID will be taken from the session.',
