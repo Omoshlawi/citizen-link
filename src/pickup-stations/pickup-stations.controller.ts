@@ -26,6 +26,7 @@ import { PickupStationsService } from './pickup-stations.service';
 import {
   CreatePickupStationDto,
   GetPickupStationResponseDto,
+  GetUserAssignedStationsDto,
   QueryPickupStationDto,
   QueryPickupStationResponseDto,
   UpdatePickupStationDto,
@@ -112,5 +113,16 @@ export class PickupStationsController {
     @Session() { user }: UserSession,
   ) {
     return this.pickupStationService.restore(id, query, user.id);
+  }
+
+  @Get('/assigned')
+  @ApiOperation({ summary: 'Get stations that user has grants on' })
+  @ApiOkResponse({ type: [GetPickupStationResponseDto] })
+  @ApiErrorsResponse()
+  getAssignedStations(
+    @Query() query: GetUserAssignedStationsDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.pickupStationService.getAssignedStations(query, user);
   }
 }

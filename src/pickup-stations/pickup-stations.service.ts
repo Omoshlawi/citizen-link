@@ -10,6 +10,7 @@ import {
 } from '../common/query-builder';
 import {
   CreatePickupStationDto,
+  GetUserAssignedStationsDto,
   QueryPickupStationDto,
   UpdatePickupStationDto,
 } from './pickup-station.dto';
@@ -264,6 +265,56 @@ export class PickupStationsService {
       where: { id },
       data: { voided: false },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
+
+  async getAssignedStations(
+    query: GetUserAssignedStationsDto,
+    user: UserSession['user'],
+  ) {
+    let userId = user.id;
+
+    // Check if the target user (userId) has global 'manage' permission for 'stationOperationType'
+    const { success: hasGlobalManage } =
+      await this.authService.api.userHasPermission({
+        body: {
+          userId,
+          permission: { stationOperationType: ['manage'] },
+        },
+      });
+
+    if (hasGlobalManage && query.userId) {
+      if (query.userId) {
+        const user = await this.prismaService.user.findUnique({
+          where: { id: query.userId },
+        });
+        if (!user) throw new NotFoundException('User not found');
+        userId = user.id;
+      }
+    }
+
+    if (hasGlobalManage && !query.userId) {
+      // Return all stations
+      return this.prismaService.pickupStation.findMany({
+        where: { voided: false },
+      });
+    }
+
+    // Otherwise, find stations where they have active grants
+    const staffGrants = await this.prismaService.staffStationOperation.findMany(
+      {
+        where: { userId, voided: false },
+        select: { stationId: true },
+      },
+    );
+
+    const stationIds = [...new Set(staffGrants.map((sg) => sg.stationId))];
+
+    return this.prismaService.pickupStation.findMany({
+      where: {
+        id: { in: stationIds },
+        voided: false,
+      },
     });
   }
 }
