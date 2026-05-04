@@ -30,19 +30,11 @@ export class PickupStationsService {
     private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
-  async getAll(
+  private getQuery = (
     query: QueryPickupStationDto,
-    originalUrl: string,
-    user?: UserSession['user'],
-  ) {
-    const { success: isAdmin } = user
-      ? await this.authService.api.userHasPermission({
-          body: {
-            userId: user.id,
-            permission: { staffStationOperation: ['view'] },
-          },
-        })
-      : { success: false };
+    isAdmin?: boolean,
+    ...additionalQueries: Array<Prisma.PickupStationWhereInput>
+  ) => {
     const dbQuery: Prisma.PickupStationWhereInput = {
       AND: [
         {
@@ -169,8 +161,29 @@ export class PickupStationsService {
               ]
             : undefined,
         },
+        ...additionalQueries,
       ],
     };
+    return dbQuery;
+  };
+
+  async getAll(
+    query: QueryPickupStationDto,
+    originalUrl: string,
+    user?: UserSession['user'],
+  ) {
+    const { success: isAdmin } = user
+      ? await this.authService.api.userHasPermission({
+          body: {
+            userId: user.id,
+            permission: { staffStationOperation: ['view'] },
+          },
+        })
+      : { success: false };
+    const dbQuery: Prisma.PickupStationWhereInput = this.getQuery(
+      query,
+      isAdmin,
+    );
     const totalCount = await this.prismaService.pickupStation.count({
       where: dbQuery,
     });
@@ -271,6 +284,7 @@ export class PickupStationsService {
   async getAssignedStations(
     query: GetUserAssignedStationsDto,
     user: UserSession['user'],
+    originalUrl: string,
   ) {
     let userId = user.id;
 
@@ -294,10 +308,25 @@ export class PickupStationsService {
     }
 
     if (hasGlobalManage && !query.userId) {
-      // Return all stations
-      return this.prismaService.pickupStation.findMany({
-        where: { voided: false },
+      const dbQuery = this.getQuery(query, hasGlobalManage);
+      const totalCount = await this.prismaService.pickupStation.count({
+        where: dbQuery,
       });
+      const data = await this.prismaService.pickupStation.findMany({
+        where: dbQuery,
+        ...this.paginationService.buildSafePaginationQuery(query, totalCount),
+        ...this.representationService.buildCustomRepresentationQuery(query?.v),
+        ...this.sortService.buildSortQuery(query?.orderBy),
+      });
+      // Return all stations
+      return {
+        results: data,
+        ...this.paginationService.buildPaginationControls(
+          totalCount,
+          originalUrl,
+          query,
+        ),
+      };
     }
 
     // Otherwise, find stations where they have active grants
@@ -309,12 +338,25 @@ export class PickupStationsService {
     );
 
     const stationIds = [...new Set(staffGrants.map((sg) => sg.stationId))];
-
-    return this.prismaService.pickupStation.findMany({
-      where: {
-        id: { in: stationIds },
-        voided: false,
-      },
+    const dbQuery = this.getQuery(query, hasGlobalManage, {
+      id: { in: stationIds },
     });
+    const totalCount = await this.prismaService.pickupStation.count({
+      where: dbQuery,
+    });
+    const data = await this.prismaService.pickupStation.findMany({
+      where: dbQuery,
+      ...this.paginationService.buildSafePaginationQuery(query, totalCount),
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      ...this.sortService.buildSortQuery(query?.orderBy),
+    });
+    return {
+      results: data,
+      ...this.paginationService.buildPaginationControls(
+        totalCount,
+        originalUrl,
+        query,
+      ),
+    };
   }
 }

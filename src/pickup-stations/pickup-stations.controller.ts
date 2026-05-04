@@ -48,6 +48,22 @@ export class PickupStationsController {
   ) {
     return this.pickupStationService.getAll(query, originalUrl, session?.user);
   }
+
+  @Get('/assigned')
+  @ApiOperation({ summary: 'Get stations that user has grants on' })
+  @ApiOkResponse({ type: QueryPickupStationResponseDto })
+  @ApiErrorsResponse()
+  getAssignedStations(
+    @Query() query: GetUserAssignedStationsDto,
+    @Session() { user }: UserSession,
+    @OriginalUrl() originalUrl: string,
+  ) {
+    return this.pickupStationService.getAssignedStations(
+      query,
+      user,
+      originalUrl,
+    );
+  }
   @Get('/:id')
   @ApiOperation({ summary: 'Get Pickup stations' })
   @ApiOkResponse({ type: GetPickupStationResponseDto })
@@ -113,16 +129,5 @@ export class PickupStationsController {
     @Session() { user }: UserSession,
   ) {
     return this.pickupStationService.restore(id, query, user.id);
-  }
-
-  @Get('/assigned')
-  @ApiOperation({ summary: 'Get stations that user has grants on' })
-  @ApiOkResponse({ type: [GetPickupStationResponseDto] })
-  @ApiErrorsResponse()
-  getAssignedStations(
-    @Query() query: GetUserAssignedStationsDto,
-    @Session() { user }: UserSession,
-  ) {
-    return this.pickupStationService.getAssignedStations(query, user);
   }
 }

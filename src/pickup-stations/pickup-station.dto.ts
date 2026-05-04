@@ -55,14 +55,16 @@ export const PickUpStationSchema = z.object({
   addressLocaleCode: z.string(),
 });
 
-export const GetUserAssignedStationsSchema = z.object({
-  userId: z
-    .string()
-    .optional()
-    .describe(
-      'Admin only - The ID of the user.For none admin sesssion user id is used',
-    ),
-});
+export const GetUserAssignedStationsSchema = z
+  .object({
+    userId: z
+      .string()
+      .optional()
+      .describe(
+        'Admin only - The ID of the user.For none admin sesssion user id is used',
+      ),
+  })
+  .extend(QueryPickupAddressSchema.shape);
 
 export class QueryPickupStationDto extends createZodDto(
   QueryPickupAddressSchema,
