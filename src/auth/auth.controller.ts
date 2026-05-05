@@ -1,22 +1,99 @@
-import { Body, Controller, Get, HttpCode, Patch } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+} from '@nestjs/swagger';
+import { AllowAnonymous, AuthService } from '@thallesp/nestjs-better-auth';
 import { Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
 import { PrismaService } from '../prisma/prisma.service';
-import { UserSession } from './auth.types';
+import { UserSession, BetterAuthWithPlugins } from './auth.types';
 import {
+  CreateUserExtendedDto,
+  CreatedUserResponseDto,
   GetRolesResponseDto,
   SessionResponseDto,
   UpdateSessionDto,
 } from './auth.dto';
 import { adminPluginRoles } from './auth.acl';
+import { RequireSystemPermission } from './auth.decorators';
 
 @Controller('/extended/auth')
 export class AuthExtendedController {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly authService: AuthService<BetterAuthWithPlugins>,
+  ) {}
 
-  //  Session
+  // Users
+
+  @Post('users')
+  @HttpCode(201)
+  @ApiOperation({
+    summary: 'Create user with optional username and phone number',
+    description:
+      'Extends Better Auth admin createUser: creates the account via Better Auth, then sets username and phoneNumber directly on the record.',
+  })
+  @ApiCreatedResponse({ type: CreatedUserResponseDto })
+  @ApiErrorsResponse()
+  @RequireSystemPermission({ user: ['create'] })
+  async createUser(
+    @Req() request: Request,
+    @Body() dto: CreateUserExtendedDto,
+  ): Promise<CreatedUserResponseDto> {
+    if (dto.username) {
+      const { available } = await this.authService.api.isUsernameAvailable({
+        body: { username: dto.username },
+      });
+      if (!available)
+        throw new BadRequestException('User exist with given username');
+    }
+    if (dto.phoneNumber) {
+      const count = await this.prismaService.user.count({
+        where: {
+          phoneNumber: dto.phoneNumber,
+        },
+      });
+      if (count > 0)
+        throw new BadRequestException('User exist with given phone number');
+    }
+
+    const { user } = await this.authService.api.createUser({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      body: { ...dto, role: dto.role as any },
+    });
+
+    const updated = await this.prismaService.user.update({
+      where: { id: user.id },
+      data: {
+        ...(dto.username ? { username: dto.username } : {}),
+        ...(dto.phoneNumber ? { phoneNumber: dto.phoneNumber } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        username: true,
+        phoneNumber: true,
+        createdAt: true,
+      },
+    });
+
+    return updated;
+  }
+
+  // Session
+
   @Patch('session')
   @HttpCode(200)
   @ApiOperation({
