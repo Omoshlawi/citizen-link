@@ -22,7 +22,7 @@ import {
 @Injectable()
 export class StaffOperationScopeService {
   private readonly defaultRep =
-    'custom:include(user:select(id,name),station:select(id,name,code),operationType:select(id,code,name),grantedBy:select(id,name))';
+    'custom:include(user:select(id,name),station,operationType,grantedBy:select(id,name))';
   constructor(
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
