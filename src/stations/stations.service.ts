@@ -13,10 +13,10 @@ import {
   GetUserAssignedStationsDto,
   QueryPickupStationDto,
   UpdatePickupStationDto,
-} from './pickup-station.dto';
+} from './station.dto';
 import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import { AuthService } from '@thallesp/nestjs-better-auth';
-import { PickupStation, Prisma } from '../../generated/prisma/client';
+import { Station, Prisma } from '../../generated/prisma/client';
 import { RegionService } from '../region/region.service';
 
 @Injectable()
@@ -33,9 +33,9 @@ export class PickupStationsService {
   private getQuery = (
     query: QueryPickupStationDto,
     isAdmin?: boolean,
-    ...additionalQueries: Array<Prisma.PickupStationWhereInput>
+    ...additionalQueries: Array<Prisma.StationWhereInput>
   ) => {
-    const dbQuery: Prisma.PickupStationWhereInput = {
+    const dbQuery: Prisma.StationWhereInput = {
       AND: [
         {
           voided: isAdmin && query?.includeVoided ? undefined : false,
@@ -180,14 +180,11 @@ export class PickupStationsService {
           },
         })
       : { success: false };
-    const dbQuery: Prisma.PickupStationWhereInput = this.getQuery(
-      query,
-      isAdmin,
-    );
-    const totalCount = await this.prismaService.pickupStation.count({
+    const dbQuery: Prisma.StationWhereInput = this.getQuery(query, isAdmin);
+    const totalCount = await this.prismaService.station.count({
       where: dbQuery,
     });
-    const data = await this.prismaService.pickupStation.findMany({
+    const data = await this.prismaService.station.findMany({
       where: dbQuery,
       ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
@@ -208,7 +205,7 @@ export class PickupStationsService {
     query: CustomRepresentationQueryDto,
     user?: UserSession['user'],
   ) {
-    const data = await this.prismaService.pickupStation.findUnique({
+    const data = await this.prismaService.station.findUnique({
       where: {
         id,
       },
@@ -224,7 +221,7 @@ export class PickupStationsService {
     query: CustomRepresentationQueryDto,
   ) {
     const { latitude, longitude, ...props } = createDto;
-    const data = await this.prismaService.pickupStation.create({
+    const data = await this.prismaService.station.create({
       data: { ...props, coordinates: { lat: latitude, lng: longitude } },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
@@ -240,7 +237,7 @@ export class PickupStationsService {
   ) {
     const { latitude, longitude, ...props } = updateDto;
 
-    const data = await this.prismaService.pickupStation.update({
+    const data = await this.prismaService.station.update({
       where: { id },
       data: {
         ...props,
@@ -253,14 +250,14 @@ export class PickupStationsService {
   }
 
   async delete(id: string, query: DeleteQueryDto, userId: string) {
-    let data: PickupStation;
+    let data: Station;
     if (query?.purge) {
-      data = await this.prismaService.pickupStation.delete({
+      data = await this.prismaService.station.delete({
         where: { id },
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
       });
     } else {
-      data = await this.prismaService.pickupStation.update({
+      data = await this.prismaService.station.update({
         where: { id },
         data: { voided: true },
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
@@ -274,7 +271,7 @@ export class PickupStationsService {
     query: CustomRepresentationQueryDto,
     userId: string,
   ) {
-    return this.prismaService.pickupStation.update({
+    return this.prismaService.station.update({
       where: { id },
       data: { voided: false },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
@@ -309,10 +306,10 @@ export class PickupStationsService {
 
     if (hasGlobalManage && !query.userId) {
       const dbQuery = this.getQuery(query, hasGlobalManage);
-      const totalCount = await this.prismaService.pickupStation.count({
+      const totalCount = await this.prismaService.station.count({
         where: dbQuery,
       });
-      const data = await this.prismaService.pickupStation.findMany({
+      const data = await this.prismaService.station.findMany({
         where: dbQuery,
         ...this.paginationService.buildSafePaginationQuery(query, totalCount),
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
@@ -341,10 +338,10 @@ export class PickupStationsService {
     const dbQuery = this.getQuery(query, hasGlobalManage, {
       id: { in: stationIds },
     });
-    const totalCount = await this.prismaService.pickupStation.count({
+    const totalCount = await this.prismaService.station.count({
       where: dbQuery,
     });
-    const data = await this.prismaService.pickupStation.findMany({
+    const data = await this.prismaService.station.findMany({
       where: dbQuery,
       ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(query?.v),

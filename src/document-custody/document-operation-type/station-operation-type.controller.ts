@@ -27,7 +27,7 @@ import {
 } from './station-operation-type.dto';
 import { StationOperationTypeService } from './station-operation-type.service';
 
-@Controller('pickup-stations/:stationId/operation-types')
+@Controller('stations/:stationId/operation-types')
 export class StationOperationTypeController {
   constructor(private readonly service: StationOperationTypeService) {}
 

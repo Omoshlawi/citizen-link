@@ -96,7 +96,7 @@ export class RequireActiveStationGuard implements CanActivate {
         );
       }
       // If the station id is not available  throw an exception
-      const station = await this.prisma.pickupStation.findUnique({
+      const station = await this.prisma.station.findUnique({
         where: {
           id: session.session.stationId,
           voided: false,

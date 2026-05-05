@@ -273,10 +273,10 @@ model AddressLocale {
 
   addresses Address[]
 
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  voided         Boolean         @default(false)
-  pickupStations PickupStation[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  voided    Boolean   @default(false)
+  stations  Station[]
 
   @@index([country])
   @@index([regionName])
@@ -654,7 +654,7 @@ model FoundDocumentCase {
   pointAwarded    Int                     @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
   matches         Match[]
   claims          Claim[]
-  pickupStation   PickupStation?          @relation(fields: [pickupStationId], references: [id])
+  station         Station?                @relation(fields: [pickupStationId], references: [id])
   pickupStationId String?
 
   // Submission method chosen by the finder
@@ -668,9 +668,9 @@ model FoundDocumentCase {
   collections DocumentCollection[]
 
   // Document custody tracking
-  custodyStatus    CustodyStatus  @default(WITH_FINDER)
+  custodyStatus    CustodyStatus @default(WITH_FINDER)
   currentStationId String?
-  currentStation   PickupStation? @relation("CurrentCustodyStation", fields: [currentStationId], references: [id])
+  currentStation   Station?      @relation("CurrentCustodyStation", fields: [currentStationId], references: [id])
 
   operationItems DocumentOperationItem[]
 
@@ -899,7 +899,7 @@ model ClaimVerification {
   @@map("claim_verifications")
 }
 
-model PickupStation {
+model Station {
   id   String @id @default(uuid())
   code String @unique // hUMAN FRIENDLY i dentifier e.g KE-NRB-CBD-001
   name String
@@ -944,7 +944,7 @@ model PickupStation {
   documentOperationsTo    DocumentOperation[]     @relation("OpTo")
   documentOperationsReq   DocumentOperation[]     @relation("OpRequestedBy")
 
-  @@map("pickup_stations")
+  @@map("stations")
 }
 
 enum HandoverMethod {
@@ -966,9 +966,9 @@ model Handover {
 
   // Dynamic Locations
   pickupStationId   String?
-  pickupStation     PickupStation? @relation(fields: [pickupStationId], references: [id])
+  station           Station? @relation(fields: [pickupStationId], references: [id])
   deliveryAddressId String?
-  deliveryAddress   Address?       @relation(fields: [deliveryAddressId], references: [id])
+  deliveryAddress   Address? @relation(fields: [deliveryAddressId], references: [id])
 
   status HandoverStatus @default(SCHEDULED)
 
@@ -1568,9 +1568,9 @@ model DocumentOperationType {
 
 // Which operations are enabled at each station (station-level ceiling)
 model StationOperationType {
-  id        String        @id @default(uuid())
+  id        String  @id @default(uuid())
   stationId String
-  station   PickupStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  station   Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
   operationTypeId String
   operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id], onDelete: Cascade)
@@ -1593,7 +1593,7 @@ model StaffStationOperation {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   stationId String
-  station   PickupStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  station   Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
   operationTypeId String
   operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id], onDelete: Cascade)
@@ -1630,16 +1630,16 @@ model DocumentOperation {
 
   // Station context
   stationId String?
-  station   PickupStation? @relation("OpStation", fields: [stationId], references: [id])
+  station   Station? @relation("OpStation", fields: [stationId], references: [id])
 
   fromStationId String?
-  fromStation   PickupStation? @relation("OpFrom", fields: [fromStationId], references: [id])
+  fromStation   Station? @relation("OpFrom", fields: [fromStationId], references: [id])
 
   toStationId String?
-  toStation   PickupStation? @relation("OpTo", fields: [toStationId], references: [id])
+  toStation   Station? @relation("OpTo", fields: [toStationId], references: [id])
 
   requestedByStationId String?
-  requestedByStation   PickupStation? @relation("OpRequestedBy", fields: [requestedByStationId], references: [id])
+  requestedByStation   Station? @relation("OpRequestedBy", fields: [requestedByStationId], references: [id])
 
   //  Actor
   createdById String
@@ -1664,22 +1664,21 @@ model DocumentOperation {
 }
 
 enum DocumentOperationStatus {
-  DRAFT       // being built, fully editable
-  SUBMITTED   // submitted for supervisor approval (high-privilege ops)
-  APPROVED    // approved, ready to execute
+  DRAFT // being built, fully editable
+  SUBMITTED // submitted for supervisor approval (high-privilege ops)
+  APPROVED // approved, ready to execute
   IN_PROGRESS // execution started (items being processed)
-  COMPLETED   // all items done, custody transitions applied
-  CANCELLED   // cancelled before completion
-  REJECTED    // rejected by approver — returns to DRAFT so staff can fix and resubmit
+  COMPLETED // all items done, custody transitions applied
+  CANCELLED // cancelled before completion
+  REJECTED // rejected by approver — returns to DRAFT so staff can fix and resubmit
 }
 
 enum DocumentOperationItemStatus {
-  PENDING   // in the operation queue, not yet processed
+  PENDING // in the operation queue, not yet processed
   COMPLETED // custody transition successfully applied
-  FAILED    // processing failed (partial-success scenarios)
-  SKIPPED   // excluded from execution
+  FAILED // processing failed (partial-success scenarios)
+  SKIPPED // excluded from execution
 }
-
 
 model DocumentOperationItem {
   id String @id @default(uuid())

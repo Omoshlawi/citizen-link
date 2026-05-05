@@ -80,7 +80,7 @@ export class HandoverService {
       },
       include: {
         claim: { select: { claimNumber: true } },
-        pickupStation: { select: { name: true } },
+        station: { select: { name: true } },
       },
     });
 

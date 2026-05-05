@@ -41,7 +41,7 @@ import {
   SmsProviders,
 } from './notifications/notification.interfaces';
 import { NotificationsModule } from './notifications/notifications.module';
-import { PickupStationsModule } from './pickup-stations/pickup-stations.module';
+import { PickupStationsModule } from './stations/stations.module';
 import { PrismaConfig } from './prisma/prisma.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';

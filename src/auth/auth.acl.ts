@@ -11,7 +11,7 @@ export const adminPluginAcl = createAccessControl({
   documentType: ['create', 'update', 'delete', 'restore'],
   addressLocale: ['create', 'update', 'delete', 'restore'],
   addressHierarchy: ['create', 'update', 'delete', 'restore'],
-  pickupStation: ['create', 'update', 'delete', 'restore'],
+  station: ['create', 'update', 'delete', 'restore'],
   documentCase: [
     'list-any',
     'view-any',
@@ -54,7 +54,7 @@ const adminRole = adminPluginAcl.newRole({
   documentType: ['create', 'update', 'delete', 'restore'],
   addressLocale: ['create', 'update', 'delete', 'restore'],
   addressHierarchy: ['create', 'update', 'delete', 'restore'],
-  pickupStation: ['create', 'update', 'delete', 'restore'],
+  station: ['create', 'update', 'delete', 'restore'],
   documentCase: [
     'list-any',
     'view-any',
@@ -146,7 +146,7 @@ const contentAdminRole = adminPluginAcl.newRole({
   documentType: ['create', 'update', 'delete', 'restore'],
   addressLocale: ['create', 'update', 'delete', 'restore'],
   addressHierarchy: ['create', 'update', 'delete', 'restore'],
-  pickupStation: ['create', 'update', 'delete', 'restore'],
+  station: ['create', 'update', 'delete', 'restore'],
   templates: ['create', 'update', 'delete', 'restore'],
   transitionReason: ['create', 'update', 'delete', 'restore'],
 });

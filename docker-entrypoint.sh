@@ -30,7 +30,7 @@ echo "🌱 Running seed scripts..."
 if npx ts-node scripts/seed-address-hierarchy.ts \
   && npx ts-node scripts/seed-admin-user.ts \
   && npx ts-node scripts/seed-address-locales.ts \
-  && npx ts-node scripts/seed-pickup-stations.ts \
+  && npx ts-node scripts/seed-stations.ts \
   && npx ts-node scripts/seed-transition-statuses.ts \
   && npx ts-node scripts/seed-templates.ts \
   && npx ts-node scripts/seed-document-types.ts; then

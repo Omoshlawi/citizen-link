@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { PickupStationsController } from './pickup-stations.controller';
-import { PickupStationsService } from './pickup-stations.service';
+import { PickupStationsController } from './stations.controller';
+import { PickupStationsService } from './stations.service';
 
 @Module({
   controllers: [PickupStationsController],

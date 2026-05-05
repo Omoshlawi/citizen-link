@@ -39,11 +39,11 @@ async function seedPickupStations(): Promise<void> {
     '..',
     'assets',
     'json',
-    'pickup-stations.json',
+    'stations.json',
   );
 
   if (!fs.existsSync(filePath)) {
-    throw new Error('Missing assets/json/pickup-stations.json seed file');
+    throw new Error('Missing assets/json/stations.json seed file');
   }
 
   const payload: PickupStationSeed[] = JSON.parse(
@@ -63,7 +63,7 @@ async function seedPickupStations(): Promise<void> {
         ? JSON.parse(station.coordinates)
         : (station.coordinates ?? null);
 
-    await prisma.pickupStation.upsert({
+    await prisma.station.upsert({
       where: { code: station.code },
       update: {
         name: station.name,

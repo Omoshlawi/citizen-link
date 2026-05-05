@@ -31,7 +31,7 @@ export class StaffStationOperationService {
   ) {}
 
   async findMyStations(userId: string) {
-    const stations = await this.prisma.pickupStation.findMany({
+    const stations = await this.prisma.station.findMany({
       where: {
         staffStationOperations: { some: { userId, voided: false } },
       },

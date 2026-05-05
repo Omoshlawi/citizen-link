@@ -78,7 +78,7 @@ async function seedDocumentOperations(): Promise<void> {
 
   // 2. Seed StationOperationType rows: every station × every operation type
   //    DISPOSAL is disabled by default everywhere (isHighPrivilege guard)
-  const stations = await prisma.pickupStation.findMany({
+  const stations = await prisma.station.findMany({
     where: { voided: false },
     select: { id: true, code: true },
   });

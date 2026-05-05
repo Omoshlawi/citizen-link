@@ -22,7 +22,7 @@ import {
   OriginalUrl,
 } from '../common/query-builder';
 import { UserSession } from '../auth/auth.types';
-import { PickupStationsService } from './pickup-stations.service';
+import { PickupStationsService } from './stations.service';
 import {
   CreatePickupStationDto,
   GetPickupStationResponseDto,
@@ -30,9 +30,9 @@ import {
   QueryPickupStationDto,
   QueryPickupStationResponseDto,
   UpdatePickupStationDto,
-} from './pickup-station.dto';
+} from './station.dto';
 import { RequireSystemPermission } from '../auth/auth.decorators';
-@Controller('pickup-stations')
+@Controller('stations')
 export class PickupStationsController {
   constructor(private readonly pickupStationService: PickupStationsService) {}
 
@@ -80,7 +80,7 @@ export class PickupStationsController {
   @ApiOperation({ summary: 'Create Pickup station' })
   @ApiCreatedResponse({ type: GetPickupStationResponseDto })
   @ApiErrorsResponse({ badRequest: true })
-  @RequireSystemPermission({ pickupStation: ['create'] })
+  @RequireSystemPermission({ station: ['create'] })
   createPickupStation(
     @Body() createAddressDto: CreatePickupStationDto,
     @Query() query: CustomRepresentationQueryDto,
@@ -92,7 +92,7 @@ export class PickupStationsController {
   @ApiOperation({ summary: 'Update Pickup station' })
   @ApiOkResponse({ type: GetPickupStationResponseDto })
   @ApiErrorsResponse({ badRequest: true })
-  @RequireSystemPermission({ pickupStation: ['update'] })
+  @RequireSystemPermission({ station: ['update'] })
   updatePickupStation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateAddressDto: UpdatePickupStationDto,
@@ -110,7 +110,7 @@ export class PickupStationsController {
   @ApiOperation({ summary: 'Delete Pickuo station' })
   @ApiOkResponse({ type: GetPickupStationResponseDto })
   @ApiErrorsResponse()
-  @RequireSystemPermission({ pickupStation: ['delete'] })
+  @RequireSystemPermission({ station: ['delete'] })
   deletePickupStation(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: DeleteQueryDto,
@@ -122,7 +122,7 @@ export class PickupStationsController {
   @ApiOperation({ summary: 'Restore Pickup station' })
   @ApiOkResponse({ type: GetPickupStationResponseDto })
   @ApiErrorsResponse()
-  @RequireSystemPermission({ pickupStation: ['restore'] })
+  @RequireSystemPermission({ station: ['restore'] })
   restorePickupStation(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: CustomRepresentationQueryDto,
