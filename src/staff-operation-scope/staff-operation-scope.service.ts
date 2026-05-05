@@ -40,7 +40,7 @@ export class StaffOperationScopeService {
       await this.authService.api.userHasPermission({
         body: {
           userId: user.id,
-          permission: { staffStationOperation: ['view'] },
+          permission: { staffOperationScope: ['view'] },
         },
       });
     const dbQuery: Prisma.StaffStationOperationWhereInput = {

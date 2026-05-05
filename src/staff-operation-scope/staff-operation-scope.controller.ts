@@ -47,7 +47,7 @@ export class StaffOperationScopeController {
   @ApiOperation({ summary: 'Get staff operation scope by ID' })
   @ApiOkResponse({ type: GetStaffOperationScoperResponseDto })
   @ApiErrorsResponse({ notFound: true })
-  @RequireSystemPermission({ staffStationOperation: ['view'] })
+  @RequireSystemPermission({ staffOperationScope: ['view'] })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: CustomRepresentationQueryDto,
@@ -59,7 +59,7 @@ export class StaffOperationScopeController {
   @ApiOperation({ summary: 'Grant one or more staff station operations' })
   @ApiOkResponse({ type: GetStaffOperationScoperResponseDto, isArray: true })
   @ApiErrorsResponse({ badRequest: true })
-  @RequireSystemPermission({ staffStationOperation: ['manage'] })
+  @RequireSystemPermission({ staffOperationScope: ['manage'] })
   grant(
     @Body() dto: CreateStaffOperationScopeDto,
     @Session() { user }: UserSession,
@@ -72,7 +72,7 @@ export class StaffOperationScopeController {
   @ApiOperation({ summary: 'Revoke or purge a staff station operation grant' })
   @ApiOkResponse({ type: GetStaffOperationScoperResponseDto })
   @ApiErrorsResponse({ notFound: true })
-  @RequireSystemPermission({ staffStationOperation: ['manage'] })
+  @RequireSystemPermission({ staffOperationScope: ['manage'] })
   revoke(
     @Param('id', ParseUUIDPipe) id: string,
     @Session() { user }: UserSession,
@@ -85,7 +85,7 @@ export class StaffOperationScopeController {
   @ApiOperation({ summary: 'Restore a revoked staff station operation grant' })
   @ApiOkResponse({ type: GetStaffOperationScoperResponseDto })
   @ApiErrorsResponse({ notFound: true })
-  @RequireSystemPermission({ staffStationOperation: ['manage'] })
+  @RequireSystemPermission({ staffOperationScope: ['manage'] })
   restore(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: CustomRepresentationQueryDto,

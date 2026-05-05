@@ -176,7 +176,7 @@ export class PickupStationsService {
       ? await this.authService.api.userHasPermission({
           body: {
             userId: user.id,
-            permission: { staffStationOperation: ['view'] },
+            permission: { staffOperationScope: ['view'] },
           },
         })
       : { success: false };
@@ -278,33 +278,21 @@ export class PickupStationsService {
     });
   }
 
-  async getAssignedStations(
+  private async getUserAssignedStations(
+    userId: string,
     query: GetUserAssignedStationsDto,
-    user: UserSession['user'],
     originalUrl: string,
   ) {
-    let userId = user.id;
-
     // Check if the target user (userId) has global 'manage' permission for 'stationOperationType'
     const { success: hasGlobalManage } =
       await this.authService.api.userHasPermission({
         body: {
-          userId,
-          permission: { stationOperationType: ['manage'] },
+          userId: userId,
+          permission: { staffOperationScope: ['manage'] },
         },
       });
 
-    if (hasGlobalManage && query.userId) {
-      if (query.userId) {
-        const user = await this.prismaService.user.findUnique({
-          where: { id: query.userId },
-        });
-        if (!user) throw new NotFoundException('User not found');
-        userId = user.id;
-      }
-    }
-
-    if (hasGlobalManage && !query.userId) {
+    if (hasGlobalManage) {
       const dbQuery = this.getQuery(query, hasGlobalManage);
       const totalCount = await this.prismaService.station.count({
         where: dbQuery,
@@ -326,7 +314,6 @@ export class PickupStationsService {
       };
     }
 
-    // Otherwise, find stations where they have active grants
     const staffGrants = await this.prismaService.staffStationOperation.findMany(
       {
         where: { userId, voided: false },
@@ -355,5 +342,28 @@ export class PickupStationsService {
         query,
       ),
     };
+  }
+
+  async getAssignedStations(
+    query: GetUserAssignedStationsDto,
+    user: UserSession['user'],
+    originalUrl: string,
+  ) {
+    if (query.userId) {
+      const { success: hasGlobalManage } =
+        await this.authService.api.userHasPermission({
+          body: {
+            userId: query.userId,
+            permission: { stationOperationType: ['manage'] },
+          },
+        });
+      if (hasGlobalManage)
+        return await this.getUserAssignedStations(
+          query.userId,
+          query,
+          originalUrl,
+        );
+    }
+    return await this.getUserAssignedStations(user.id, query, originalUrl);
   }
 }

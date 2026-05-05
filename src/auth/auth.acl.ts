@@ -39,7 +39,7 @@ export const adminPluginAcl = createAccessControl({
   documentOperation: ['manage', 'approve', 'reject'],
   documentOperationType: ['manage'],
   stationOperationType: ['manage'],
-  staffStationOperation: ['view', 'manage'],
+  staffOperationScope: ['view', 'manage'],
   wallet: ['view-any'],
   address: ['view-any'],
   transaction: ['list-any'],
@@ -82,7 +82,7 @@ const adminRole = adminPluginAcl.newRole({
   documentOperation: ['manage', 'approve', 'reject'],
   documentOperationType: ['manage'],
   stationOperationType: ['manage'],
-  staffStationOperation: ['view', 'manage'],
+  staffOperationScope: ['view', 'manage'],
   wallet: ['view-any'],
   address: ['view-any'],
   transaction: ['list-any'],
@@ -160,7 +160,7 @@ const extractionDebuggerRole = adminPluginAcl.newRole({
 });
 
 const stationManagerRole = adminPluginAcl.newRole({
-  staffStationOperation: ['view', 'manage'],
+  staffOperationScope: ['view', 'manage'],
   documentOperation: ['manage', 'approve', 'reject'],
   documentOperationType: ['manage'],
   stationOperationType: ['manage'],
