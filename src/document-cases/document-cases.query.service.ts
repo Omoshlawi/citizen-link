@@ -18,6 +18,8 @@ import {
   CustodyStatus,
   Prisma,
 } from '../../generated/prisma/client';
+import { SystemSettingService } from '../common/settings/settings.system.service';
+import z from 'zod';
 
 @Injectable()
 export class DocumentCasesQueryService {
@@ -27,6 +29,7 @@ export class DocumentCasesQueryService {
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
     private readonly authService: AuthService<BetterAuthWithPlugins>,
+    private readonly settings: SystemSettingService,
   ) {}
   async findAll(
     query: QueryDocumentCaseDto,
@@ -36,6 +39,13 @@ export class DocumentCasesQueryService {
     const { success: isAdmin } = await this.authService.api.userHasPermission({
       body: { userId: user.id, permission: { documentCase: ['list-any'] } },
     });
+
+    const areaLevel = await this.settings.get(
+      'receipt.area_level',
+      z.enum(['level1', 'level2', 'level3', 'level4', 'level5']),
+      'level3',
+    );
+
     const dbQuery: Prisma.DocumentCaseWhereInput = {
       AND: [
         {
@@ -82,6 +92,15 @@ export class DocumentCasesQueryService {
                         query.submissionMethod as SubmissionMethod,
                       custodyStatus: query.custodyStatus as CustodyStatus,
                       currentStationId: query.currentStationId,
+                      pickupStationId: query.pickupStationId,
+                      ...(query.collectionAreaValue && {
+                        collectionAddress: {
+                          [areaLevel]: {
+                            equals: query.collectionAreaValue,
+                            mode: 'insensitive',
+                          },
+                        },
+                      }),
                     },
                   ],
                 }

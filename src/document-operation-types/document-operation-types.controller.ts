@@ -11,25 +11,25 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { ApiErrorsResponse } from '../../app.decorators';
-import { RequireSystemPermission } from '../../auth/auth.decorators';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
   OriginalUrl,
-} from '../../common/query-builder';
+} from '../common/query-builder';
 import {
   CreateDocumentOperationTypeDto,
   GetDocumentOperationTypeResponseDto,
   GetDocumentOperationTypesListDto,
   QueryDocumentOperationTypesDto,
   UpdateDocumentOperationTypeDto,
-} from './document-operation-type.dto';
-import { DocumentOperationTypeService } from './document-operation-type.service';
+} from './document-operation-types.dto';
+import { DocumentOperationTypesService } from './document-operation-types.service';
+import { ApiErrorsResponse } from '../app.decorators';
+import { RequireSystemPermission } from '../auth/auth.decorators';
 
 @Controller('document-operation-types')
-export class DocumentOperationTypeController {
-  constructor(private readonly service: DocumentOperationTypeService) {}
+export class DocumentOperationTypesController {
+  constructor(private readonly service: DocumentOperationTypesService) {}
 
   @Get()
   @ApiOperation({ summary: 'List document operation types' })

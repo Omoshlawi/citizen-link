@@ -4,24 +4,25 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuthService } from '@thallesp/nestjs-better-auth';
-import { Prisma } from '../../../generated/prisma/client';
-import { BetterAuthWithPlugins } from '../../auth/auth.types';
+import { Prisma } from '../../generated/prisma/client';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
   PaginationService,
   SortService,
-} from '../../common/query-builder';
-import { PrismaService } from '../../prisma/prisma.service';
+} from '../common/query-builder';
+import { PrismaService } from '../prisma/prisma.service';
 import {
-  CreateStaffStationOperationDto,
-  MyStationDto,
-  QueryStaffStationOperationsDto,
-} from './staff-station-operation.dto';
+  CreateStaffOperationScopeDto,
+  QueryStaffOperationsScopeDto,
+} from './staff-operation-scope.dto';
 
 @Injectable()
-export class StaffStationOperationService {
+export class StaffOperationScopeService {
+  private readonly defaultRep =
+    'custom:include(user:select(id,name),station:select(id,name,code),operationType:select(id,code,name),grantedBy:select(id,name))';
   constructor(
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
@@ -30,46 +31,50 @@ export class StaffStationOperationService {
     private readonly authService: AuthService<BetterAuthWithPlugins>,
   ) {}
 
-  async findMyStations(userId: string) {
-    const stations = await this.prisma.station.findMany({
-      where: {
-        staffStationOperations: { some: { userId, voided: false } },
-      },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        level1: true,
-        level2: true,
-        staffStationOperations: {
-          where: { userId, voided: false },
-          select: {
-            operationType: { select: { id: true, code: true, name: true } },
+  async findAll(
+    query: QueryStaffOperationsScopeDto,
+    originalUrl: string,
+    user: UserSession['user'],
+  ) {
+    const { success: hasGlobalView } =
+      await this.authService.api.userHasPermission({
+        body: {
+          userId: user.id,
+          permission: { staffStationOperation: ['view'] },
+        },
+      });
+    const dbQuery: Prisma.StaffStationOperationWhereInput = {
+      AND: [
+        {
+          voided: query.includeVoided ? undefined : false,
+          userId: hasGlobalView ? query.userId : user.id,
+          stationId: query.stationId,
+          operationTypeId: query.operationTypeId,
+          operationType: {
+            isFinalOperation: query.isFinalOperation,
+            isHighPrivilege: query.isHighPrivilege,
+            requiresDestinationStation: query.requiresDestinationStation,
+            requiresSourceStation: query.requiresSourceStation,
+            requiresNotes: query.requiresNotes,
           },
         },
-      },
-    });
-
-    const results: MyStationDto[] = stations.map((s) => ({
-      id: s.id,
-      name: s.name,
-      code: s.code,
-      level1: s.level1,
-      level2: s.level2 ?? null,
-      operations: s.staffStationOperations
-        .map((g) => g.operationType)
-        .filter((op): op is MyStationDto['operations'][number] => op !== null),
-    }));
-
-    return { results, totalCount: results.length };
-  }
-
-  async findAll(query: QueryStaffStationOperationsDto, originalUrl: string) {
-    const dbQuery: Prisma.StaffStationOperationWhereInput = {
-      voided: query.includeVoided ? undefined : false,
-      userId: query.userId,
-      stationId: query.stationId,
-      operationTypeId: query.operationTypeId,
+        {
+          OR: query.search
+            ? [
+                {
+                  operationType: {
+                    name: { contains: query.search, mode: 'insensitive' },
+                  },
+                },
+                {
+                  operationType: {
+                    code: { contains: query.search, mode: 'insensitive' },
+                  },
+                },
+              ]
+            : undefined,
+        },
+      ],
     };
 
     const totalCount = await this.prisma.staffStationOperation.count({
@@ -78,14 +83,11 @@ export class StaffStationOperationService {
 
     const data = await this.prisma.staffStationOperation.findMany({
       where: dbQuery,
-      include: {
-        user: { select: { id: true, name: true } },
-        station: { select: { id: true, name: true, code: true } },
-        operationType: { select: { id: true, code: true, name: true } },
-        grantedBy: { select: { id: true, name: true } },
-      },
       ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.sortService.buildSortQuery(query?.orderBy),
+      ...this.representationService.buildCustomRepresentationQuery(
+        query?.v ?? this.defaultRep,
+      ),
     });
 
     return {
@@ -101,13 +103,9 @@ export class StaffStationOperationService {
   async findOne(id: string, query: CustomRepresentationQueryDto) {
     const data = await this.prisma.staffStationOperation.findUnique({
       where: { id },
-      include: {
-        user: { select: { id: true, name: true } },
-        station: { select: { id: true, name: true, code: true } },
-        operationType: { select: { id: true, code: true, name: true } },
-        grantedBy: { select: { id: true, name: true } },
-      },
-      ...this.representationService.buildCustomRepresentationQuery(query?.v),
+      ...this.representationService.buildCustomRepresentationQuery(
+        query?.v ?? this.defaultRep,
+      ),
     });
     if (!data)
       throw new NotFoundException('Staff station operation grant not found');
@@ -115,9 +113,8 @@ export class StaffStationOperationService {
   }
 
   async grant(
-    dto: CreateStaffStationOperationDto,
+    dto: CreateStaffOperationScopeDto,
     grantedById: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     query: CustomRepresentationQueryDto,
   ) {
     const { success: canManageOperations } =
@@ -155,12 +152,9 @@ export class StaffStationOperationService {
             operationTypeId,
             grantedById,
           },
-          include: {
-            user: { select: { id: true, name: true } },
-            station: { select: { id: true, name: true, code: true } },
-            operationType: { select: { id: true, code: true, name: true } },
-            grantedBy: { select: { id: true, name: true } },
-          },
+          ...this.representationService.buildCustomRepresentationQuery(
+            query?.v ?? this.defaultRep,
+          ),
         }),
       ),
     );

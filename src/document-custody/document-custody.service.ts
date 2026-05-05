@@ -16,23 +16,22 @@ import {
   PaginationService,
   SortService,
 } from '../common/query-builder';
+import { EntityPrefix } from '../human-id/human-id.constants';
 import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DocumentCustodyPermissionService } from './document-custody-permission.service';
+import { DocumentCustodyTransitionsService } from './document-custody-transitions.service';
+import { DEFAULT_OPERATION_REP } from './document-custody.constants';
 import {
   AddOperationItemDto,
   CancelOperationDto,
   CreateDocumentOperationDto,
-  GetAllowedOperationsDto,
   QueryDocumentOperationsListDto,
   RejectOperationDto,
   SkipOperationItemDto,
   UpdateDocumentOperationDto,
 } from './document-custody.dto';
-import { DEFAULT_OPERATION_REP } from './document-custody.constants';
-import { CustodyOperationCode } from './operations/custody-operation-code.enum';
-import { DocumentCustodyPermissionService } from './document-custody-permission.service';
-import { DocumentCustodyTransitionsService } from './document-custody-transitions.service';
-import { EntityPrefix } from '../human-id/human-id.constants';
+import { CustodyOperationCode } from './document-custody.interface';
 
 @Injectable()
 export class DocumentCustodyService {
@@ -127,17 +126,6 @@ export class DocumentCustodyService {
     });
     if (!op) throw new NotFoundException('Operation not found');
     return op;
-  }
-
-  async getAllowedOperations(
-    dto: GetAllowedOperationsDto,
-    user: UserSession['user'],
-  ) {
-    const allowedOperations = await this.permissionService.getAllowedOperations(
-      dto,
-      user,
-    );
-    return { allowedOperations };
   }
 
   /** Operation history for a specific found case (used by CustodyDetailPage). */
@@ -254,6 +242,7 @@ export class DocumentCustodyService {
         fromStationId: dto.fromStationId ?? null,
         toStationId: dto.toStationId ?? null,
         requestedByStationId: dto.requestedByStationId ?? null,
+        responsiblePersonId: dto.responsiblePersonId ?? user.id,
         notes: dto.notes ?? null,
         createdById: user.id,
         items: {
@@ -311,6 +300,9 @@ export class DocumentCustodyService {
         ...(dto.toStationId !== undefined && { toStationId: dto.toStationId }),
         ...(dto.requestedByStationId !== undefined && {
           requestedByStationId: dto.requestedByStationId,
+        }),
+        ...(dto.responsiblePersonId !== undefined && {
+          responsiblePersonId: dto.responsiblePersonId,
         }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },

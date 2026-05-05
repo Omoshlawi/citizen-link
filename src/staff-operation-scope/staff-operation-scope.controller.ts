@@ -11,52 +11,41 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Session } from '@thallesp/nestjs-better-auth';
-import { ApiErrorsResponse } from '../../app.decorators';
-import { RequireSystemPermission } from '../../auth/auth.decorators';
-import { UserSession } from '../../auth/auth.types';
+import { ApiErrorsResponse } from '../app.decorators';
+import { RequireSystemPermission } from '../auth/auth.decorators';
+import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
   OriginalUrl,
-} from '../../common/query-builder';
+} from '../common/query-builder';
 import {
-  CreateStaffStationOperationDto,
-  GetMyStationsResponseDto,
-  GetStaffStationOperationResponseDto,
-  GetStaffStationOperationsListDto,
-  QueryStaffStationOperationsDto,
-} from './staff-station-operation.dto';
-import { StaffStationOperationService } from './staff-station-operation.service';
+  CreateStaffOperationScopeDto,
+  GetStaffOperationScoperResponseDto,
+  GetStaffOperationsScoperListDto,
+  QueryStaffOperationsScopeDto,
+} from './staff-operation-scope.dto';
+import { StaffOperationScopeService } from './staff-operation-scope.service';
 
-@Controller('staff-station-operations')
-export class StaffStationOperationController {
-  constructor(private readonly service: StaffStationOperationService) {}
-
-  @Get('mine')
-  @ApiOperation({
-    summary: 'Get stations the current user is assigned to (deduplicated)',
-  })
-  @ApiOkResponse({ type: GetMyStationsResponseDto })
-  @ApiErrorsResponse()
-  findMyStations(@Session() { user }: UserSession) {
-    return this.service.findMyStations(user.id);
-  }
+@Controller('operation-scope')
+export class StaffOperationScopeController {
+  constructor(private readonly service: StaffOperationScopeService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List staff station operation grants' })
-  @ApiOkResponse({ type: GetStaffStationOperationsListDto })
+  @ApiOperation({ summary: 'List staff operation scope' })
+  @ApiOkResponse({ type: GetStaffOperationsScoperListDto })
   @ApiErrorsResponse()
-  @RequireSystemPermission({ staffStationOperation: ['view'] })
   findAll(
-    @Query() query: QueryStaffStationOperationsDto,
+    @Query() query: QueryStaffOperationsScopeDto,
     @OriginalUrl() originalUrl: string,
+    @Session() { user }: UserSession,
   ) {
-    return this.service.findAll(query, originalUrl);
+    return this.service.findAll(query, originalUrl, user);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get staff station operation grant by ID' })
-  @ApiOkResponse({ type: GetStaffStationOperationResponseDto })
+  @ApiOperation({ summary: 'Get staff operation scope by ID' })
+  @ApiOkResponse({ type: GetStaffOperationScoperResponseDto })
   @ApiErrorsResponse({ notFound: true })
   @RequireSystemPermission({ staffStationOperation: ['view'] })
   findOne(
@@ -68,11 +57,11 @@ export class StaffStationOperationController {
 
   @Post()
   @ApiOperation({ summary: 'Grant one or more staff station operations' })
-  @ApiOkResponse({ type: GetStaffStationOperationResponseDto, isArray: true })
+  @ApiOkResponse({ type: GetStaffOperationScoperResponseDto, isArray: true })
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ staffStationOperation: ['manage'] })
   grant(
-    @Body() dto: CreateStaffStationOperationDto,
+    @Body() dto: CreateStaffOperationScopeDto,
     @Session() { user }: UserSession,
     @Query() query: CustomRepresentationQueryDto,
   ) {
@@ -81,7 +70,7 @@ export class StaffStationOperationController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Revoke or purge a staff station operation grant' })
-  @ApiOkResponse({ type: GetStaffStationOperationResponseDto })
+  @ApiOkResponse({ type: GetStaffOperationScoperResponseDto })
   @ApiErrorsResponse({ notFound: true })
   @RequireSystemPermission({ staffStationOperation: ['manage'] })
   revoke(
@@ -94,7 +83,7 @@ export class StaffStationOperationController {
 
   @Put(':id/restore')
   @ApiOperation({ summary: 'Restore a revoked staff station operation grant' })
-  @ApiOkResponse({ type: GetStaffStationOperationResponseDto })
+  @ApiOkResponse({ type: GetStaffOperationScoperResponseDto })
   @ApiErrorsResponse({ notFound: true })
   @RequireSystemPermission({ staffStationOperation: ['manage'] })
   restore(

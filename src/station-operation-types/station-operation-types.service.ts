@@ -1,21 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../../generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
   PaginationService,
   SortService,
-} from '../../common/query-builder';
-import { PrismaService } from '../../prisma/prisma.service';
+} from '../common/query-builder';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateStationOperationTypeDto,
   QueryStationOperationTypesDto,
   UpdateStationOperationTypeDto,
-} from './station-operation-type.dto';
+} from './station-operation-types.dto';
 
 @Injectable()
-export class StationOperationTypeService {
+export class StationOperationTypesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
@@ -29,8 +29,36 @@ export class StationOperationTypeService {
     originalUrl: string,
   ) {
     const dbQuery: Prisma.StationOperationTypeWhereInput = {
-      stationId,
-      voided: query.includeVoided ? undefined : false,
+      AND: [
+        {
+          stationId,
+          voided: query.includeVoided ? undefined : false,
+          isEnabled: query.isEnabled,
+          operationType: {
+            isFinalOperation: query.isFinalOperation,
+            isHighPrivilege: query.isHighPrivilege,
+            requiresDestinationStation: query.requiresDestinationStation,
+            requiresSourceStation: query.requiresSourceStation,
+            requiresNotes: query.requiresNotes,
+          },
+        },
+        {
+          OR: query.search
+            ? [
+                {
+                  operationType: {
+                    name: { contains: query.search, mode: 'insensitive' },
+                  },
+                },
+                {
+                  operationType: {
+                    code: { contains: query.search, mode: 'insensitive' },
+                  },
+                },
+              ]
+            : undefined,
+        },
+      ],
     };
 
     const totalCount = await this.prisma.stationOperationType.count({
@@ -39,9 +67,9 @@ export class StationOperationTypeService {
 
     const data = await this.prisma.stationOperationType.findMany({
       where: dbQuery,
-      include: { operationType: true },
       ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.sortService.buildSortQuery(query?.orderBy),
+      ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
 
     return {

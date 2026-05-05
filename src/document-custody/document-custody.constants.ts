@@ -1,5 +1,5 @@
 import { CustodyStatus, Prisma } from '../../generated/prisma/client';
-import { CustodyOperationCode } from './operations/custody-operation-code.enum';
+import { CustodyOperationCode } from './document-custody.interface';
 
 // ── Station field roles ───────────────────────────────────────────────────────
 // stationId            — the station executing / hosting this operation
@@ -125,4 +125,4 @@ export const CUSTODY_TRANSITION: Record<string, CustodyTransitionFn> = {
 // operation type, stations, creator, and items with their found case details.
 
 export const DEFAULT_OPERATION_REP =
-  'custom:include(operationType,station,fromStation,toStation,requestedByStation,createdBy,items:include(foundCase:include(case:include(document:include(type)))))' as const;
+  'custom:include(operationType,station,fromStation,toStation,requestedByStation,createdBy,responsiblePerson,items:include(foundCase:include(case:include(document:include(type)))))' as const;

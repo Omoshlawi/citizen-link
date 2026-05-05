@@ -1,7 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
-import { PaginatedListBase, QueryBuilderSchema } from '../../common/query-builder';
+import { PaginatedListBase, QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
-import { DocumentOperationType } from '../../../generated/prisma/client';
+import { DocumentOperationType } from '../../generated/prisma/client';
 import { JsonValue } from '@prisma/client/runtime/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -20,11 +20,27 @@ export const CreateDocumentOperationTypeSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-export const UpdateDocumentOperationTypeSchema = CreateDocumentOperationTypeSchema.partial();
+export const UpdateDocumentOperationTypeSchema =
+  CreateDocumentOperationTypeSchema.partial();
 
 export const QueryDocumentOperationTypesSchema = z.object({
   ...QueryBuilderSchema.shape,
   search: z.string().optional(),
+  requiresDestinationStation: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
+  requiresSourceStation: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
+  requiresNotes: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
+  isHighPrivilege: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
+  isFinalOperation: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
   includeVoided: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional()
@@ -45,7 +61,9 @@ export class QueryDocumentOperationTypesDto extends createZodDto(
 
 // ── Response DTOs ─────────────────────────────────────────────────────────────
 
-export class GetDocumentOperationTypeResponseDto implements DocumentOperationType {
+export class GetDocumentOperationTypeResponseDto
+  implements DocumentOperationType
+{
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() prefix!: string;

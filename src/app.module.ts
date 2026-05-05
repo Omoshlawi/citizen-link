@@ -51,6 +51,9 @@ import { S3Module } from './s3/s3.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
 import { VisionModule } from './vision/vision.module';
 import { RegionModule } from './region/region.module';
+import { DocumentOperationTypesModule } from './document-operation-types/document-operation-types.module';
+import { StationOperationTypesModule } from './station-operation-types/station-operation-types.module';
+import { StaffOperationScopeModule } from './staff-operation-scope/staff-operation-scope.module';
 
 @Module({
   imports: [
@@ -135,6 +138,10 @@ import { RegionModule } from './region/region.module';
     SettingsModule,
     TemplatesModule,
     PushTokenModule,
+    DocumentOperationTypesModule,
+    StationOperationTypesModule,
+    StationOperationTypesModule,
+    StaffOperationScopeModule,
   ],
   controllers: [AppController],
   providers: [

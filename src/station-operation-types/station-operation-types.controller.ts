@@ -11,25 +11,25 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { ApiErrorsResponse } from '../../app.decorators';
-import { RequireSystemPermission } from '../../auth/auth.decorators';
+import { ApiErrorsResponse } from '../app.decorators';
+import { RequireSystemPermission } from '../auth/auth.decorators';
 import {
   CustomRepresentationQueryDto,
   DeleteQueryDto,
   OriginalUrl,
-} from '../../common/query-builder';
+} from '../common/query-builder';
 import {
   CreateStationOperationTypeDto,
   GetStationOperationTypeResponseDto,
   GetStationOperationTypesListDto,
   QueryStationOperationTypesDto,
   UpdateStationOperationTypeDto,
-} from './station-operation-type.dto';
-import { StationOperationTypeService } from './station-operation-type.service';
+} from './station-operation-types.dto';
+import { StationOperationTypesService } from './station-operation-types.service';
 
 @Controller('stations/:stationId/operation-types')
-export class StationOperationTypeController {
-  constructor(private readonly service: StationOperationTypeService) {}
+export class StationOperationTypesController {
+  constructor(private readonly service: StationOperationTypesService) {}
 
   @Get()
   @ApiOperation({ summary: 'List operation types for a station' })

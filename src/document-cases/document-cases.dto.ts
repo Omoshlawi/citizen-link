@@ -66,6 +66,18 @@ export const QueryDocumentCaseSchema = z
       .uuid()
       .optional()
       .describe('Filter found cases by their current custody station'),
+    pickupStationId: z
+      .uuid()
+      .optional()
+      .describe(
+        'Filter DROPOFF found cases by their designated pickup station',
+      ),
+    collectionAreaValue: z
+      .string()
+      .optional()
+      .describe(
+        'Filter PICKUP found cases by collection address area. The address level used is controlled by the receipt.area_level system setting (default: level3).',
+      ),
   })
   .extend(
     QueryAddressSchema.pick({

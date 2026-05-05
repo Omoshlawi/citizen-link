@@ -38,6 +38,13 @@ export const CreateDocumentOperationSchema = z.object({
     .uuid()
     .optional()
     .describe('Station that requested this operation (used for REQUISITION)'),
+  responsiblePersonId: z
+    .uuid()
+    .optional()
+    .nullable()
+    .describe(
+      'Staff member physically responsible for executing this operation. Defaults to the creator when not provided.',
+    ),
   notes: z.string().optional(),
 });
 
@@ -66,6 +73,13 @@ export const UpdateDocumentOperationSchema = z.object({
     .optional()
     .nullable()
     .describe('Station that requested this operation (REQUISITION)'),
+  responsiblePersonId: z
+    .uuid()
+    .optional()
+    .nullable()
+    .describe(
+      'Staff member physically responsible for executing this operation',
+    ),
   notes: z.string().optional().nullable(),
 });
 
@@ -172,6 +186,7 @@ export class GetDocumentOperationResponseDto implements DocumentOperation {
   })
   requestedByStationId!: string | null;
   @ApiProperty() createdById!: string;
+  @ApiPropertyOptional({ nullable: true }) responsiblePersonId!: string | null;
   @ApiPropertyOptional({ nullable: true }) notes!: string | null;
   @ApiPropertyOptional({ nullable: true }) metadata!: JsonValue;
   @ApiPropertyOptional({ nullable: true }) completedAt!: Date | null;
@@ -198,12 +213,3 @@ export class GetDocumentOperationTypeResponseDto {
   @ApiProperty() isHighPrivilege!: boolean;
   @ApiProperty() isFinalOperation!: boolean;
 }
-
-export class GetAllowedOperationsResponseDto {
-  @ApiProperty({ type: [GetDocumentOperationTypeResponseDto] })
-  allowedOperations!: GetDocumentOperationTypeResponseDto[];
-}
-
-export class GetAllowedOperationsDto extends createZodDto(
-  GetAllowedOperationsSchema,
-) {}

@@ -1,8 +1,9 @@
 import { createZodDto } from 'nestjs-zod';
-import { PaginatedListBase, QueryBuilderSchema } from '../../common/query-builder';
+import { PaginatedListBase, QueryBuilderSchema } from '../common/query-builder';
 import z from 'zod';
-import { StationOperationType } from '../../../generated/prisma/client';
+import { StationOperationType } from '../../generated/prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
+import { QueryDocumentOperationTypesSchema } from '../document-operation-types/document-operation-types.dto';
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -15,13 +16,18 @@ export const UpdateStationOperationTypeSchema = z.object({
   isEnabled: z.boolean(),
 });
 
-export const QueryStationOperationTypesSchema = z.object({
-  ...QueryBuilderSchema.shape,
-  includeVoided: z
-    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
-    .optional()
-    .default(false),
-});
+export const QueryStationOperationTypesSchema = z
+  .object({
+    ...QueryBuilderSchema.shape,
+    isEnabled: z
+      .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+      .optional(),
+    includeVoided: z
+      .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+      .optional()
+      .default(false),
+  })
+  .extend(QueryDocumentOperationTypesSchema.shape);
 
 // ── DTOs ─────────────────────────────────────────────────────────────────────
 
@@ -37,7 +43,9 @@ export class QueryStationOperationTypesDto extends createZodDto(
 
 // ── Response DTOs ─────────────────────────────────────────────────────────────
 
-export class GetStationOperationTypeResponseDto implements StationOperationType {
+export class GetStationOperationTypeResponseDto
+  implements StationOperationType
+{
   @ApiProperty() id!: string;
   @ApiProperty() stationId!: string;
   @ApiProperty() operationTypeId!: string;

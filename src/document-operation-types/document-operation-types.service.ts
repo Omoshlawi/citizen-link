@@ -1,21 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '../../../generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   DeleteQueryDto,
   PaginationService,
   SortService,
-} from '../../common/query-builder';
-import { PrismaService } from '../../prisma/prisma.service';
+} from '../common/query-builder';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateDocumentOperationTypeDto,
   QueryDocumentOperationTypesDto,
   UpdateDocumentOperationTypeDto,
-} from './document-operation-type.dto';
+} from './document-operation-types.dto';
 
 @Injectable()
-export class DocumentOperationTypeService {
+export class DocumentOperationTypesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
@@ -25,13 +25,24 @@ export class DocumentOperationTypeService {
 
   async findAll(query: QueryDocumentOperationTypesDto, originalUrl: string) {
     const dbQuery: Prisma.DocumentOperationTypeWhereInput = {
-      voided: query.includeVoided ? undefined : false,
-      OR: query.search
-        ? [
-            { name: { contains: query.search, mode: 'insensitive' } },
-            { code: { contains: query.search, mode: 'insensitive' } },
-          ]
-        : undefined,
+      AND: [
+        {
+          voided: query.includeVoided ? undefined : false,
+          requiresDestinationStation: query.requiresDestinationStation,
+          requiresSourceStation: query.requiresSourceStation,
+          requiresNotes: query.requiresNotes,
+          isHighPrivilege: query.isHighPrivilege,
+          isFinalOperation: query.isFinalOperation,
+        },
+        {
+          OR: query.search
+            ? [
+                { name: { contains: query.search, mode: 'insensitive' } },
+                { code: { contains: query.search, mode: 'insensitive' } },
+              ]
+            : undefined,
+        },
+      ],
     };
 
     const totalCount = await this.prisma.documentOperationType.count({

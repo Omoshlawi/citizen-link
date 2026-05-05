@@ -8,6 +8,7 @@ import {
   CustodyStatus,
   DocumentOperationItemStatus,
   DocumentOperationStatus,
+  FoundDocumentCaseStatus,
   Prisma,
 } from '../../generated/prisma/client';
 import { UserSession } from '../auth/auth.types';
@@ -19,6 +20,7 @@ import {
   DEFAULT_OPERATION_REP,
 } from './document-custody.constants';
 import { DocumentCustodyPermissionService } from './document-custody-permission.service';
+import { CustodyOperationCode } from './document-custody.interface';
 
 @Injectable()
 export class DocumentCustodyTransitionsService {
@@ -218,6 +220,9 @@ export class DocumentCustodyTransitionsService {
 
     const fromStatus = op.status;
     const applyCustody = CUSTODY_TRANSITION[op.operationType.code];
+    const isReceiptOp =
+      (op.operationType.code as CustodyOperationCode) ===
+      CustodyOperationCode.RECEIPT;
     const rep = this.representationService.buildCustomRepresentationQuery(
       v ?? this.defaultRep,
     );
@@ -230,6 +235,28 @@ export class DocumentCustodyTransitionsService {
 
       let failedCount = 0;
       for (const item of op.items) {
+        if (item.status !== DocumentOperationItemStatus.PENDING) continue;
+
+        // For RECEIPT operations: items already submitted via code exchange
+        // are skipped rather than failed — they were successfully collected
+        // through a separate path (quality data, not a failure).
+        if (isReceiptOp) {
+          const fc = await tx.foundDocumentCase.findUnique({
+            where: { id: item.foundCaseId },
+            select: { status: true },
+          });
+          if (fc?.status === FoundDocumentCaseStatus.SUBMITTED) {
+            await tx.documentOperationItem.update({
+              where: { id: item.id },
+              data: {
+                status: DocumentOperationItemStatus.SKIPPED,
+                notes: 'Already submitted via direct collection',
+              },
+            });
+            continue;
+          }
+        }
+
         try {
           let before: CustodyStatus = CustodyStatus.WITH_FINDER;
           let after: CustodyStatus = CustodyStatus.WITH_FINDER;

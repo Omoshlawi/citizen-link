@@ -60,6 +60,7 @@ model User {
   staffStationOperations StaffStationOperation[]
   grantedStaffOperations StaffStationOperation[] @relation("OperationGranter")
   createdOperations      DocumentOperation[]     @relation("OpCreator")
+  responsibleOperations  DocumentOperation[]     @relation("OpResponsible")
 
   @@unique([email])
   @@unique([username])
@@ -227,6 +228,7 @@ model Address {
   @@index([country])
   @@index([localeId])
   @@index([level1, level2, level3])
+  @@index([level3])
   @@map("addresses")
 }
 
@@ -1644,6 +1646,10 @@ model DocumentOperation {
   //  Actor
   createdById String
   createdBy   User   @relation("OpCreator", fields: [createdById], references: [id])
+
+  // Field responsible person — staff member physically executing this operation
+  responsiblePersonId String?
+  responsiblePerson   User?   @relation("OpResponsible", fields: [responsiblePersonId], references: [id])
 
   // Lifecycle status (CRITICAL)
   status DocumentOperationStatus
