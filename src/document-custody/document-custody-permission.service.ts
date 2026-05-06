@@ -18,7 +18,7 @@ export class DocumentCustodyPermissionService {
   /**
    * Convenience wrapper that resolves the acting station from an operation shape
    * and delegates to assertPermission. Skips silently when no station applies
-   * (station-agnostic operations such as AUDIT / CONDITION_UPDATE).
+   * (station-agnostic operations).
    *
    * TRANSFER_OUT: acting staff is at the sending station (fromStationId).
    * All other types: acting staff is at the primary station (stationId).

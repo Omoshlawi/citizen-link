@@ -46,6 +46,12 @@ export const CreateDocumentOperationSchema = z.object({
       'Staff member physically responsible for executing this operation. Defaults to the creator when not provided.',
     ),
   notes: z.string().optional(),
+  targetArea: z
+    .string()
+    .optional()
+    .describe(
+      'Geographic zone for this operation batch (e.g. "Westlands", "CBD Zone A"). Required when the operation type has requiresTargetArea=true.',
+    ),
 });
 
 export const UpdateDocumentOperationSchema = z.object({
@@ -81,6 +87,7 @@ export const UpdateDocumentOperationSchema = z.object({
       'Staff member physically responsible for executing this operation',
     ),
   notes: z.string().optional().nullable(),
+  targetArea: z.string().optional().nullable(),
 });
 
 export const AddOperationItemSchema = z.object({
@@ -154,6 +161,7 @@ export class GetDocumentOperationItemResponseDto
   @ApiProperty({ enum: CustodyStatus, required: false, nullable: true })
   custodyStatusAfter!: CustodyStatus | null;
   @ApiPropertyOptional({ nullable: true }) notes!: string | null;
+  @ApiPropertyOptional({ nullable: true }) userAddressId!: string | null;
   @ApiProperty() createdAt!: Date;
 }
 
@@ -188,6 +196,7 @@ export class GetDocumentOperationResponseDto implements DocumentOperation {
   @ApiProperty() createdById!: string;
   @ApiPropertyOptional({ nullable: true }) responsiblePersonId!: string | null;
   @ApiPropertyOptional({ nullable: true }) notes!: string | null;
+  @ApiPropertyOptional({ nullable: true }) targetArea!: string | null;
   @ApiPropertyOptional({ nullable: true }) metadata!: JsonValue;
   @ApiPropertyOptional({ nullable: true }) completedAt!: Date | null;
   @ApiProperty() createdAt!: Date;
@@ -212,4 +221,6 @@ export class GetDocumentOperationTypeResponseDto {
   @ApiProperty() requiresNotes!: boolean;
   @ApiProperty() isHighPrivilege!: boolean;
   @ApiProperty() isFinalOperation!: boolean;
+  @ApiProperty() requiresTargetArea!: boolean;
+  @ApiProperty() requiresItemAddresses!: boolean;
 }

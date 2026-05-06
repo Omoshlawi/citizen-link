@@ -14,8 +14,8 @@ import { CustodyOperationCode } from './document-custody.interface';
 
 // ── Custody transition map ────────────────────────────────────────────────────
 // Defines how each operation code mutates a found case's custody status.
-// Operations not listed here (AUDIT, CONDITION_UPDATE, REQUISITION) are
-// no-ops: they record the current status as both before and after.
+// Operations not listed here (e.g. REQUISITION) are no-ops: they record the
+// current status as both before and after.
 
 export type CustodyTransitionFn = (
   tx: Prisma.TransactionClient,
@@ -106,18 +106,6 @@ export const CUSTODY_TRANSITION: Record<string, CustodyTransitionFn> = {
     });
     return { before: fc.custodyStatus, after: fc.custodyStatus };
   },
-  [CustodyOperationCode.AUDIT]: async (tx, item) => {
-    const fc = await tx.foundDocumentCase.findUniqueOrThrow({
-      where: { id: item.foundCaseId },
-    });
-    return { before: fc.custodyStatus, after: fc.custodyStatus };
-  },
-  [CustodyOperationCode.CONDITION_UPDATE]: async (tx, item) => {
-    const fc = await tx.foundDocumentCase.findUniqueOrThrow({
-      where: { id: item.foundCaseId },
-    });
-    return { before: fc.custodyStatus, after: fc.custodyStatus };
-  },
 };
 
 // ── Default custom representation ─────────────────────────────────────────────
@@ -125,4 +113,4 @@ export const CUSTODY_TRANSITION: Record<string, CustodyTransitionFn> = {
 // operation type, stations, creator, and items with their found case details.
 
 export const DEFAULT_OPERATION_REP =
-  'custom:include(operationType,station,fromStation,toStation,requestedByStation,createdBy,responsiblePerson,items:include(foundCase:include(case:include(document:include(type)))))' as const;
+  'custom:include(operationType,station,fromStation,toStation,requestedByStation,createdBy,responsiblePerson,items:include(foundCase:include(case:include(document:include(type))),userAddress))' as const;

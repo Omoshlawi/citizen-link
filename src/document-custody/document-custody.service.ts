@@ -5,9 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ClaimStatus,
   DocumentOperationItemStatus,
   DocumentOperationStatus,
+  HandoverMethod,
   Prisma,
+  SubmissionMethod,
 } from '../../generated/prisma/client';
 import { UserSession } from '../auth/auth.types';
 import {
@@ -171,11 +174,13 @@ export class DocumentCustodyService {
       requiresSourceStation: boolean;
       requiresDestinationStation: boolean;
       requiresNotes: boolean;
+      requiresTargetArea: boolean;
     },
     fields: {
       fromStationId?: string | null;
       toStationId?: string | null;
       notes?: string | null;
+      targetArea?: string | null;
     },
   ): void {
     if (opType.requiresSourceStation && !fields.fromStationId)
@@ -188,6 +193,55 @@ export class DocumentCustodyService {
       );
     if (opType.requiresNotes && !fields.notes?.trim())
       throw new BadRequestException(`${opType.code} requires notes`);
+    if (opType.requiresTargetArea && !fields.targetArea?.trim())
+      throw new BadRequestException(`${opType.code} requires a target area`);
+  }
+
+  /**
+   * Resolves per-item userAddressId from existing user data:
+   * - RECEIPT + PICKUP  → foundCase.collectionAddressId
+   * - HANDOVER + DELIVERY → claim.handover.deliveryAddressId
+   * Returns an empty map for all other operation codes.
+   */
+  private async resolveItemAddresses(
+    opCode: CustodyOperationCode,
+    foundCaseIds: string[],
+  ): Promise<Record<string, string | null>> {
+    if (opCode === CustodyOperationCode.RECEIPT) {
+      const cases = await this.prisma.foundDocumentCase.findMany({
+        where: { id: { in: foundCaseIds } },
+        select: { id: true, submissionMethod: true, collectionAddressId: true },
+      });
+      return Object.fromEntries(
+        cases.map((fc) => [
+          fc.id,
+          fc.submissionMethod === SubmissionMethod.PICKUP
+            ? fc.collectionAddressId
+            : null,
+        ]),
+      );
+    }
+    if (opCode === CustodyOperationCode.HANDOVER) {
+      const claims = await this.prisma.claim.findMany({
+        where: {
+          foundDocumentCaseId: { in: foundCaseIds },
+          status: ClaimStatus.VERIFIED,
+        },
+        select: {
+          foundDocumentCaseId: true,
+          handover: { select: { method: true, deliveryAddressId: true } },
+        },
+      });
+      return Object.fromEntries(
+        claims.map((c) => [
+          c.foundDocumentCaseId,
+          c.handover?.method === HandoverMethod.DELIVERY
+            ? c.handover.deliveryAddressId
+            : null,
+        ]),
+      );
+    }
+    return {};
   }
 
   //  Create / Edit
@@ -203,7 +257,10 @@ export class DocumentCustodyService {
     if (!opType)
       throw new BadRequestException('Invalid or voided operation type');
 
-    this.validateStationRequirements(opType, dto);
+    this.validateStationRequirements(opType, {
+      ...dto,
+      targetArea: dto.targetArea ?? null,
+    });
 
     if (
       (opType.code as CustodyOperationCode) ===
@@ -233,6 +290,11 @@ export class DocumentCustodyService {
       prefix: opType.prefix as EntityPrefix,
     });
 
+    const addressMap = await this.resolveItemAddresses(
+      opType.code as CustodyOperationCode,
+      dto.foundCaseIds,
+    );
+
     return this.prisma.documentOperation.create({
       data: {
         operationNumber,
@@ -244,11 +306,13 @@ export class DocumentCustodyService {
         requestedByStationId: dto.requestedByStationId ?? null,
         responsiblePersonId: dto.responsiblePersonId ?? user.id,
         notes: dto.notes ?? null,
+        targetArea: dto.targetArea ?? null,
         createdById: user.id,
         items: {
           create: dto.foundCaseIds.map((foundCaseId) => ({
             foundCaseId,
             status: DocumentOperationItemStatus.PENDING,
+            userAddressId: addressMap[foundCaseId] ?? null,
           })),
         },
       },
@@ -282,6 +346,7 @@ export class DocumentCustodyService {
       toStationId:
         dto.toStationId !== undefined ? dto.toStationId : op.toStationId,
       notes: dto.notes !== undefined ? dto.notes : op.notes,
+      targetArea: dto.targetArea !== undefined ? dto.targetArea : op.targetArea,
     });
 
     await this.permissionService.assertPermissionForOperation(user.id, {
@@ -305,6 +370,7 @@ export class DocumentCustodyService {
           responsiblePersonId: dto.responsiblePersonId,
         }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
+        ...(dto.targetArea !== undefined && { targetArea: dto.targetArea }),
       },
       ...this.representationService.buildCustomRepresentationQuery(
         query?.v ?? this.defaultRep,
@@ -343,12 +409,18 @@ export class DocumentCustodyService {
     if (exists)
       throw new ConflictException('This document is already in the operation');
 
+    const addressMap = await this.resolveItemAddresses(
+      op.operationType.code as CustodyOperationCode,
+      [dto.foundCaseId],
+    );
+
     await this.prisma.documentOperationItem.create({
       data: {
         operationId: id,
         foundCaseId: dto.foundCaseId,
         status: DocumentOperationItemStatus.PENDING,
         notes: dto.notes ?? null,
+        userAddressId: addressMap[dto.foundCaseId] ?? null,
       },
     });
 

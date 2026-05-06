@@ -10,6 +10,4 @@ export enum CustodyOperationCode {
   HANDOVER = 'HANDOVER',
   DISPOSAL = 'DISPOSAL',
   RETURN = 'RETURN',
-  AUDIT = 'AUDIT',
-  CONDITION_UPDATE = 'CONDITION_UPDATE',
 }

@@ -33,6 +33,8 @@ export class DocumentOperationTypesService {
           requiresNotes: query.requiresNotes,
           isHighPrivilege: query.isHighPrivilege,
           isFinalOperation: query.isFinalOperation,
+          requiresTargetArea: query.requiresTargetArea,
+          requiresItemAddresses: query.requiresItemAddresses,
         },
         {
           OR: query.search

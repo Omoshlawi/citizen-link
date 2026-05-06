@@ -8,7 +8,9 @@
     "requiresSourceStation": false,
     "requiresNotes": false,
     "isHighPrivilege": false,
-    "isFinalOperation": false
+    "isFinalOperation": false,
+    "requiresTargetArea": true,
+    "requiresItemAddresses": true
   },
   {
     "code": "TRANSFER_OUT",
@@ -52,7 +54,9 @@
     "requiresSourceStation": false,
     "requiresNotes": false,
     "isHighPrivilege": false,
-    "isFinalOperation": true
+    "isFinalOperation": true,
+    "requiresTargetArea": true,
+    "requiresItemAddresses": true
   },
   {
     "code": "DISPOSAL",
@@ -73,28 +77,6 @@
     "requiresDestinationStation": false,
     "requiresSourceStation": false,
     "requiresNotes": false,
-    "isHighPrivilege": false,
-    "isFinalOperation": false
-  },
-  {
-    "code": "AUDIT",
-    "prefix": "AUD",
-    "name": "Location Audit",
-    "description": "Periodic confirmation that this document is physically present at this station.",
-    "requiresDestinationStation": false,
-    "requiresSourceStation": false,
-    "requiresNotes": false,
-    "isHighPrivilege": false,
-    "isFinalOperation": false
-  },
-  {
-    "code": "CONDITION_UPDATE",
-    "prefix": "CDU",
-    "name": "Condition Update",
-    "description": "Record updated physical condition of the document (e.g. water damage, torn).",
-    "requiresDestinationStation": false,
-    "requiresSourceStation": false,
-    "requiresNotes": true,
     "isHighPrivilege": false,
     "isFinalOperation": false
   }

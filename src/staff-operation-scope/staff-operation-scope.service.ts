@@ -56,6 +56,8 @@ export class StaffOperationScopeService {
             requiresDestinationStation: query.requiresDestinationStation,
             requiresSourceStation: query.requiresSourceStation,
             requiresNotes: query.requiresNotes,
+            requiresItemAddresses: query.requiresItemAddresses,
+            requiresTargetArea: query.requiresTargetArea,
           },
         },
         {

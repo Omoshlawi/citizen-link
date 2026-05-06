@@ -17,6 +17,8 @@ export const CreateDocumentOperationTypeSchema = z.object({
   requiresNotes: z.boolean().default(false),
   isHighPrivilege: z.boolean().default(false),
   isFinalOperation: z.boolean().default(false),
+  requiresTargetArea: z.boolean().default(false),
+  requiresItemAddresses: z.boolean().default(false),
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
@@ -39,6 +41,12 @@ export const QueryDocumentOperationTypesSchema = z.object({
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
   isFinalOperation: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
+  requiresTargetArea: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
+  requiresItemAddresses: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
   includeVoided: z
@@ -74,6 +82,8 @@ export class GetDocumentOperationTypeResponseDto
   @ApiProperty() requiresNotes!: boolean;
   @ApiProperty() isHighPrivilege!: boolean;
   @ApiProperty() isFinalOperation!: boolean;
+  @ApiProperty() requiresTargetArea!: boolean;
+  @ApiProperty() requiresItemAddresses!: boolean;
   @ApiPropertyOptional({ nullable: true }) metadata!: JsonValue;
   @ApiProperty() voided!: boolean;
   @ApiProperty() createdAt!: Date;

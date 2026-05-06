@@ -220,7 +220,8 @@ model Address {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  voided Boolean @default(false)
+  voided                 Boolean                 @default(false)
+  documentOperationItems DocumentOperationItem[]
 
   // For hierarchical queries
   @@index([userId])
@@ -1555,6 +1556,8 @@ model DocumentOperationType {
   requiresNotes              Boolean @default(false)
   isHighPrivilege            Boolean @default(false) // extra check (e.g. DISPOSAL)
   isFinalOperation           Boolean @default(false) // custody becomes terminal after this
+  requiresTargetArea         Boolean @default(false) // True for HANDOVER & RECEIPT
+  requiresItemAddresses      Boolean @default(false) // True for HANDOVER & RECEIPT
 
   metadata  Json?
   voided    Boolean  @default(false)
@@ -1651,8 +1654,11 @@ model DocumentOperation {
   responsiblePersonId String?
   responsiblePerson   User?   @relation("OpResponsible", fields: [responsiblePersonId], references: [id])
 
-  // Lifecycle status (CRITICAL)
+  // Lifecycle status 
   status DocumentOperationStatus
+
+  // The broader geographic zone for this batch of tasks
+  targetArea String? // e.g., "Juja North", "CBD Zone A"
 
   // Info
   notes    String?
@@ -1701,6 +1707,10 @@ model DocumentOperationItem {
   // Snapshot at time of execution (not creation)
   custodyStatusBefore CustodyStatus?
   custodyStatusAfter  CustodyStatus?
+
+  // ─── Per-item delivery/pickup address (for HANDOVER / RECEIPT ops) ───
+  userAddress   Address? @relation(fields: [userAddressId], references: [id], onDelete: SetNull)
+  userAddressId String?
 
   notes String?
 

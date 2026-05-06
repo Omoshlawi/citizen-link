@@ -17,6 +17,8 @@ interface DocumentOperationConfigSeed {
   requiresNotes: boolean;
   isHighPrivilege: boolean;
   isFinalOperation: boolean;
+  requiresTargetArea?: boolean;
+  requiresItemAddresses?: boolean;
 }
 
 async function seedDocumentOperations(): Promise<void> {
@@ -58,6 +60,8 @@ async function seedDocumentOperations(): Promise<void> {
       requiresNotes: config.requiresNotes,
       isHighPrivilege: config.isHighPrivilege,
       isFinalOperation: config.isFinalOperation,
+      requiresTargetArea: config.requiresTargetArea ?? false,
+      requiresItemAddresses: config.requiresItemAddresses ?? false,
     };
 
     if (existing) {

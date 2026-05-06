@@ -40,6 +40,8 @@ export class StationOperationTypesService {
             requiresDestinationStation: query.requiresDestinationStation,
             requiresSourceStation: query.requiresSourceStation,
             requiresNotes: query.requiresNotes,
+            requiresItemAddresses: query.requiresItemAddresses,
+            requiresTargetArea: query.requiresTargetArea,
           },
         },
         {
