@@ -48,7 +48,6 @@ import { DocumentCasesCollectionService } from './document-cases.collection.serv
       name: CASE_VISION_EXTRACTION_QUEUE,
       defaultJobOptions: {
         priority: 3,
-        attempts: 3,
         backoff: {
           type: 'exponential',
           delay: 10_000, // 10s → 20s → 40s
@@ -61,7 +60,6 @@ import { DocumentCasesCollectionService } from './document-cases.collection.serv
       name: CASE_TEXT_EXTRACTION_QUEUE,
       defaultJobOptions: {
         priority: 3,
-        attempts: 3,
         backoff: {
           type: 'exponential',
           delay: 10_000, // 10s → 20s → 40s

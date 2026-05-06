@@ -72,12 +72,10 @@ export const QueryDocumentCaseSchema = z
       .describe(
         'Filter DROPOFF found cases by their designated pickup station',
       ),
-    collectionAreaValue: z
+    collectionArea: z
       .string()
       .optional()
-      .describe(
-        'Filter PICKUP found cases by collection address area. The address level used is controlled by the receipt.area_level system setting (default: level3).',
-      ),
+      .describe('Filter PICKUP found cases by collection address area.'),
   })
   .extend(
     QueryAddressSchema.pick({

@@ -1,25 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { AuthService } from '@thallesp/nestjs-better-auth';
 import dayjs from 'dayjs';
+import {
+  CustodyStatus,
+  ExtractionStatus,
+  FoundDocumentCaseStatus,
+  LostDocumentCaseStatus,
+  Prisma,
+  SubmissionMethod,
+} from '../../generated/prisma/client';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
   CustomRepresentationService,
   PaginationService,
   SortService,
 } from '../common/query-builder';
+import { SystemSettingService } from '../common/settings/settings.system.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueryDocumentCaseDto } from './document-cases.dto';
-import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
-import { AuthService } from '@thallesp/nestjs-better-auth';
-import {
-  FoundDocumentCaseStatus,
-  LostDocumentCaseStatus,
-  ExtractionStatus,
-  SubmissionMethod,
-  CustodyStatus,
-  Prisma,
-} from '../../generated/prisma/client';
-import { SystemSettingService } from '../common/settings/settings.system.service';
-import z from 'zod';
 
 @Injectable()
 export class DocumentCasesQueryService {
@@ -39,12 +38,6 @@ export class DocumentCasesQueryService {
     const { success: isAdmin } = await this.authService.api.userHasPermission({
       body: { userId: user.id, permission: { documentCase: ['list-any'] } },
     });
-
-    const areaLevel = await this.settings.get(
-      'receipt.area_level',
-      z.enum(['level1', 'level2', 'level3', 'level4', 'level5']),
-      'level3',
-    );
 
     const dbQuery: Prisma.DocumentCaseWhereInput = {
       AND: [
@@ -93,14 +86,52 @@ export class DocumentCasesQueryService {
                       custodyStatus: query.custodyStatus as CustodyStatus,
                       currentStationId: query.currentStationId,
                       pickupStationId: query.pickupStationId,
-                      ...(query.collectionAreaValue && {
-                        collectionAddress: {
-                          [areaLevel]: {
-                            equals: query.collectionAreaValue,
-                            mode: 'insensitive',
-                          },
-                        },
-                      }),
+                    },
+                    {
+                      OR: query.collectionArea
+                        ? [
+                            {
+                              collectionAddress: {
+                                level1: {
+                                  equals: query.collectionArea,
+                                  mode: 'insensitive',
+                                },
+                              },
+                            },
+                            {
+                              collectionAddress: {
+                                level2: {
+                                  equals: query.collectionArea,
+                                  mode: 'insensitive',
+                                },
+                              },
+                            },
+                            {
+                              collectionAddress: {
+                                level3: {
+                                  equals: query.collectionArea,
+                                  mode: 'insensitive',
+                                },
+                              },
+                            },
+                            {
+                              collectionAddress: {
+                                level4: {
+                                  equals: query.collectionArea,
+                                  mode: 'insensitive',
+                                },
+                              },
+                            },
+                            {
+                              collectionAddress: {
+                                level5: {
+                                  equals: query.collectionArea,
+                                  mode: 'insensitive',
+                                },
+                              },
+                            },
+                          ]
+                        : undefined,
                     },
                   ],
                 }
