@@ -28,8 +28,7 @@ export class DocumentOperationTypesService {
       AND: [
         {
           voided: query.includeVoided ? undefined : false,
-          requiresDestinationStation: query.requiresDestinationStation,
-          requiresSourceStation: query.requiresSourceStation,
+          requiresCounterpartStation: query.requiresCounterpartStation,
           requiresNotes: query.requiresNotes,
           isHighPrivilege: query.isHighPrivilege,
           isFinalOperation: query.isFinalOperation,

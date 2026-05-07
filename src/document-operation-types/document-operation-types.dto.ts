@@ -12,8 +12,7 @@ export const CreateDocumentOperationTypeSchema = z.object({
   prefix: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional(),
-  requiresDestinationStation: z.boolean().default(false),
-  requiresSourceStation: z.boolean().default(false),
+  requiresCounterpartStation: z.boolean().default(false),
   requiresNotes: z.boolean().default(false),
   isHighPrivilege: z.boolean().default(false),
   isFinalOperation: z.boolean().default(false),
@@ -28,10 +27,7 @@ export const UpdateDocumentOperationTypeSchema =
 export const QueryDocumentOperationTypesSchema = z.object({
   ...QueryBuilderSchema.shape,
   search: z.string().optional(),
-  requiresDestinationStation: z
-    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
-    .optional(),
-  requiresSourceStation: z
+  requiresCounterpartStation: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
   requiresNotes: z
@@ -77,8 +73,7 @@ export class GetDocumentOperationTypeResponseDto
   @ApiProperty() prefix!: string;
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ nullable: true }) description!: string | null;
-  @ApiProperty() requiresDestinationStation!: boolean;
-  @ApiProperty() requiresSourceStation!: boolean;
+  @ApiProperty() requiresCounterpartStation!: boolean;
   @ApiProperty() requiresNotes!: boolean;
   @ApiProperty() isHighPrivilege!: boolean;
   @ApiProperty() isFinalOperation!: boolean;

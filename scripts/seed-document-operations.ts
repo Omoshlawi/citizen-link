@@ -12,8 +12,7 @@ interface DocumentOperationConfigSeed {
   prefix: string;
   name: string;
   description?: string;
-  requiresDestinationStation: boolean;
-  requiresSourceStation: boolean;
+  requiresCounterpartStation: boolean;
   requiresNotes: boolean;
   isHighPrivilege: boolean;
   isFinalOperation: boolean;
@@ -55,8 +54,7 @@ async function seedDocumentOperations(): Promise<void> {
       prefix: config.prefix,
       name: config.name,
       description: config.description,
-      requiresDestinationStation: config.requiresDestinationStation,
-      requiresSourceStation: config.requiresSourceStation,
+      requiresCounterpartStation: config.requiresCounterpartStation,
       requiresNotes: config.requiresNotes,
       isHighPrivilege: config.isHighPrivilege,
       isFinalOperation: config.isFinalOperation,

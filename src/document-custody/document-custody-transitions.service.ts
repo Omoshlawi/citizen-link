@@ -52,11 +52,7 @@ export class DocumentCustodyTransitionsService {
     if (op.items.length === 0)
       throw new BadRequestException('Cannot submit an operation with no items');
 
-    if (
-      (op.operationType.requiresSourceStation ||
-        op.operationType.requiresDestinationStation) &&
-      !op.counterpartStationId
-    )
+    if (op.operationType.requiresCounterpartStation && !op.counterpartStationId)
       throw new BadRequestException(
         `${op.operationType.code} requires a counterpart station (counterpartStationId)`,
       );

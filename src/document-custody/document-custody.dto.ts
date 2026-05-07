@@ -183,8 +183,7 @@ export class GetDocumentOperationTypeResponseDto {
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ nullable: true }) description!: string | null;
   @ApiProperty() prefix!: string;
-  @ApiProperty() requiresDestinationStation!: boolean;
-  @ApiProperty() requiresSourceStation!: boolean;
+  @ApiProperty() requiresCounterpartStation!: boolean;
   @ApiProperty() requiresNotes!: boolean;
   @ApiProperty() isHighPrivilege!: boolean;
   @ApiProperty() isFinalOperation!: boolean;

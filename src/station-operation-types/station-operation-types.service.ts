@@ -37,8 +37,7 @@ export class StationOperationTypesService {
           operationType: {
             isFinalOperation: query.isFinalOperation,
             isHighPrivilege: query.isHighPrivilege,
-            requiresDestinationStation: query.requiresDestinationStation,
-            requiresSourceStation: query.requiresSourceStation,
+            requiresCounterpartStation: query.requiresCounterpartStation,
             requiresNotes: query.requiresNotes,
             requiresItemAddresses: query.requiresItemAddresses,
             requiresTargetArea: query.requiresTargetArea,

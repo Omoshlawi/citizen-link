@@ -170,8 +170,7 @@ export class DocumentCustodyService {
   private validateStationRequirements(
     opType: {
       code: string;
-      requiresSourceStation: boolean;
-      requiresDestinationStation: boolean;
+      requiresCounterpartStation: boolean;
       requiresNotes: boolean;
       requiresTargetArea: boolean;
     },
@@ -181,10 +180,7 @@ export class DocumentCustodyService {
       targetArea?: string | null;
     },
   ): void {
-    if (
-      (opType.requiresSourceStation || opType.requiresDestinationStation) &&
-      !fields.counterpartStationId
-    )
+    if (opType.requiresCounterpartStation && !fields.counterpartStationId)
       throw new BadRequestException(
         `${opType.code} requires a counterpart station (counterpartStationId)`,
       );
