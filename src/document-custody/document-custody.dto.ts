@@ -29,7 +29,7 @@ export const CreateDocumentOperationSchema = z.object({
       'The other station involved. Destination for TRANSFER_OUT, source for TRANSFER_IN and REQUISITION. Required when the operation type has requiresSourceStation or requiresDestinationStation=true.',
     ),
   responsiblePersonId: z
-    .uuid()
+    .string()
     .optional()
     .nullable()
     .describe(

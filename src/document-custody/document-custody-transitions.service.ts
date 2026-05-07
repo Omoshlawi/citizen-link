@@ -191,14 +191,15 @@ export class DocumentCustodyTransitionsService {
     if (!op) throw new NotFoundException('Operation not found');
 
     const validStatuses = [
-      DocumentOperationStatus.DRAFT,
-      DocumentOperationStatus.APPROVED,
+      DocumentOperationStatus.DRAFT, // Operations that requires no approval
+      DocumentOperationStatus.APPROVED, //  For operations that requirs approval
     ];
     if (!validStatuses.includes(op.status as (typeof validStatuses)[number]))
       throw new ConflictException(
         `Only ${DocumentOperationStatus.DRAFT} or ${DocumentOperationStatus.APPROVED} operations can be executed`,
       );
 
+    // If operation require high priviledge aproval but want to excecute at draft then reject execution
     if (
       op.operationType.isHighPrivilege &&
       op.status === DocumentOperationStatus.DRAFT
@@ -223,6 +224,21 @@ export class DocumentCustodyTransitionsService {
       v ?? this.defaultRep,
     );
 
+    if (isReceiptOp) {
+      const foundCaseIds = op.items
+        .map((item) => item.foundCaseId)
+        .filter((fid): fid is string => fid != null);
+
+      const pendingCount = await this.prisma.documentCollection.count({
+        where: { foundCaseId: { in: foundCaseIds }, status: 'PENDING' },
+      });
+
+      if (pendingCount > 0)
+        throw new ConflictException(
+          `${pendingCount} item(s) have active pending collections. Confirm or cancel them before executing.`,
+        );
+    }
+
     return this.prisma.$transaction(async (tx) => {
       await tx.documentOperation.update({
         where: { id },
@@ -233,24 +249,23 @@ export class DocumentCustodyTransitionsService {
       for (const item of op.items) {
         if (item.status !== DocumentOperationItemStatus.PENDING) continue;
 
-        // For RECEIPT operations: items already submitted via code exchange
-        // are skipped rather than failed — they were successfully collected
-        // through a separate path (quality data, not a failure).
+        // For RECEIPT operations: only process cases that were confirmed via
+        // code exchange (SUBMITTED). Cases still in DRAFT had no handover —
+        // citizen was unavailable — so skip them. PENDING collections are
+        // blocked pre-transaction, so no PENDING state can reach here.
         if (isReceiptOp) {
           const fc = await tx.foundDocumentCase.findUnique({
             where: { id: item.foundCaseId },
             select: { status: true },
           });
-          if (fc?.status === FoundDocumentCaseStatus.SUBMITTED) {
+          if (fc?.status !== FoundDocumentCaseStatus.SUBMITTED) {
             await tx.documentOperationItem.update({
               where: { id: item.id },
-              data: {
-                status: DocumentOperationItemStatus.SKIPPED,
-                notes: 'Already submitted via direct collection',
-              },
+              data: { status: DocumentOperationItemStatus.SKIPPED },
             });
             continue;
           }
+          // SUBMITTED: fall through to apply custody transition + COMPLETED
         }
 
         try {
