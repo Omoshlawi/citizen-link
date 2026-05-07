@@ -265,7 +265,18 @@ export class DocumentCustodyTransitionsService {
             });
             continue;
           }
-          // SUBMITTED: fall through to apply custody transition + COMPLETED
+          // Custody was already transitioned to IN_CUSTODY during collection
+          // confirmation — applyCustody would produce a no-op IN_CUSTODY→IN_CUSTODY.
+          // Record the correct logical transition and skip redundant DB write.
+          await tx.documentOperationItem.update({
+            where: { id: item.id },
+            data: {
+              status: DocumentOperationItemStatus.COMPLETED,
+              custodyStatusBefore: CustodyStatus.WITH_FINDER,
+              custodyStatusAfter: CustodyStatus.IN_CUSTODY,
+            },
+          });
+          continue;
         }
 
         try {
