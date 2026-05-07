@@ -942,10 +942,8 @@ model Station {
   currentCustodyDocuments FoundDocumentCase[]     @relation("CurrentCustodyStation")
   stationOperationTypes   StationOperationType[]
   staffStationOperations  StaffStationOperation[]
-  documentOperationsAt    DocumentOperation[]     @relation("OpStation")
-  documentOperationsFrom  DocumentOperation[]     @relation("OpFrom")
-  documentOperationsTo    DocumentOperation[]     @relation("OpTo")
-  documentOperationsReq   DocumentOperation[]     @relation("OpRequestedBy")
+  documentOperationsAt          DocumentOperation[] @relation("OpStation")
+  documentOperationsCounterpart DocumentOperation[] @relation("OpCounterpart")
 
   @@map("stations")
 }
@@ -1637,14 +1635,8 @@ model DocumentOperation {
   stationId String?
   station   Station? @relation("OpStation", fields: [stationId], references: [id], onDelete: SetNull)
 
-  fromStationId String?
-  fromStation   Station? @relation("OpFrom", fields: [fromStationId], references: [id], onDelete: SetNull)
-
-  toStationId String?
-  toStation   Station? @relation("OpTo", fields: [toStationId], references: [id], onDelete: SetNull)
-
-  requestedByStationId String?
-  requestedByStation   Station? @relation("OpRequestedBy", fields: [requestedByStationId], references: [id], onDelete: SetNull)
+  counterpartStationId String?
+  counterpartStation   Station? @relation("OpCounterpart", fields: [counterpartStationId], references: [id], onDelete: SetNull)
 
   //  Actor
   createdById String

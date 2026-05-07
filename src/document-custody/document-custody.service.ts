@@ -66,8 +66,7 @@ export class DocumentCustodyService {
           ...(query.stationId && {
             OR: [
               { stationId: query.stationId },
-              { fromStationId: query.stationId },
-              { toStationId: query.stationId },
+              { counterpartStationId: query.stationId },
             ],
           }),
         },
@@ -177,19 +176,17 @@ export class DocumentCustodyService {
       requiresTargetArea: boolean;
     },
     fields: {
-      fromStationId?: string | null;
-      toStationId?: string | null;
+      counterpartStationId?: string | null;
       notes?: string | null;
       targetArea?: string | null;
     },
   ): void {
-    if (opType.requiresSourceStation && !fields.fromStationId)
+    if (
+      (opType.requiresSourceStation || opType.requiresDestinationStation) &&
+      !fields.counterpartStationId
+    )
       throw new BadRequestException(
-        `${opType.code} requires a source station (fromStationId)`,
-      );
-    if (opType.requiresDestinationStation && !fields.toStationId)
-      throw new BadRequestException(
-        `${opType.code} requires a destination station (toStationId)`,
+        `${opType.code} requires a counterpart station (counterpartStationId)`,
       );
     if (opType.requiresNotes && !fields.notes?.trim())
       throw new BadRequestException(`${opType.code} requires notes`);
@@ -258,19 +255,19 @@ export class DocumentCustodyService {
       throw new BadRequestException('Invalid or voided operation type');
 
     this.validateStationRequirements(opType, {
-      ...dto,
+      counterpartStationId: dto.counterpartStationId ?? null,
       targetArea: dto.targetArea ?? null,
     });
 
     if (
       (opType.code as CustodyOperationCode) ===
         CustodyOperationCode.REQUISITION &&
-      dto.fromStationId
+      dto.counterpartStationId
     ) {
       const mismatched = await this.prisma.foundDocumentCase.findMany({
         where: {
           id: { in: dto.foundCaseIds },
-          currentStationId: { not: dto.fromStationId },
+          currentStationId: { not: dto.counterpartStationId },
         },
         select: { id: true },
       });
@@ -282,7 +279,6 @@ export class DocumentCustodyService {
 
     await this.permissionService.assertPermissionForOperation(user.id, {
       stationId: dto.stationId ?? null,
-      fromStationId: dto.fromStationId ?? null,
       operationType: { code: opType.code },
     });
 
@@ -301,9 +297,7 @@ export class DocumentCustodyService {
         operationTypeId: dto.operationTypeId,
         status: DocumentOperationStatus.DRAFT,
         stationId: dto.stationId ?? null,
-        fromStationId: dto.fromStationId ?? null,
-        toStationId: dto.toStationId ?? null,
-        requestedByStationId: dto.requestedByStationId ?? null,
+        counterpartStationId: dto.counterpartStationId ?? null,
         responsiblePersonId: dto.responsiblePersonId ?? user.id,
         notes: dto.notes ?? null,
         targetArea: dto.targetArea ?? null,
@@ -338,20 +332,19 @@ export class DocumentCustodyService {
 
     const effectiveStationId =
       dto.stationId !== undefined ? dto.stationId : op.stationId;
-    const effectiveFromStationId =
-      dto.fromStationId !== undefined ? dto.fromStationId : op.fromStationId;
+    const effectiveCounterpartStationId =
+      dto.counterpartStationId !== undefined
+        ? dto.counterpartStationId
+        : op.counterpartStationId;
 
     this.validateStationRequirements(op.operationType, {
-      fromStationId: effectiveFromStationId,
-      toStationId:
-        dto.toStationId !== undefined ? dto.toStationId : op.toStationId,
+      counterpartStationId: effectiveCounterpartStationId,
       notes: dto.notes !== undefined ? dto.notes : op.notes,
       targetArea: dto.targetArea !== undefined ? dto.targetArea : op.targetArea,
     });
 
     await this.permissionService.assertPermissionForOperation(user.id, {
       stationId: effectiveStationId ?? null,
-      fromStationId: effectiveFromStationId ?? null,
       operationType: op.operationType,
     });
 
@@ -359,12 +352,8 @@ export class DocumentCustodyService {
       where: { id },
       data: {
         ...(dto.stationId !== undefined && { stationId: dto.stationId }),
-        ...(dto.fromStationId !== undefined && {
-          fromStationId: dto.fromStationId,
-        }),
-        ...(dto.toStationId !== undefined && { toStationId: dto.toStationId }),
-        ...(dto.requestedByStationId !== undefined && {
-          requestedByStationId: dto.requestedByStationId,
+        ...(dto.counterpartStationId !== undefined && {
+          counterpartStationId: dto.counterpartStationId,
         }),
         ...(dto.responsiblePersonId !== undefined && {
           responsiblePersonId: dto.responsiblePersonId,

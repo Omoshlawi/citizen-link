@@ -20,22 +20,16 @@ export class DocumentCustodyPermissionService {
    * and delegates to assertPermission. Skips silently when no station applies
    * (station-agnostic operations).
    *
-   * TRANSFER_OUT: acting staff is at the sending station (fromStationId).
-   * All other types: acting staff is at the primary station (stationId).
+   * stationId is always the performing/active station across all operation types.
    */
   async assertPermissionForOperation(
     userId: string,
     op: {
       stationId: string | null;
-      fromStationId: string | null;
       operationType: { code: string };
     },
   ): Promise<void> {
-    const actingStationId =
-      (op.operationType.code as CustodyOperationCode) ===
-      CustodyOperationCode.TRANSFER_OUT
-        ? op.fromStationId
-        : op.stationId;
+    const actingStationId = op.stationId;
 
     if (!actingStationId) return;
 

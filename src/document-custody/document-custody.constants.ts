@@ -2,12 +2,11 @@ import { CustodyStatus, Prisma } from '../../generated/prisma/client';
 import { CustodyOperationCode } from './document-custody.interface';
 
 // ── Station field roles ───────────────────────────────────────────────────────
-// stationId            — the station executing / hosting this operation
-// fromStationId        — source station; required when opType.requiresSourceStation
-//                        (TRANSFER_IN: the station that dispatched the doc)
-// toStationId          — destination station; required when opType.requiresDestinationStation
-//                        (TRANSFER_OUT: the station the doc is being sent to)
-// requestedByStationId — station that requested this operation (REQUISITION)
+// stationId            — the performing / active station across all operations
+// counterpartStationId — the other station involved; meaning depends on op type:
+//                        TRANSFER_OUT → destination station
+//                        TRANSFER_IN  → source station (where the doc came from)
+//                        REQUISITION  → source station (supplier being requested from)
 //
 // Enforcement: DocumentCustodyService.validateStationRequirements() (create/update)
 //              and DocumentCustodyTransitionsService.submit() (pre-submit guard).
@@ -20,7 +19,7 @@ import { CustodyOperationCode } from './document-custody.interface';
 export type CustodyTransitionFn = (
   tx: Prisma.TransactionClient,
   item: { foundCaseId: string },
-  op: { stationId: string | null; toStationId: string | null },
+  op: { stationId: string | null },
 ) => Promise<{ before: CustodyStatus; after: CustodyStatus }>;
 
 export const CUSTODY_TRANSITION: Record<string, CustodyTransitionFn> = {
@@ -113,4 +112,4 @@ export const CUSTODY_TRANSITION: Record<string, CustodyTransitionFn> = {
 // operation type, stations, creator, and items with their found case details.
 
 export const DEFAULT_OPERATION_REP =
-  'custom:include(operationType,station,fromStation,toStation,requestedByStation,createdBy,responsiblePerson,items:include(foundCase:include(case:include(document:include(type))),userAddress))' as const;
+  'custom:include(operationType,station,counterpartStation,createdBy,responsiblePerson,items:include(foundCase:include(case:include(document:include(type))),userAddress))' as const;

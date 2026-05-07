@@ -22,22 +22,12 @@ export const CreateDocumentOperationSchema = z.object({
     .describe(
       'Station executing this operation (e.g. receiving station for RECEIPT/TRANSFER_IN, disposing station for DISPOSAL)',
     ),
-  fromStationId: z
+  counterpartStationId: z
     .uuid()
     .optional()
     .describe(
-      'Source station. Required when the operation type has requiresSourceStation=true (e.g. TRANSFER_IN — the station that dispatched the document)',
+      'The other station involved. Destination for TRANSFER_OUT, source for TRANSFER_IN and REQUISITION. Required when the operation type has requiresSourceStation or requiresDestinationStation=true.',
     ),
-  toStationId: z
-    .uuid()
-    .optional()
-    .describe(
-      'Destination station. Required when the operation type has requiresDestinationStation=true (e.g. TRANSFER_OUT — where the document is being sent)',
-    ),
-  requestedByStationId: z
-    .uuid()
-    .optional()
-    .describe('Station that requested this operation (used for REQUISITION)'),
   responsiblePersonId: z
     .uuid()
     .optional()
@@ -60,25 +50,13 @@ export const UpdateDocumentOperationSchema = z.object({
     .optional()
     .nullable()
     .describe('Station executing this operation'),
-  fromStationId: z
+  counterpartStationId: z
     .uuid()
     .optional()
     .nullable()
     .describe(
-      'Source station. Required when the operation type has requiresSourceStation=true',
+      'The other station involved. Destination for TRANSFER_OUT, source for TRANSFER_IN and REQUISITION.',
     ),
-  toStationId: z
-    .uuid()
-    .optional()
-    .nullable()
-    .describe(
-      'Destination station. Required when the operation type has requiresDestinationStation=true',
-    ),
-  requestedByStationId: z
-    .uuid()
-    .optional()
-    .nullable()
-    .describe('Station that requested this operation (REQUISITION)'),
   responsiblePersonId: z
     .uuid()
     .optional()
@@ -179,20 +157,9 @@ export class GetDocumentOperationResponseDto implements DocumentOperation {
   @ApiPropertyOptional({
     nullable: true,
     description:
-      'Source station (present when requiresSourceStation=true on the operation type, e.g. TRANSFER_IN)',
+      'The other station involved. Destination for TRANSFER_OUT, source for TRANSFER_IN and REQUISITION.',
   })
-  fromStationId!: string | null;
-  @ApiPropertyOptional({
-    nullable: true,
-    description:
-      'Destination station (present when requiresDestinationStation=true on the operation type, e.g. TRANSFER_OUT)',
-  })
-  toStationId!: string | null;
-  @ApiPropertyOptional({
-    nullable: true,
-    description: 'Station that requested this operation (REQUISITION)',
-  })
-  requestedByStationId!: string | null;
+  counterpartStationId!: string | null;
   @ApiProperty() createdById!: string;
   @ApiPropertyOptional({ nullable: true }) responsiblePersonId!: string | null;
   @ApiPropertyOptional({ nullable: true }) notes!: string | null;

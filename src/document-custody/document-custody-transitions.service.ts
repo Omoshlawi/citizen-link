@@ -52,13 +52,13 @@ export class DocumentCustodyTransitionsService {
     if (op.items.length === 0)
       throw new BadRequestException('Cannot submit an operation with no items');
 
-    if (op.operationType.requiresSourceStation && !op.fromStationId)
+    if (
+      (op.operationType.requiresSourceStation ||
+        op.operationType.requiresDestinationStation) &&
+      !op.counterpartStationId
+    )
       throw new BadRequestException(
-        `${op.operationType.code} requires a source station (fromStationId)`,
-      );
-    if (op.operationType.requiresDestinationStation && !op.toStationId)
-      throw new BadRequestException(
-        `${op.operationType.code} requires a destination station (toStationId)`,
+        `${op.operationType.code} requires a counterpart station (counterpartStationId)`,
       );
     if (op.operationType.requiresNotes && !op.notes?.trim())
       throw new BadRequestException(`${op.operationType.code} requires notes`);
