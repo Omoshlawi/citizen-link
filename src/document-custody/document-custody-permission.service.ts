@@ -79,6 +79,22 @@ export class DocumentCustodyPermissionService {
     }
 
     // Layer 2: staff grant
+
+    // For proviledge users dont check grants
+    const { success: byPassGrants } =
+      await this.authService.api.userHasPermission({
+        body: {
+          userId,
+          permissions: {
+            staffOperationScope: ['manage'],
+          },
+        },
+      });
+
+    if (byPassGrants) return;
+
+    // if not priviledge chec grants
+
     const grant = await this.prisma.staffStationOperation.findUnique({
       where: {
         userId_stationId_operationTypeId: {

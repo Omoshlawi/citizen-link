@@ -101,6 +101,7 @@ const staffRole = adminPluginAcl.newRole({
   documentOperation: ['manage'],
   documentCase: ['list-any', 'view-any'],
   match: ['list-any', 'query-case-matches', 'create'],
+  user: ['list'],
 });
 
 const userRole = adminPluginAcl.newRole({

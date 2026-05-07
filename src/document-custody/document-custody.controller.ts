@@ -29,7 +29,11 @@ import {
   UpdateDocumentOperationDto,
 } from './document-custody.dto';
 import { DocumentCustodyService } from './document-custody.service';
-import { RequireSystemPermission } from 'src/auth/auth.decorators';
+import {
+  ActiveStationMode,
+  RequireActiveStation,
+  RequireSystemPermission,
+} from 'src/auth/auth.decorators';
 
 @Controller('document-custody')
 export class DocumentCustodyController {
@@ -54,6 +58,7 @@ export class DocumentCustodyController {
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
   @RequireSystemPermission({ documentOperation: ['manage'] })
+  @RequireActiveStation(ActiveStationMode.REQUIRED)
   createOperation(
     @Body() dto: CreateDocumentOperationDto,
     @Session() { user }: UserSession,
@@ -79,6 +84,7 @@ export class DocumentCustodyController {
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
   @RequireSystemPermission({ documentOperation: ['manage'] })
+  @RequireActiveStation(ActiveStationMode.REQUIRED)
   updateOperation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateDocumentOperationDto,
@@ -95,6 +101,7 @@ export class DocumentCustodyController {
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
   @RequireSystemPermission({ documentOperation: ['manage'] })
+  @RequireActiveStation(ActiveStationMode.REQUIRED)
   addItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AddOperationItemDto,
@@ -109,6 +116,7 @@ export class DocumentCustodyController {
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
   @RequireSystemPermission({ documentOperation: ['manage'] })
+  @RequireActiveStation(ActiveStationMode.REQUIRED)
   removeItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
@@ -123,6 +131,7 @@ export class DocumentCustodyController {
   @ApiOkResponse({ type: GetDocumentOperationResponseDto })
   @ApiErrorsResponse({ badRequest: true, forbidden: true })
   @RequireSystemPermission({ documentOperation: ['manage'] })
+  @RequireActiveStation(ActiveStationMode.REQUIRED)
   skipItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,

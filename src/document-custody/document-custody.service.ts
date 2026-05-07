@@ -286,14 +286,14 @@ export class DocumentCustodyService {
       operationType: { code: opType.code },
     });
 
-    const operationNumber = await this.humanId.generate({
-      prefix: opType.prefix as EntityPrefix,
-    });
-
     const addressMap = await this.resolveItemAddresses(
       opType.code as CustodyOperationCode,
       dto.foundCaseIds,
     );
+
+    const operationNumber = await this.humanId.generate({
+      prefix: opType.prefix as EntityPrefix,
+    });
 
     return this.prisma.documentOperation.create({
       data: {

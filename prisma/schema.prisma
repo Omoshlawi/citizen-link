@@ -1604,7 +1604,7 @@ model StaffStationOperation {
   operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id], onDelete: Cascade)
 
   grantedById String
-  grantedBy   User   @relation("OperationGranter", fields: [grantedById], references: [id])
+  grantedBy   User   @relation("OperationGranter", fields: [grantedById], references: [id], onDelete: Cascade)
 
   voided     Boolean   @default(false)
   voidedAt   DateTime?
@@ -1626,7 +1626,7 @@ model DocumentOperation {
 
   //  Type
   operationTypeId String
-  operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id])
+  operationType   DocumentOperationType @relation(fields: [operationTypeId], references: [id], onDelete: Cascade)
 
   //  Batch root (now FIRST-CLASS, not optional thinking)
   // One operation = one batch
@@ -1635,24 +1635,24 @@ model DocumentOperation {
 
   // Station context
   stationId String?
-  station   Station? @relation("OpStation", fields: [stationId], references: [id])
+  station   Station? @relation("OpStation", fields: [stationId], references: [id], onDelete: SetNull)
 
   fromStationId String?
-  fromStation   Station? @relation("OpFrom", fields: [fromStationId], references: [id])
+  fromStation   Station? @relation("OpFrom", fields: [fromStationId], references: [id], onDelete: SetNull)
 
   toStationId String?
-  toStation   Station? @relation("OpTo", fields: [toStationId], references: [id])
+  toStation   Station? @relation("OpTo", fields: [toStationId], references: [id], onDelete: SetNull)
 
   requestedByStationId String?
-  requestedByStation   Station? @relation("OpRequestedBy", fields: [requestedByStationId], references: [id])
+  requestedByStation   Station? @relation("OpRequestedBy", fields: [requestedByStationId], references: [id], onDelete: SetNull)
 
   //  Actor
   createdById String
-  createdBy   User   @relation("OpCreator", fields: [createdById], references: [id])
+  createdBy   User   @relation("OpCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   // Field responsible person — staff member physically executing this operation
   responsiblePersonId String?
-  responsiblePerson   User?   @relation("OpResponsible", fields: [responsiblePersonId], references: [id])
+  responsiblePerson   User?   @relation("OpResponsible", fields: [responsiblePersonId], references: [id], onDelete: SetNull)
 
   // Lifecycle status 
   status DocumentOperationStatus
@@ -1699,7 +1699,7 @@ model DocumentOperationItem {
   operation   DocumentOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
 
   foundCaseId String
-  foundCase   FoundDocumentCase @relation(fields: [foundCaseId], references: [id])
+  foundCase   FoundDocumentCase @relation(fields: [foundCaseId], references: [id], onDelete: Cascade)
 
   // Optional per-item status (for partial success scenarios)
   status DocumentOperationItemStatus
