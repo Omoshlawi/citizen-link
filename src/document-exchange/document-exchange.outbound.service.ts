@@ -239,7 +239,7 @@ export class DocumentExchangeOutboundService {
   async confirmVerification(
     exchangeId: string,
     dto: ConfirmOutboundCodeDto,
-    { user, session }: UserSession,
+    { user }: UserSession,
   ) {
     const exchange = await this.prisma.documentExchange.findUnique({
       where: { id: exchangeId, direction: 'OUTBOUND' },
@@ -503,7 +503,11 @@ export class DocumentExchangeOutboundService {
 
     return {
       results: data,
-      ...this.pagination.buildPaginationControls(totalCount, originalUrl, query),
+      ...this.pagination.buildPaginationControls(
+        totalCount,
+        originalUrl,
+        query,
+      ),
     };
   }
 

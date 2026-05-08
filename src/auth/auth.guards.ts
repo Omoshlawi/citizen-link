@@ -110,21 +110,31 @@ export class RequireActiveStationGuard implements CanActivate {
           'Your active station is not active or not found. Please select an active station to access this resource',
         );
       }
-      // If not assigned to the user, throw an exception
-      const userStation = await this.prisma.staffStationOperation.findFirst({
-        where: {
+      // If not admin and not assigned to the user, throw an exception
+      const { success } = await this.authService.api.userHasPermission({
+        body: {
           userId: session.user.id,
-          stationId: session.session.stationId,
-          voided: false,
+          permissions: {
+            staffOperationScope: ['manage'],
+          },
         },
       });
-      if (!userStation) {
-        this.logger.warn(
-          `User ${session.user.id} is not assigned to station ${session.session.stationId} for any operations`,
-        );
-        throw new ForbiddenException(
-          'You are not assigned to this station. Please select an active station to access this resource',
-        );
+      if (!success) {
+        const userStation = await this.prisma.staffStationOperation.findFirst({
+          where: {
+            userId: session.user.id,
+            stationId: session.session.stationId,
+            voided: false,
+          },
+        });
+        if (!userStation) {
+          this.logger.warn(
+            `User ${session.user.id} is not assigned to station ${session.session.stationId} for any operations`,
+          );
+          throw new ForbiddenException(
+            'You are not assigned to this station. Please select an active station to access this resource',
+          );
+        }
       }
     } else if (mode === ActiveStationMode.FORBIDDEN) {
       if (session?.session?.stationId) {

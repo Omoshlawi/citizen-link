@@ -108,7 +108,8 @@ export class DocumentExchangeController {
 
   @Post('inbound/:foundCaseId/cancel-code')
   @ApiOperation({
-    summary: 'Cancel active verification session, revert exchange to SCHEDULED (staff only)',
+    summary:
+      'Cancel active verification session, revert exchange to SCHEDULED (staff only)',
   })
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ documentCase: ['collect'] })
@@ -195,7 +196,8 @@ export class DocumentExchangeController {
 
   @Post('outbound/:id/cancel-code')
   @ApiOperation({
-    summary: 'Cancel active verification session, revert exchange to SCHEDULED (staff only)',
+    summary:
+      'Cancel active verification session, revert exchange to SCHEDULED (staff only)',
   })
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ documentCase: ['collect'] })
