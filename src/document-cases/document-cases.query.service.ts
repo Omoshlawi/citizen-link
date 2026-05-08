@@ -83,8 +83,10 @@ export class DocumentCasesQueryService {
                       status: query.status as FoundDocumentCaseStatus,
                       custodyStatus: query.custodyStatus as CustodyStatus,
                       currentStationId: query.currentStationId,
-                      // Filter by active exchange addresses
-                      ...(query.collectionArea && {
+                      // Filter by exchange addresses
+                      ...((query.collectionArea ||
+                        query.submissionMethod ||
+                        query.pickupStationId) && {
                         exchanges: {
                           some: {
                             AND: [
@@ -93,8 +95,11 @@ export class DocumentCasesQueryService {
                                   in: [
                                     ExchangeStatus.SCHEDULED,
                                     ExchangeStatus.IN_PROGRESS,
+                                    ExchangeStatus.COMPLETED,
                                   ],
                                 },
+                                method: query.submissionMethod ?? undefined,
+                                stationId: query.pickupStationId ?? undefined,
                               },
                               {
                                 OR: query.collectionArea

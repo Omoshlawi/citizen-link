@@ -112,4 +112,4 @@ export const CUSTODY_TRANSITION: Record<string, CustodyTransitionFn> = {
 // operation type, stations, creator, and items with their found case details.
 
 export const DEFAULT_OPERATION_REP =
-  'custom:include(operationType,station,counterpartStation,createdBy,responsiblePerson,items:include(foundCase:include(case:include(document:include(type)),exchanges:select(status)),userAddress))' as const;
+  'custom:include(operationType,station,counterpartStation,createdBy,responsiblePerson,items:include(foundCase:include(case:include(document:include(type))),userAddress))' as const;
