@@ -22,28 +22,22 @@ import {
   OriginalUrl,
 } from '../common/query-builder';
 import {
-  CancelCollectionDto,
   CaseTimelineResponseDto,
-  ConfirmCollectionDto,
   CreateFoundDocumentCaseDto,
   GetDocumentCaseResponseDto,
-  InitiateCollectionResponseDto,
   QueryDocumentCaseDto,
   QueryDocumentCaseResponseDto,
   CreateLostDocumentCaseDto,
   UpdateDocumentCaseDto,
+  UpdateFoundCaseSubmissionDto,
 } from './document-cases.dto';
 import { DocumentCasesService } from './document-cases.service';
 import { RequireSystemPermission } from '../auth/auth.decorators';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
-import { DocumentCasesCollectionService } from './document-cases.collection.service';
 
 @Controller('documents/cases')
 export class DocumentCasesController {
-  constructor(
-    private readonly documentCasesService: DocumentCasesService,
-    private readonly collectionService: DocumentCasesCollectionService,
-  ) {}
+  constructor(private readonly documentCasesService: DocumentCasesService) {}
 
   @Post('found')
   @ApiOperation({ summary: 'Report Found Document Case' })
@@ -106,56 +100,6 @@ export class DocumentCasesController {
   ) {
     return this.documentCasesService.submitLostDocumentCase(id, query, user);
   }
-  @Post('found/:id/collect/initiate')
-  @RequireSystemPermission({ documentCase: ['collect'] })
-  @ApiOperation({ summary: 'Initiate found case collection (staff only)' })
-  @ApiCreatedResponse({ type: InitiateCollectionResponseDto })
-  @ApiErrorsResponse({ badRequest: true, notFound: true })
-  initiateCollection(
-    @Param('id') id: string,
-    @Session() { user }: UserSession,
-  ) {
-    return this.collectionService.initiateCollection(id, user);
-  }
-
-  @Post('found/:id/collect/confirm')
-  @RequireSystemPermission({ documentCase: ['collect'] })
-  @ApiOperation({ summary: 'Confirm active collection code (staff only)' })
-  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
-  @ApiErrorsResponse({ badRequest: true, notFound: true })
-  confirmCollection(
-    @Param('id') id: string,
-    @Body() dto: ConfirmCollectionDto,
-    @Session() userSession: UserSession,
-  ) {
-    return this.collectionService.confirmCollection(id, dto, userSession);
-  }
-
-  @Post('found/:id/collect/cancel')
-  @RequireSystemPermission({ documentCase: ['collect'] })
-  @ApiOperation({ summary: 'Cancel active collection (staff only)' })
-  @ApiErrorsResponse({ badRequest: true, notFound: true })
-  cancelCollection(
-    @Param('id') id: string,
-    @Body() dto: CancelCollectionDto,
-    @Session() { user }: UserSession,
-  ) {
-    return this.collectionService.cancelActiveCollection(id, dto, user);
-  }
-
-  @Get('found/:id/collect/active')
-  @ApiOperation({
-    summary:
-      'Get active collection state for a found case (code visible to owner only)',
-  })
-  @ApiErrorsResponse({ notFound: true })
-  getActiveCollection(
-    @Param('id') id: string,
-    @Session() { user }: UserSession,
-  ) {
-    return this.collectionService.caseHasActiveCollection(id, user);
-  }
-
   @Get()
   @ApiOperation({ summary: 'Query Document Cases' })
   @ApiOkResponse({ type: QueryDocumentCaseResponseDto })
@@ -216,6 +160,27 @@ export class DocumentCasesController {
     @Session() { user }: UserSession,
   ) {
     return this.documentCasesService.remove(id, query, user.id);
+  }
+
+  @Patch('found/:id/submission')
+  @ApiOperation({
+    summary:
+      'Update found case submission preference. If no active exchange its creates',
+  })
+  @ApiOkResponse({ type: GetDocumentCaseResponseDto })
+  @ApiErrorsResponse({ badRequest: true, notFound: true, conflict: true })
+  updateSubmissionPreference(
+    @Param('id') id: string,
+    @Body() dto: UpdateFoundCaseSubmissionDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.updateSubmissionPreference(
+      id,
+      dto,
+      query,
+      user,
+    );
   }
 
   @Post('found/:id/verify')

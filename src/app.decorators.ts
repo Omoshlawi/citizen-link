@@ -2,6 +2,7 @@
 import { applyDecorators } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
@@ -21,6 +22,7 @@ type ApiErrorResponseProps = {
   unauthorized?: boolean;
   forbidden?: boolean;
   internalServerError?: boolean;
+  conflict?: boolean;
 };
 
 export const ApiErrorsResponse = ({
@@ -29,6 +31,7 @@ export const ApiErrorsResponse = ({
   unauthorized = true,
   forbidden = true,
   internalServerError = true,
+  conflict = false,
 }: ApiErrorResponseProps = {}) => {
   const decorators: any[] = [];
   if (internalServerError) {
@@ -55,6 +58,9 @@ export const ApiErrorsResponse = ({
   }
   if (badRequest) {
     decorators.push(ApiBadRequestResponse({ type: HttpBadRequestResponseDto }));
+  }
+  if (conflict) {
+    decorators.push(ApiConflictResponse({ type: HttpBadRequestResponseDto }));
   }
 
   return applyDecorators(...decorators);

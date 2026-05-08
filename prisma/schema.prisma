@@ -53,9 +53,12 @@ model User {
   statusTransitions    StatusTransition[]
   pushTokens           UserPushToken[]
   templateVersions     TemplateVersion[]
-  collectionsInitiated DocumentCollection[] @relation("CollectionInitiatedBy")
-  collectionsConfirmed DocumentCollection[] @relation("CollectionConfirmedBy")
-  collectionsCancelled DocumentCollection[] @relation("CollectionCancelledBy")
+  exchangesCreated       DocumentExchange[]     @relation("ExchangeCreatedBy")
+  exchangesCompleted     DocumentExchange[]     @relation("ExchangeCompletedBy")
+  exchangesCancelled     DocumentExchange[]     @relation("ExchangeCancelledBy")
+  verificationsIssued    ExchangeVerification[] @relation("VerificationIssuedBy")
+  verificationsConfirmed ExchangeVerification[] @relation("VerificationConfirmedBy")
+  verificationsCancelled ExchangeVerification[] @relation("VerificationCancelledBy")
 
   staffStationOperations StaffStationOperation[]
   grantedStaffOperations StaffStationOperation[] @relation("OperationGranter")
@@ -213,9 +216,8 @@ model Address {
   localeId String?
   locale   AddressLocale? @relation(fields: [localeId], references: [id])
 
-  cases                       DocumentCase[]
-  collectionAddressFoundCases FoundDocumentCase[] @relation("FoundCaseCollectionAddress")
-  handovers                   Handover[]
+  cases     DocumentCase[]
+  exchanges DocumentExchange[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -651,24 +653,14 @@ model FoundDocumentCase {
   caseId String       @unique
   case   DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
-  status          FoundDocumentCaseStatus @default(DRAFT)
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  pointAwarded    Int                     @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
-  matches         Match[]
-  claims          Claim[]
-  station         Station?                @relation(fields: [pickupStationId], references: [id])
-  pickupStationId String?
+  status       FoundDocumentCaseStatus @default(DRAFT)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  pointAwarded Int                     @default(0) // Set when found document is succesfully united by the owner, is based on points awardable based on document type
+  matches      Match[]
+  claims       Claim[]
 
-  // Submission method chosen by the finder
-  submissionMethod    SubmissionMethod?
-  // For PICKUP: address where agent should come collect the document
-  collectionAddressId String?
-  collectionAddress   Address?          @relation("FoundCaseCollectionAddress", fields: [collectionAddressId], references: [id])
-  // For PICKUP: scheduled date+time when finder will be available at the collection address
-  scheduledPickupAt   DateTime?
-
-  collections DocumentCollection[]
+  exchanges DocumentExchange[]
 
   // Document custody tracking
   custodyStatus    CustodyStatus @default(WITH_FINDER)
@@ -680,49 +672,10 @@ model FoundDocumentCase {
   @@map("found_document_cases")
 }
 
-model DocumentCollection {
-  id          String                   @id @default(uuid())
-  foundCaseId String
-  foundCase   FoundDocumentCase        @relation(fields: [foundCaseId], references: [id], onDelete: Cascade)
-  code        String // plaintext 6-digit numeric
-  status      DocumentCollectionStatus @default(PENDING)
-  expiresAt   DateTime
-  attempts    Int                      @default(0)
-  maxAttempts Int                      @default(3) // snapshot from settings at initiation time
-
-  initiatedById String
-  initiatedBy   User   @relation("CollectionInitiatedBy", fields: [initiatedById], references: [id])
-
-  confirmedById String?
-  confirmedBy   User?   @relation("CollectionConfirmedBy", fields: [confirmedById], references: [id])
-
-  cancelledById String?
-  cancelledBy   User?   @relation("CollectionCancelledBy", fields: [cancelledById], references: [id])
-  cancelReason  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([foundCaseId, status])
-  @@map("document_collections")
-}
-
-enum DocumentCollectionStatus {
-  PENDING // code issued, awaiting confirmation
-  CONFIRMED // code matched; case transitioned to SUBMITTED
-  EXPIRED // TTL elapsed or max attempts reached
-  CANCELLED // staff cancelled
-}
-
 enum LostDocumentCaseStatus {
   DRAFT
   SUBMITTED // When user submit lost document info
   COMPLETED // When the document is reunited with the owner
-}
-
-enum SubmissionMethod {
-  DROPOFF // Finder will drop the document off at a partner pickup station
-  PICKUP // An agent will be dispatched to collect the document from the finder
 }
 
 enum FoundDocumentCaseStatus {
@@ -848,8 +801,8 @@ model Claim {
   status ClaimStatus @default(PENDING)
 
   // Relations
-  invoice  Invoice?
-  handover Handover?
+  invoice   Invoice?
+  exchanges DocumentExchange[]
 
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -937,8 +890,7 @@ model Station {
   operatingHours Json?
 
   // Relations
-  foundDocumentCases      FoundDocumentCase[]
-  handovers               Handover[]
+  exchanges               DocumentExchange[]
   currentCustodyDocuments FoundDocumentCase[]     @relation("CurrentCustodyStation")
   stationOperationTypes   StationOperationType[]
   staffStationOperations  StaffStationOperation[]
@@ -948,98 +900,130 @@ model Station {
   @@map("stations")
 }
 
-enum HandoverMethod {
-  PICKUP
-  DELIVERY
+// ─── Document Exchange ────────────────────────────────────────────────────────
+// Unified model for coordinating the physical exchange of a document between
+// an end user and the system. Replaces DocumentCollection (INBOUND) and
+// Handover (OUTBOUND).
+
+enum ExchangeDirection {
+  INBOUND // finder → station
+  OUTBOUND // station → owner (claimant)
 }
 
-model Handover {
-  id             String         @id @default(uuid())
-  handoverNumber String         @unique
-  claimId        String         @unique
-  claim          Claim          @relation(fields: [claimId], references: [id])
-  method         HandoverMethod
+enum ExchangeMethod {
+  STATION_DROPOFF  // INBOUND: finder walks to a partner station
+  AGENT_PICKUP     // INBOUND: agent dispatched to finder's address
+  OWNER_PICKUP     // OUTBOUND: owner comes to station to collect
+  INHOUSE_DELIVERY // OUTBOUND: in-house staff dispatched to owner's address
+  COURIER_DELIVERY // OUTBOUND: third-party courier dispatched to owner's address
+}
 
-  // External Logistics Integration
-  trackingNumber     String? @unique // Number from the courier
-  courierProvider    String? // e.g., "DHL", "In-House", "Sendy"
-  externalShipmentId String? // The ID in the logistics system
+enum ExchangeStatus {
+  SCHEDULED   // created, awaiting logistics
+  IN_PROGRESS // code issued (INBOUND) or document ready/out-for-delivery (OUTBOUND)
+  COMPLETED   // code confirmed (INBOUND) or delivery confirmed (OUTBOUND)
+  FAILED      // delivery failed, no-show, etc.
+  CANCELLED
+}
 
-  // Dynamic Locations
-  pickupStationId   String?
-  station           Station? @relation(fields: [pickupStationId], references: [id])
-  deliveryAddressId String?
-  deliveryAddress   Address? @relation(fields: [deliveryAddressId], references: [id])
+enum VerificationStatus {
+  PENDING   // code issued, awaiting confirmation
+  CONFIRMED // code matched; exchange transitions to COMPLETED
+  EXPIRED   // TTL elapsed or max attempts reached
+  CANCELLED // staff cancelled
+}
 
-  status HandoverStatus @default(SCHEDULED)
+model DocumentExchange {
+  id             String            @id @default(uuid())
+  exchangeNumber String            @unique
+  direction      ExchangeDirection
+  method         ExchangeMethod
+  status         ExchangeStatus    @default(SCHEDULED)
 
-  // The "Logistics Feed" - This is what users actually track
-  events HandoverEvent[]
+  // INBOUND: claimId null. OUTBOUND: both set — foundCaseId cached from claim→match for optimized querying.
+  foundCaseId String
+  foundCase   FoundDocumentCase @relation(fields: [foundCaseId], references: [id], onDelete: Cascade)
+  claimId     String?
+  claim       Claim?            @relation(fields: [claimId], references: [id])
 
-  scheduledDate DateTime
-  completedAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  // Location — stationId for STATION_DROPOFF/OWNER_PICKUP; addressId for AGENT_PICKUP/INHOUSE_DELIVERY/COURIER_DELIVERY
+  stationId String?
+  station   Station? @relation(fields: [stationId], references: [id])
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
 
+  scheduledAt DateTime
+  completedAt DateTime?
+
+  // Courier fields (COURIER_DELIVERY only — not used for INHOUSE_DELIVERY)
+  courierProvider    String?
+  trackingNumber     String? @unique
+  externalShipmentId String?
+
+  createdById   String
+  createdBy     User   @relation("ExchangeCreatedBy", fields: [createdById], references: [id])
+  completedById String?
+  completedBy   User?  @relation("ExchangeCompletedBy", fields: [completedById], references: [id])
+  cancelledById String?
+  cancelledBy   User?  @relation("ExchangeCancelledBy", fields: [cancelledById], references: [id])
+  cancelReason  String?
+
+  verifications ExchangeVerification[]
+  events        ExchangeEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([foundCaseId, status])
   @@index([trackingNumber])
-  @@map("handovers")
+  @@map("document_exchanges")
 }
 
-model HandoverEvent {
-  id         String   @id @default(uuid())
-  handoverId String
-  handover   Handover @relation(fields: [handoverId], references: [id])
+model ExchangeVerification {
+  id         String           @id @default(uuid())
+  exchangeId String
+  exchange   DocumentExchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
 
-  handledByType String? // "COURIER", "ADMIN", "SYSTEM"
-  handledById   String?
+  code        String             // plaintext 6-digit numeric
+  status      VerificationStatus @default(PENDING)
+  expiresAt   DateTime
+  attempts    Int                @default(0)
+  maxAttempts Int                @default(3) // snapshot from settings at initiation time
 
-  status       HandoverStatus
-  description  String? // e.g., "Picked up by courier", "Arrived at sorting center"
+  issuedById    String
+  issuedBy      User   @relation("VerificationIssuedBy", fields: [issuedById], references: [id])
+  confirmedById String?
+  confirmedBy   User?  @relation("VerificationConfirmedBy", fields: [confirmedById], references: [id])
+  cancelledById String?
+  cancelledBy   User?  @relation("VerificationCancelledBy", fields: [cancelledById], references: [id])
+  cancelReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([exchangeId, status])
+  @@map("exchange_verifications")
+}
+
+model ExchangeEvent {
+  id         String           @id @default(uuid())
+  exchangeId String
+  exchange   DocumentExchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+
+  // Event type strings: "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | "DELIVERED" | "NO_SHOW" | etc.
+  type         String
+  description  String?
+  handledById  String?
   latitude     Float?
   longitude    Float?
-  locationName String? // "CBD Nairobi"
-  timestamp    DateTime       @default(now())
+  locationName String?
+  timestamp    DateTime @default(now())
 
-  @@index([handoverId])
-  @@map("handover_events")
+  @@index([exchangeId])
+  @@map("exchange_events")
 }
 
-enum HandoverStatus {
-  SCHEDULED
-  // Handover has been created after claim verification.
-  // Document is already in system custody (verified).
-  // Next step: prepare for pickup or delivery.
-
-  READY_FOR_PICKUP
-  // Document is available at a pickup station or office.
-  // Owner has been notified to come collect it.
-
-  OUT_FOR_DELIVERY
-  // Document has left the station and is on its way to the owner.
-  // Used only for DELIVERY method.
-
-  DELIVERED
-  // Document has been handed over to the recipient (owner or proxy).
-  // Awaiting final confirmation (e.g., admin validation or system acknowledgment).
-
-  COMPLETED
-  // Handover process fully finalized.
-  // Owner has received and confirmed the document.
-  // Safe to trigger downstream actions (ratings, rewards, closure).
-
-  FAILED
-  // Delivery or pickup attempt failed.
-  // Examples: owner unreachable, incorrect address, logistics issue.
-  // Can be retried or escalated.
-
-  NO_SHOW
-  // Owner did not show up to collect the document at the pickup station
-  // within the scheduled time window.
-
-  CANCELLED
-  // Handover was cancelled by admin or system.
-  // Examples: claim invalidated, duplicate, or operational decision.
-}
+// ─────────────────────────────────────────────────────────────────────────────
 
 enum CustodyStatus {
   WITH_FINDER // document is physically with the finder; FoundDocumentCase in DRAFT

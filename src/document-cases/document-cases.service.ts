@@ -8,9 +8,11 @@ import {
 import dayjs from 'dayjs';
 import {
   DocumentCase,
+  ExchangeDirection,
+  ExchangeMethod,
+  ExchangeStatus,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
-  SubmissionMethod,
 } from '../../generated/prisma/client';
 import { UserSession } from '../auth/auth.types';
 import {
@@ -25,6 +27,7 @@ import {
   CreateLostDocumentCaseDto,
   QueryDocumentCaseDto,
   UpdateDocumentCaseDto,
+  UpdateFoundCaseSubmissionDto,
 } from './document-cases.dto';
 import { DocumentCasesQueryService } from './document-cases.query.service';
 import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
@@ -79,8 +82,8 @@ export class DocumentCasesService {
         lostDocumentCase: true,
         foundDocumentCase: {
           include: {
-            collections: {
-              where: { status: 'PENDING' },
+            exchanges: {
+              where: { status: ExchangeStatus.IN_PROGRESS },
               take: 1,
             },
           },
@@ -106,9 +109,9 @@ export class DocumentCasesService {
           "Can't Update Found Document Case that is not in draft status",
         );
       }
-      if (documentCase.foundDocumentCase.collections.length > 0) {
+      if (documentCase.foundDocumentCase.exchanges.length > 0) {
         throw new ConflictException(
-          'Case is locked while a collection is in progress. Cancel the collection to edit.',
+          'Case is locked while a collection exchange is in progress. Cancel the exchange to edit.',
         );
       }
     }
@@ -135,32 +138,7 @@ export class DocumentCasesService {
         description: updateDocumentCaseDto.description,
         tags: updateDocumentCaseDto.tags,
         foundDocumentCase: documentCase.foundDocumentCase
-          ? {
-              update: {
-                where: {
-                  caseId: id,
-                },
-                data: {
-                  submissionMethod: updateDocumentCaseDto.submissionMethod,
-                  pickupStationId:
-                    updateDocumentCaseDto.submissionMethod ===
-                    SubmissionMethod.DROPOFF
-                      ? updateDocumentCaseDto.pickupStationId
-                      : undefined,
-                  collectionAddressId:
-                    updateDocumentCaseDto.submissionMethod ===
-                    SubmissionMethod.PICKUP
-                      ? updateDocumentCaseDto.collectionAddressId
-                      : undefined,
-                  scheduledPickupAt:
-                    updateDocumentCaseDto.submissionMethod ===
-                      SubmissionMethod.PICKUP &&
-                    updateDocumentCaseDto.scheduledPickupAt
-                      ? dayjs(updateDocumentCaseDto.scheduledPickupAt).toDate()
-                      : undefined,
-                },
-              },
-            }
+          ? { update: { where: { caseId: id }, data: {} } }
           : undefined,
       },
     });
@@ -177,9 +155,9 @@ export class DocumentCasesService {
       eventDate,
       typeId,
       submissionMethod,
-      pickupStationId,
-      collectionAddressId,
-      scheduledPickupAt,
+      submissionStationId,
+      submissionAddressId,
+      submissionScheduledAt,
       ...caseData
     } = createDocumentCaseDto;
 
@@ -199,10 +177,29 @@ export class DocumentCasesService {
         userId: user.id,
         foundDocumentCase: {
           create: {
-            submissionMethod,
-            pickupStationId,
-            collectionAddressId,
-            scheduledPickupAt,
+            // Create a SCHEDULED inbound exchange to record the finder's submission preference
+            exchanges: {
+              create: {
+                exchangeNumber: await this.humanIdService.generate({
+                  prefix: EntityPrefix.EXCHANGE,
+                }),
+                direction: ExchangeDirection.INBOUND,
+                method: submissionMethod as ExchangeMethod,
+                status: ExchangeStatus.SCHEDULED,
+                stationId:
+                  submissionMethod === ExchangeMethod.STATION_DROPOFF
+                    ? submissionStationId
+                    : null,
+                addressId:
+                  submissionMethod === ExchangeMethod.AGENT_PICKUP
+                    ? submissionAddressId
+                    : null,
+                scheduledAt: submissionScheduledAt
+                  ? new Date(submissionScheduledAt)
+                  : new Date(),
+                createdById: user.id,
+              },
+            },
           },
         },
         document: {
@@ -222,13 +219,11 @@ export class DocumentCasesService {
       include: { document: true, extraction: true },
     });
 
-    // Create extraction record linked to this case, then queue the pipeline (document and and extraction are guaranted as they are created)
+    // Queue the extraction pipeline
     this.caseVisionExtractionQueue
       .add('extract-vision', {
         caseId: documentCase.id,
-
         documentId: documentCase.document!.id,
-
         extractionId: documentCase.extraction!.id,
         images,
         userId: user.id,
@@ -248,6 +243,90 @@ export class DocumentCasesService {
       });
 
     return await this.findOne(documentCase.id, query, user);
+  }
+
+  async updateSubmissionPreference(
+    foundCaseId: string,
+    dto: UpdateFoundCaseSubmissionDto,
+    query: CustomRepresentationQueryDto,
+    user: UserSession['user'],
+  ) {
+    const foundCase = await this.prismaService.foundDocumentCase.findUnique({
+      where: {
+        id: foundCaseId,
+        case: {
+          userId: user.id,
+        },
+      },
+      include: {
+        exchanges: {
+          where: {
+            direction: ExchangeDirection.INBOUND,
+            status: {
+              in: [ExchangeStatus.SCHEDULED, ExchangeStatus.IN_PROGRESS],
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!foundCase) throw new NotFoundException('Found Case not found');
+    if (foundCase.status !== FoundDocumentCaseStatus.DRAFT) {
+      throw new BadRequestException(
+        'Submission preference can only be updated on DRAFT cases',
+      );
+    }
+
+    const activeExchange = foundCase.exchanges[0];
+
+    if (activeExchange?.status === ExchangeStatus.IN_PROGRESS) {
+      throw new ConflictException(
+        'Cannot update submission preference while a collection exchange is in progress',
+      );
+    }
+
+    const stationId =
+      dto.submissionMethod === ExchangeMethod.STATION_DROPOFF
+        ? dto.submissionStationId
+        : null;
+    const addressId =
+      dto.submissionMethod === ExchangeMethod.AGENT_PICKUP
+        ? dto.submissionAddressId
+        : null;
+    const scheduledAt = dto.submissionScheduledAt;
+
+    if (activeExchange) {
+      await this.prismaService.documentExchange.update({
+        where: { id: activeExchange.id },
+        data: {
+          method: dto.submissionMethod,
+          stationId,
+          addressId,
+          ...(scheduledAt && { scheduledAt }),
+        },
+      });
+    } else {
+      const exchangeNumber = await this.humanIdService.generate({
+        prefix: EntityPrefix.EXCHANGE,
+      });
+      await this.prismaService.documentExchange.create({
+        data: {
+          exchangeNumber,
+          direction: ExchangeDirection.INBOUND,
+          method: dto.submissionMethod,
+          status: ExchangeStatus.SCHEDULED,
+          foundCaseId: foundCase.id,
+          stationId,
+          addressId,
+          scheduledAt: scheduledAt ?? new Date(),
+          createdById: user.id,
+        },
+      });
+    }
+
+    return this.findOne(foundCase.caseId, query, user);
   }
 
   async reportLostDocumentCaseScanned(

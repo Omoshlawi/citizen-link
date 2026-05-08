@@ -18,7 +18,7 @@ import { AuthModule } from './auth/auth.module';
 import { CaseDocumentsModule } from './case-documents/case-documents.module';
 import { ChatBotModule } from './chat-bot/chat-bot.module';
 import { ClaimModule } from './claim/claim.module';
-import { HandoverModule } from './handover/handover.module';
+import { DocumentExchangeModule } from './document-exchange/document-exchange.module';
 import { DocumentCustodyModule } from './document-custody/document-custody.module';
 import { PaymentModule } from './payment/payment.module';
 import { DisbursementModule } from './disbursement/disbursement.module';
@@ -128,7 +128,7 @@ import { StaffOperationScopeModule } from './staff-operation-scope/staff-operati
       inject: [HumanIdConfig],
     }),
     InvoiceModule,
-    HandoverModule,
+    DocumentExchangeModule,
     DocumentCustodyModule,
     PaymentModule,
     DisbursementModule,

@@ -805,11 +805,11 @@
       },
       "push_title": {
         "source": "text",
-        "text": "Handover Scheduled \u2014 #{{handover.handoverNumber}}"
+        "text": "Handover Scheduled \u2014 #{{handover.exchangeNumber}}"
       },
       "push_body": {
         "source": "text",
-        "text": "Your {{handover.method}} handover for claim #{{handover.claim.claimNumber}} is confirmed for {{handover.scheduledDate}}."
+        "text": "Your {{handover.method}} handover for claim #{{handover.claim.claimNumber}} is confirmed for {{handover.scheduledAt}}."
       },
       "push_data": {
         "source": "text",

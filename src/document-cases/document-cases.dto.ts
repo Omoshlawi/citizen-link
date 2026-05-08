@@ -17,13 +17,12 @@ import { ApiProperty, PickType } from '@nestjs/swagger';
 import {
   CustodyStatus,
   DocumentCase,
-  DocumentCollectionStatus,
+  ExchangeMethod,
   ExtractionStatus,
   FoundDocumentCase,
   FoundDocumentCaseStatus,
   LostDocumentCase,
   LostDocumentCaseStatus,
-  SubmissionMethod,
 } from '../../generated/prisma/client';
 
 export const QueryDocumentCaseSchema = z
@@ -60,7 +59,9 @@ export const QueryDocumentCaseSchema = z
       .optional()
       .default(false),
     extractionStatus: z.enum(ExtractionStatus).optional(),
-    submissionMethod: z.enum(SubmissionMethod).optional(),
+    submissionMethod: z
+      .enum([ExchangeMethod.AGENT_PICKUP, ExchangeMethod.STATION_DROPOFF])
+      .optional(),
     custodyStatus: z.enum(CustodyStatus).optional(),
     currentStationId: z
       .uuid()
@@ -70,12 +71,14 @@ export const QueryDocumentCaseSchema = z
       .uuid()
       .optional()
       .describe(
-        'Filter DROPOFF found cases by their designated pickup station',
+        `Filter ${ExchangeMethod.STATION_DROPOFF} found cases by their designated pickup station`,
       ),
     collectionArea: z
       .string()
       .optional()
-      .describe('Filter PICKUP found cases by collection address area.'),
+      .describe(
+        `Filter ${ExchangeMethod.AGENT_PICKUP} found cases by collection address area.`,
+      ),
   })
   .extend(
     QueryAddressSchema.pick({
@@ -114,53 +117,105 @@ const FoundDocumentCaseBaseSchema = z.object({
   tags: z.string().min(1).array().optional(),
   description: z.string().optional(),
   images: z.string().nonempty().array().nonempty().max(2),
-  submissionMethod: z.enum(['DROPOFF', 'PICKUP']).optional(),
-  pickupStationId: z.uuid().optional().describe('Drop Off - Partner Station'),
-  collectionAddressId: z
+  // Optional submission preference — creates a SCHEDULED inbound exchange on case creation
+  submissionMethod: z
+    .enum([ExchangeMethod.AGENT_PICKUP, ExchangeMethod.STATION_DROPOFF])
+    .optional(),
+  submissionStationId: z
+    .uuid()
+    .optional()
+    .describe('Drop Off - Partner Station'),
+  submissionAddressId: z
     .uuid()
     .optional()
     .describe('Pickup - Collection Address'),
-  scheduledPickupAt: z.iso
+  submissionScheduledAt: z.iso
     .datetime()
     .optional()
-    .describe('Pickup - Scheduled Pickup Date and Time'),
+    .describe('Scheduled Pickup/Dro off Date and Time'),
 });
+
+export const UpdateFoundCaseSubmissionSchema = z
+  .object({
+    submissionMethod: z.enum([
+      ExchangeMethod.STATION_DROPOFF,
+      ExchangeMethod.AGENT_PICKUP,
+    ]),
+    submissionStationId: z.uuid().optional(),
+    submissionAddressId: z.uuid().optional(),
+    submissionScheduledAt: z.iso.datetime(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.submissionMethod === ExchangeMethod.STATION_DROPOFF &&
+      !data.submissionStationId
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['submissionStationId'],
+        message: `A station is required for ${ExchangeMethod.STATION_DROPOFF} submission`,
+      });
+    }
+    if (data.submissionMethod === ExchangeMethod.AGENT_PICKUP) {
+      if (!data.submissionAddressId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['submissionAddressId'],
+          message: `A submission address is required for ${ExchangeMethod.AGENT_PICKUP}`,
+        });
+      }
+    }
+    if (!dayjs(data.submissionScheduledAt).isAfter(dayjs())) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['submissionScheduledAt'],
+        message: 'Scheduled time must be a future date and time',
+      });
+    }
+  });
+
+export class UpdateFoundCaseSubmissionDto extends createZodDto(
+  UpdateFoundCaseSubmissionSchema,
+) {}
 
 export const FoundDocumentCaseSchema = FoundDocumentCaseBaseSchema.superRefine(
   (data, ctx) => {
-    if (data.submissionMethod === 'DROPOFF' && !data.pickupStationId) {
+    if (
+      data.submissionMethod === ExchangeMethod.STATION_DROPOFF &&
+      !data.submissionStationId
+    ) {
       ctx.addIssue({
         code: 'custom',
-        path: ['pickupStationId'],
-        message: 'A partner station is required for drop-off submission',
+        path: ['submissionStationId'],
+        message: `A station is required for ${ExchangeMethod.STATION_DROPOFF} submission`,
       });
     }
-    if (data.submissionMethod === 'PICKUP') {
-      if (!data.collectionAddressId) {
+    if (data.submissionMethod === ExchangeMethod.AGENT_PICKUP) {
+      if (!data.submissionAddressId) {
         ctx.addIssue({
           code: 'custom',
-          path: ['collectionAddressId'],
-          message: 'A collection address is required for agent pickup',
+          path: ['submissionAddressId'],
+          message: `A submission address is required for ${ExchangeMethod.AGENT_PICKUP}`,
         });
       }
-      if (!data.scheduledPickupAt) {
+    }
+    if (data.submissionMethod) {
+      if (!data.submissionScheduledAt) {
         ctx.addIssue({
           code: 'custom',
-          path: ['scheduledPickupAt'],
-          message:
-            'A scheduled pickup date and time is required for agent pickup',
+          path: ['submissionScheduledAt'],
+          message: 'A scheduled pickup date and time is required',
         });
-      } else if (!dayjs(data.scheduledPickupAt).isAfter(dayjs())) {
+      } else if (!dayjs(data.submissionScheduledAt).isAfter(dayjs())) {
         ctx.addIssue({
           code: 'custom',
-          path: ['scheduledPickupAt'],
-          message: 'Scheduled pickup must be a future date and time',
+          path: ['submissionScheduledAt'],
+          message: 'Scheduled time must be a future date and time',
         });
       }
     }
   },
 );
-
 export const LostDocumentCaseSchema = FoundDocumentCaseBaseSchema.omit({
   images: true,
 }).extend(CaseDocumentSchema.omit({ images: true }).shape);
@@ -214,54 +269,7 @@ export class SecurityQuestionDto {
   answer!: string;
 }
 
-export class ActiveCollectionDto {
-  @ApiProperty()
-  id!: string;
-  @ApiProperty({ enum: DocumentCollectionStatus })
-  status!: DocumentCollectionStatus;
-  @ApiProperty()
-  expiresAt!: Date;
-  @ApiProperty()
-  code!: string;
-  @ApiProperty()
-  attempts!: number;
-  @ApiProperty()
-  maxAttempts!: number;
-  @ApiProperty()
-  createdAt!: Date;
-}
-
-export class InitiateCollectionResponseDto {
-  @ApiProperty()
-  collectionId!: string;
-  @ApiProperty()
-  expiresAt!: Date;
-}
-
-export const ConfirmCollectionSchema = z.object({
-  code: z
-    .string()
-    .length(6)
-    .regex(/^\d{6}$/, 'Code must be 6 digits'),
-});
-export class ConfirmCollectionDto extends createZodDto(
-  ConfirmCollectionSchema,
-) {}
-
-export const CancelCollectionSchema = z.object({
-  reason: z.string().min(5, 'Reason must be at least 5 characters'),
-});
-export class CancelCollectionDto extends createZodDto(CancelCollectionSchema) {}
-
 export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
-  @ApiProperty()
-  pickupStationId!: string | null;
-  @ApiProperty({ enum: SubmissionMethod, nullable: true })
-  submissionMethod!: 'DROPOFF' | 'PICKUP' | null;
-  @ApiProperty({ nullable: true })
-  collectionAddressId!: string | null;
-  @ApiProperty({ nullable: true })
-  scheduledPickupAt!: Date | null;
   @ApiProperty()
   createdAt!: Date;
   @ApiProperty()
@@ -280,8 +288,6 @@ export class FoundDocumentCaseResponseDto implements FoundDocumentCase {
   custodyStatus!: CustodyStatus;
   @ApiProperty({ required: false })
   currentStationId!: string | null;
-  @ApiProperty({ type: ActiveCollectionDto, nullable: true, required: false })
-  activeCollection?: ActiveCollectionDto | null;
 }
 
 export class GetDocumentCaseResponseDto implements DocumentCase {

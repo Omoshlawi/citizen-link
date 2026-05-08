@@ -2,7 +2,7 @@ export enum EntityPrefix {
   TEST = 'TST',
   MATCH = 'MTH',
   CLAIM = 'CLM',
-  HANDOVER = 'HND',
+  EXCHANGE = 'EXC',
   INVOICE = 'INV',
   TRANSACTION = 'TRX',
   DISBURSEMENT = 'DSB',

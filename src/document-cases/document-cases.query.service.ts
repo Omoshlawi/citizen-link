@@ -3,11 +3,11 @@ import { AuthService } from '@thallesp/nestjs-better-auth';
 import dayjs from 'dayjs';
 import {
   CustodyStatus,
+  ExchangeStatus,
   ExtractionStatus,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
   Prisma,
-  SubmissionMethod,
 } from '../../generated/prisma/client';
 import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import {
@@ -81,57 +81,69 @@ export class DocumentCasesQueryService {
                   AND: [
                     {
                       status: query.status as FoundDocumentCaseStatus,
-                      submissionMethod:
-                        query.submissionMethod as SubmissionMethod,
                       custodyStatus: query.custodyStatus as CustodyStatus,
                       currentStationId: query.currentStationId,
-                      pickupStationId: query.pickupStationId,
-                    },
-                    {
-                      OR: query.collectionArea
-                        ? [
+                      // Filter by active exchange addresses
+                      exchanges: {
+                        some: {
+                          AND: [
                             {
-                              collectionAddress: {
-                                level1: {
-                                  equals: query.collectionArea,
-                                  mode: 'insensitive',
-                                },
+                              status: {
+                                in: [
+                                  ExchangeStatus.SCHEDULED,
+                                  ExchangeStatus.IN_PROGRESS,
+                                ],
                               },
                             },
                             {
-                              collectionAddress: {
-                                level2: {
-                                  equals: query.collectionArea,
-                                  mode: 'insensitive',
-                                },
-                              },
+                              OR: query.collectionArea
+                                ? [
+                                    {
+                                      address: {
+                                        level1: {
+                                          equals: query.collectionArea,
+                                          mode: 'insensitive',
+                                        },
+                                      },
+                                    },
+                                    {
+                                      address: {
+                                        level2: {
+                                          equals: query.collectionArea,
+                                          mode: 'insensitive',
+                                        },
+                                      },
+                                    },
+                                    {
+                                      address: {
+                                        level3: {
+                                          equals: query.collectionArea,
+                                          mode: 'insensitive',
+                                        },
+                                      },
+                                    },
+                                    {
+                                      address: {
+                                        level4: {
+                                          equals: query.collectionArea,
+                                          mode: 'insensitive',
+                                        },
+                                      },
+                                    },
+                                    {
+                                      address: {
+                                        level5: {
+                                          equals: query.collectionArea,
+                                          mode: 'insensitive',
+                                        },
+                                      },
+                                    },
+                                  ]
+                                : undefined,
                             },
-                            {
-                              collectionAddress: {
-                                level3: {
-                                  equals: query.collectionArea,
-                                  mode: 'insensitive',
-                                },
-                              },
-                            },
-                            {
-                              collectionAddress: {
-                                level4: {
-                                  equals: query.collectionArea,
-                                  mode: 'insensitive',
-                                },
-                              },
-                            },
-                            {
-                              collectionAddress: {
-                                level5: {
-                                  equals: query.collectionArea,
-                                  mode: 'insensitive',
-                                },
-                              },
-                            },
-                          ]
-                        : undefined,
+                          ],
+                        },
+                      },
                     },
                   ],
                 }

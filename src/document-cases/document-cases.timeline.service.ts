@@ -53,9 +53,11 @@ export class DocumentCasesTimelineService {
                     id: true,
                     createdAt: true,
                     status: true,
-                    handover: {
+                    exchanges: {
+                      orderBy: { createdAt: 'desc' },
+                      take: 1,
                       select: {
-                        scheduledDate: true,
+                        scheduledAt: true,
                         completedAt: true,
                         status: true,
                       },
@@ -80,9 +82,11 @@ export class DocumentCasesTimelineService {
                     id: true,
                     createdAt: true,
                     status: true,
-                    handover: {
+                    exchanges: {
+                      orderBy: { createdAt: 'desc' },
+                      take: 1,
                       select: {
-                        scheduledDate: true,
+                        scheduledAt: true,
                         completedAt: true,
                         status: true,
                       },
@@ -143,7 +147,7 @@ export class DocumentCasesTimelineService {
         })[0] ?? null)
       : null;
 
-    const handover = selectedClaim?.handover ?? null;
+    const handover = selectedClaim?.exchanges?.[0] ?? null;
 
     // Fetch sub-entity transitions + claim transitions in one round trip.
     const transitionEntityIds = [

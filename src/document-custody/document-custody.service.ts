@@ -8,9 +8,10 @@ import {
   ClaimStatus,
   DocumentOperationItemStatus,
   DocumentOperationStatus,
-  HandoverMethod,
+  ExchangeDirection,
+  ExchangeMethod,
+  ExchangeStatus,
   Prisma,
-  SubmissionMethod,
 } from '../../generated/prisma/client';
 import { UserSession } from '../auth/auth.types';
 import {
@@ -192,8 +193,8 @@ export class DocumentCustodyService {
 
   /**
    * Resolves per-item userAddressId from existing user data:
-   * - RECEIPT + PICKUP  → foundCase.collectionAddressId
-   * - HANDOVER + DELIVERY → claim.handover.deliveryAddressId
+   * - RECEIPT + AGENT_PICKUP  → exchange.addressId (active inbound exchange for the found case)
+   * - HANDOVER + delivery method → claim.exchange.addressId
    * Returns an empty map for all other operation codes.
    */
   private async resolveItemAddresses(
@@ -201,17 +202,23 @@ export class DocumentCustodyService {
     foundCaseIds: string[],
   ): Promise<Record<string, string | null>> {
     if (opCode === CustodyOperationCode.RECEIPT) {
-      const cases = await this.prisma.foundDocumentCase.findMany({
-        where: { id: { in: foundCaseIds } },
-        select: { id: true, submissionMethod: true, collectionAddressId: true },
+      // For AGENT_PICKUP exchanges, the delivery address is on the exchange
+      const exchanges = await this.prisma.documentExchange.findMany({
+        where: {
+          foundCaseId: { in: foundCaseIds },
+          direction: ExchangeDirection.INBOUND,
+          method: ExchangeMethod.AGENT_PICKUP,
+          status: {
+            in: [ExchangeStatus.SCHEDULED, ExchangeStatus.IN_PROGRESS],
+          },
+        },
+        select: { foundCaseId: true, addressId: true },
       });
+      const exchangeMap = new Map(
+        exchanges.map((ex) => [ex.foundCaseId, ex.addressId]),
+      );
       return Object.fromEntries(
-        cases.map((fc) => [
-          fc.id,
-          fc.submissionMethod === SubmissionMethod.PICKUP
-            ? fc.collectionAddressId
-            : null,
-        ]),
+        foundCaseIds.map((id) => [id, exchangeMap.get(id) ?? null]),
       );
     }
     if (opCode === CustodyOperationCode.HANDOVER) {
@@ -222,16 +229,29 @@ export class DocumentCustodyService {
         },
         select: {
           foundDocumentCaseId: true,
-          handover: { select: { method: true, deliveryAddressId: true } },
+          exchanges: {
+            where: {
+              status: {
+                in: [ExchangeStatus.SCHEDULED, ExchangeStatus.IN_PROGRESS],
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { method: true, addressId: true },
+          },
         },
       });
       return Object.fromEntries(
-        claims.map((c) => [
-          c.foundDocumentCaseId,
-          c.handover?.method === HandoverMethod.DELIVERY
-            ? c.handover.deliveryAddressId
-            : null,
-        ]),
+        claims.map((c) => {
+          const ex = c.exchanges[0];
+          return [
+            c.foundDocumentCaseId,
+            ex?.method === ExchangeMethod.INHOUSE_DELIVERY ||
+            ex?.method === ExchangeMethod.COURIER_DELIVERY
+              ? ex.addressId
+              : null,
+          ];
+        }),
       );
     }
     return {};

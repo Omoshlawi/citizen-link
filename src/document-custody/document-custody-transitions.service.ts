@@ -8,6 +8,7 @@ import {
   CustodyStatus,
   DocumentOperationItemStatus,
   DocumentOperationStatus,
+  ExchangeStatus,
   FoundDocumentCaseStatus,
   Prisma,
 } from '../../generated/prisma/client';
@@ -229,13 +230,18 @@ export class DocumentCustodyTransitionsService {
         .map((item) => item.foundCaseId)
         .filter((fid): fid is string => fid != null);
 
-      const pendingCount = await this.prisma.documentCollection.count({
-        where: { foundCaseId: { in: foundCaseIds }, status: 'PENDING' },
+      const pendingCount = await this.prisma.documentExchange.count({
+        where: {
+          foundCaseId: { in: foundCaseIds },
+          status: {
+            in: [ExchangeStatus.IN_PROGRESS],
+          },
+        },
       });
 
       if (pendingCount > 0)
         throw new ConflictException(
-          `${pendingCount} item(s) have active pending collections. Confirm or cancel them before executing.`,
+          `${pendingCount} item(s) have active pending exchanges. Confirm or cancel them before executing.`,
         );
     }
 
