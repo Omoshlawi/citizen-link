@@ -84,66 +84,68 @@ export class DocumentCasesQueryService {
                       custodyStatus: query.custodyStatus as CustodyStatus,
                       currentStationId: query.currentStationId,
                       // Filter by active exchange addresses
-                      exchanges: {
-                        some: {
-                          AND: [
-                            {
-                              status: {
-                                in: [
-                                  ExchangeStatus.SCHEDULED,
-                                  ExchangeStatus.IN_PROGRESS,
-                                ],
+                      ...(query.collectionArea && {
+                        exchanges: {
+                          some: {
+                            AND: [
+                              {
+                                status: {
+                                  in: [
+                                    ExchangeStatus.SCHEDULED,
+                                    ExchangeStatus.IN_PROGRESS,
+                                  ],
+                                },
                               },
-                            },
-                            {
-                              OR: query.collectionArea
-                                ? [
-                                    {
-                                      address: {
-                                        level1: {
-                                          equals: query.collectionArea,
-                                          mode: 'insensitive',
+                              {
+                                OR: query.collectionArea
+                                  ? [
+                                      {
+                                        address: {
+                                          level1: {
+                                            equals: query.collectionArea,
+                                            mode: 'insensitive',
+                                          },
                                         },
                                       },
-                                    },
-                                    {
-                                      address: {
-                                        level2: {
-                                          equals: query.collectionArea,
-                                          mode: 'insensitive',
+                                      {
+                                        address: {
+                                          level2: {
+                                            equals: query.collectionArea,
+                                            mode: 'insensitive',
+                                          },
                                         },
                                       },
-                                    },
-                                    {
-                                      address: {
-                                        level3: {
-                                          equals: query.collectionArea,
-                                          mode: 'insensitive',
+                                      {
+                                        address: {
+                                          level3: {
+                                            equals: query.collectionArea,
+                                            mode: 'insensitive',
+                                          },
                                         },
                                       },
-                                    },
-                                    {
-                                      address: {
-                                        level4: {
-                                          equals: query.collectionArea,
-                                          mode: 'insensitive',
+                                      {
+                                        address: {
+                                          level4: {
+                                            equals: query.collectionArea,
+                                            mode: 'insensitive',
+                                          },
                                         },
                                       },
-                                    },
-                                    {
-                                      address: {
-                                        level5: {
-                                          equals: query.collectionArea,
-                                          mode: 'insensitive',
+                                      {
+                                        address: {
+                                          level5: {
+                                            equals: query.collectionArea,
+                                            mode: 'insensitive',
+                                          },
                                         },
                                       },
-                                    },
-                                  ]
-                                : undefined,
-                            },
-                          ],
+                                    ]
+                                  : undefined,
+                              },
+                            ],
+                          },
                         },
-                      },
+                      }),
                     },
                   ],
                 }
