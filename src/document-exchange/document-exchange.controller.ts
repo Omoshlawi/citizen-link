@@ -31,7 +31,6 @@ import {
   CancelVerificationDto,
   GetExchangeResponseDto,
   IssueCodeQueryDto,
-  IssueVerificationResponseDto,
   QueryExchangeDto,
   QueryExchangeResponseDto,
   ScheduleInboundExchangeDto,

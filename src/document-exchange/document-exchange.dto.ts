@@ -233,7 +233,6 @@ export class QueryExchangeDto extends createZodDto(QueryExchangeSchema) {}
 
 // ─── Response DTOs ────────────────────────────────────────────────────────────
 
-
 export class ActiveExchangeDto {
   @ApiProperty()
   id!: string;
