@@ -14,28 +14,31 @@ import {
 } from '@nestjs/swagger';
 import { Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
-import { UserSession } from '../auth/auth.types';
-import {
-  CustomRepresentationQueryDto,
-  OriginalUrl,
-} from '../common/query-builder';
 import {
   ActiveStationMode,
   RequireActiveStation,
   RequireSystemPermission,
 } from '../auth/auth.decorators';
-import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
+import { UserSession } from '../auth/auth.types';
 import {
+  CustomRepresentationQueryDto,
+  OriginalUrl,
+} from '../common/query-builder';
+import { DocumentExchangeBidirectionService } from './document-exchange.bidirection.service';
+import {
+  CancelCodeQueryDto,
   CancelExchangeDto,
   CancelVerificationDto,
-  ConfirmOutboundCodeDto,
   GetExchangeResponseDto,
+  IssueCodeQueryDto,
   IssueVerificationResponseDto,
   QueryExchangeDto,
   QueryExchangeResponseDto,
   ScheduleInboundExchangeDto,
   ScheduleOutboundExchangeDto,
+  VerifyCodeQueryDto,
   VerifyExchangeCodeDto,
+  WithdrawScheduleQueryDto,
 } from './document-exchange.dto';
 import { DocumentExchangeInboundService } from './document-exchange.inbound.service';
 import { DocumentExchangeOutboundService } from './document-exchange.outbound.service';
@@ -45,9 +48,8 @@ export class DocumentExchangeController {
   constructor(
     private readonly inbound: DocumentExchangeInboundService,
     private readonly outbound: DocumentExchangeOutboundService,
+    private readonly biderection: DocumentExchangeBidirectionService,
   ) {}
-
-  // ─── Inbound — user (finder) routes ──────────────────────────────────────
 
   @Post('inbound/schedule')
   @ApiOperation({ summary: 'Schedule inbound exchange (finder/case owner)' })
@@ -59,96 +61,6 @@ export class DocumentExchangeController {
   ) {
     return this.inbound.scheduleExchange(dto, userSession);
   }
-
-  @Post('inbound/:foundCaseId/withdraw')
-  @ApiOperation({
-    summary:
-      'Withdraw (cancel) a scheduled inbound exchange (finder/case owner)',
-  })
-  @ApiErrorsResponse({ badRequest: true })
-  withdrawInbound(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: CancelExchangeDto,
-    @Session() { user }: UserSession,
-  ) {
-    return this.inbound.cancelExchange(foundCaseId, dto, user, true);
-  }
-
-  // ─── Inbound — staff routes ───────────────────────────────────────────────
-
-  @Post('inbound/:foundCaseId/issue-code')
-  @ApiOperation({
-    summary: 'Issue verification code for inbound exchange (staff only)',
-  })
-  @ApiCreatedResponse({ type: IssueVerificationResponseDto })
-  @ApiErrorsResponse({ badRequest: true })
-  @RequireSystemPermission({ documentCase: ['collect'] })
-  @RequireActiveStation(ActiveStationMode.REQUIRED)
-  issueInboundCode(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Session() userSession: UserSession,
-  ) {
-    return this.inbound.issueVerification(foundCaseId, userSession);
-  }
-
-  @Post('inbound/:foundCaseId/verify')
-  @ApiOperation({
-    summary: 'Confirm verification code for inbound exchange (staff only)',
-  })
-  @ApiErrorsResponse({ badRequest: true })
-  @RequireSystemPermission({ documentCase: ['collect'] })
-  @RequireActiveStation(ActiveStationMode.REQUIRED)
-  verifyInbound(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: VerifyExchangeCodeDto,
-    @Session() userSession: UserSession,
-  ) {
-    return this.inbound.verifyCode(foundCaseId, dto, userSession);
-  }
-
-  @Post('inbound/:foundCaseId/cancel-code')
-  @ApiOperation({
-    summary:
-      'Cancel active verification session, revert exchange to SCHEDULED (staff only)',
-  })
-  @ApiErrorsResponse({ badRequest: true })
-  @RequireSystemPermission({ documentCase: ['collect'] })
-  @RequireActiveStation(ActiveStationMode.REQUIRED)
-  cancelInboundCode(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: CancelVerificationDto,
-    @Session() { user }: UserSession,
-  ) {
-    return this.inbound.cancelVerification(foundCaseId, dto, user);
-  }
-
-  @Post('inbound/:foundCaseId/cancel')
-  @ApiOperation({ summary: 'Cancel active inbound exchange (staff only)' })
-  @ApiErrorsResponse({ badRequest: true })
-  @RequireSystemPermission({ documentCase: ['collect'] })
-  @RequireActiveStation(ActiveStationMode.REQUIRED)
-  cancelInbound(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Body() dto: CancelExchangeDto,
-    @Session() { user }: UserSession,
-  ) {
-    return this.inbound.cancelExchange(foundCaseId, dto, user);
-  }
-
-  @Get('inbound/:foundCaseId/active')
-  @ApiOperation({
-    summary:
-      'Get active inbound exchange state (code visible to document owner only)',
-  })
-  @ApiErrorsResponse()
-  getActiveInbound(
-    @Param('foundCaseId', ParseUUIDPipe) foundCaseId: string,
-    @Session() { user }: UserSession,
-  ) {
-    return this.inbound.getActiveExchangeState(foundCaseId, user);
-  }
-
-  // ─── Outbound — user (claimant) routes ───────────────────────────────────
 
   @Post('outbound')
   @ApiOperation({
@@ -164,37 +76,50 @@ export class DocumentExchangeController {
     return this.outbound.scheduleExchange(dto, query, user);
   }
 
-  @Post('outbound/:id/cancel')
-  @ApiOperation({ summary: 'Cancel a scheduled outbound exchange (claimant)' })
-  @ApiOkResponse({ type: GetExchangeResponseDto })
+  @Post('withdraw')
+  @ApiOperation({
+    summary: 'Withdraw/cancel a scheduled exchange (end user)',
+  })
   @ApiErrorsResponse({ badRequest: true })
-  cancelOutbound(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() cancelDto: StatusTransitionReasonsDto,
-    @Query() query: CustomRepresentationQueryDto,
+  withdraw(
+    @Query() query: WithdrawScheduleQueryDto,
+    @Body() dto: CancelExchangeDto,
     @Session() { user }: UserSession,
   ) {
-    return this.outbound.cancelOutbound(id, cancelDto, query, user);
+    return this.biderection.withDraw(query, dto, user);
   }
 
-  // ─── Outbound — staff routes ──────────────────────────────────────────────
-
-  @Post('outbound/:id/issue-code')
+  @Post('issue-code')
   @ApiOperation({
-    summary: 'Issue verification code for outbound exchange (staff only)',
+    summary: 'Issue verification code for exchange (staff only)',
   })
   @ApiCreatedResponse({ type: IssueVerificationResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
-  issueOutboundCode(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Session() userSession: UserSession,
+  issueCode(
+    @Query() query: IssueCodeQueryDto,
+    @Session() { user }: UserSession,
   ) {
-    return this.outbound.issueVerification(id, userSession);
+    return this.biderection.issueCode(query, user);
   }
 
-  @Post('outbound/:id/cancel-code')
+  @Post('verify-code')
+  @ApiOperation({
+    summary: 'Verify exchange',
+  })
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ documentCase: ['collect'] })
+  @RequireActiveStation(ActiveStationMode.REQUIRED)
+  verifyInbound(
+    @Query() query: VerifyCodeQueryDto,
+    @Body() dto: VerifyExchangeCodeDto,
+    @Session() userSession: UserSession,
+  ) {
+    return this.biderection.verifyCode(query, dto, userSession);
+  }
+
+  @Post('cancel-code')
   @ApiOperation({
     summary:
       'Cancel active verification session, revert exchange to SCHEDULED (staff only)',
@@ -202,31 +127,13 @@ export class DocumentExchangeController {
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
-  cancelOutboundCode(
-    @Param('id', ParseUUIDPipe) id: string,
+  cancelInboundCode(
+    @Query() query: CancelCodeQueryDto,
     @Body() dto: CancelVerificationDto,
     @Session() { user }: UserSession,
   ) {
-    return this.outbound.cancelVerification(id, dto, user);
+    return this.biderection.cancelCode(query, dto, user);
   }
-
-  @Post('outbound/:id/verify')
-  @ApiOperation({
-    summary: 'Confirm handover code for outbound exchange (staff only)',
-  })
-  @ApiErrorsResponse({ badRequest: true })
-  @RequireSystemPermission({ documentCase: ['collect'] })
-  @RequireActiveStation(ActiveStationMode.REQUIRED)
-  confirmOutbound(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ConfirmOutboundCodeDto,
-    @Session() userSession: UserSession,
-  ) {
-    return this.outbound.confirmVerification(id, dto, userSession);
-  }
-
-  // ─── Shared ───────────────────────────────────────────────────────────────
-
   @Get()
   @ApiOperation({ summary: 'Query exchanges' })
   @ApiOkResponse({ type: QueryExchangeResponseDto })
@@ -236,7 +143,7 @@ export class DocumentExchangeController {
     @OriginalUrl() originalUrl: string,
     @Session() { user }: UserSession,
   ) {
-    return this.outbound.findAll(query, originalUrl, user);
+    return this.biderection.findAll(query, originalUrl, user);
   }
 
   @Get(':id')
@@ -248,6 +155,6 @@ export class DocumentExchangeController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.outbound.findOne(id, query, user);
+    return this.biderection.findOne(id, query, user);
   }
 }

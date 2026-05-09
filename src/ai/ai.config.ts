@@ -23,7 +23,7 @@ export class AiConfig {
   @Value('VISION_AI_MODEL', {
     parse: z.string({ message: 'Vision AI Model is required' }).optional()
       .parse,
-    default: 'gemma3:4b',
+    default: 'gemma4',
     // default: 'maternion/LightOnOCR-2:1b',
     // default: 'qwen3-vl:8b',
     // default: 'llama3.2-vision:latest',
@@ -43,7 +43,7 @@ export class AiConfig {
     parse: z
       .string({ message: 'Text Extraction AI Model is required' })
       .optional().parse,
-    default: 'gemma3:4b',
+    default: 'gemma4',
   })
   textExtractionAiModel: ChatModel;
   @Value('TEXT_EXTRACTION_AI_BASE_URL', {

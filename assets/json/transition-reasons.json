@@ -289,6 +289,15 @@
   },
   {
     "entityType": "FoundDocumentCase",
+    "fromStatus": "VERIFIED",
+    "toStatus": "COMPLETED",
+    "code": "STAFF_CONFIRMED_HANDOVER",
+    "auto": true,
+    "label": "Staff handed over the document to owner",
+    "description": "Staff confirmed handover of found document to owner"
+  },
+  {
+    "entityType": "FoundDocumentCase",
     "fromStatus": "SUBMITTED",
     "toStatus": "VERIFIED",
     "code": "DOCUMENT_RECEIVED_AND_VERIFIED",
@@ -359,7 +368,6 @@
     "label": "Other",
     "description": "Other reason not listed."
   },
-
   {
     "entityType": "DocumentOperation",
     "fromStatus": "DRAFT",
@@ -387,7 +395,6 @@
     "label": "Executed",
     "description": "Operation was executed and custody transitions applied to all items."
   },
-
   {
     "entityType": "DocumentOperation",
     "fromStatus": "SUBMITTED",
@@ -433,7 +440,6 @@
     "label": "Policy violation",
     "description": "Violates custody policy (e.g., attempting to dispose a document with active claims)."
   },
-
   {
     "entityType": "DocumentOperation",
     "fromStatus": "*",

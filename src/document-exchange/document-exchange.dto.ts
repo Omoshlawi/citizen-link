@@ -8,7 +8,10 @@ import {
   VerificationStatus,
 } from '../../generated/prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
-import { QueryBuilderSchema } from '../common/query-builder';
+import {
+  CustomRepresentationQuerySchema,
+  QueryBuilderSchema,
+} from '../common/query-builder';
 import dayjs from 'dayjs';
 
 // ─── Inbound (finder → station) ───────────────────────────────────────────────
@@ -145,6 +148,73 @@ export class ScheduleOutboundExchangeDto extends createZodDto(
 
 // ─── Query ────────────────────────────────────────────────────────────────────
 
+export const WithdrawScheduleQuerySchema = z
+  .object({
+    direction: z.enum(ExchangeDirection),
+    foundCaseId: z
+      .uuid()
+      .optional()
+      .describe(`Required for ${ExchangeDirection.INBOUND}`),
+    claimId: z
+      .uuid()
+      .optional()
+      .describe(`Required for ${ExchangeDirection.OUTBOUND}`),
+  })
+  .extend(CustomRepresentationQuerySchema.shape)
+  .superRefine((data, ctx) => {
+    if (data.direction === ExchangeDirection.INBOUND && !data.foundCaseId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['foundCaseId'],
+        message: `A found case is required for ${ExchangeDirection.INBOUND}`,
+      });
+    }
+    if (data.direction === ExchangeDirection.OUTBOUND && !data.claimId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['claimId'],
+        message: `A claim is required for ${ExchangeDirection.OUTBOUND}`,
+      });
+    }
+  });
+
+export class WithdrawScheduleQueryDto extends createZodDto(
+  WithdrawScheduleQuerySchema,
+) {}
+
+export const IssueCodeQuerySchema = z
+  .object({
+    direction: z.enum(ExchangeDirection),
+    foundCaseId: z
+      .uuid()
+      .optional()
+      .describe(`Required for ${ExchangeDirection.INBOUND}`),
+    exchangeNumber: z
+      .string()
+      .optional()
+      .describe(`Required for ${ExchangeDirection.OUTBOUND}`),
+  })
+  .extend(CustomRepresentationQuerySchema.shape)
+  .superRefine((data, ctx) => {
+    if (data.direction === ExchangeDirection.INBOUND && !data.foundCaseId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['foundCaseId'],
+        message: `A found case is required for ${ExchangeDirection.INBOUND}`,
+      });
+    }
+    if (data.direction === ExchangeDirection.OUTBOUND && !data.exchangeNumber) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['exchangeNumber'],
+        message: `An exchange number is required for ${ExchangeDirection.OUTBOUND}`,
+      });
+    }
+  });
+export class IssueCodeQueryDto extends createZodDto(IssueCodeQuerySchema) {}
+export class VerifyCodeQueryDto extends createZodDto(IssueCodeQuerySchema) {}
+export class CancelCodeQueryDto extends createZodDto(IssueCodeQuerySchema) {}
+
 export const QueryExchangeSchema = z.object({
   ...QueryBuilderSchema.shape,
   direction: z.enum(ExchangeDirection).optional(),
@@ -152,6 +222,12 @@ export const QueryExchangeSchema = z.object({
   status: z.enum(ExchangeStatus).optional(),
   foundCaseId: z.uuid().optional(),
   claimId: z.uuid().optional(),
+  active: z
+    .stringbool({ truthy: ['1', 'true'], falsy: ['0', 'false'] })
+    .describe(
+      `Queries ${ExchangeStatus.SCHEDULED} and ${ExchangeStatus.IN_PROGRESS} statuses.Ignored when status param is supplied`,
+    )
+    .optional(),
 });
 export class QueryExchangeDto extends createZodDto(QueryExchangeSchema) {}
 
