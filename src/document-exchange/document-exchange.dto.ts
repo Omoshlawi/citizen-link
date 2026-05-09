@@ -233,19 +233,6 @@ export class QueryExchangeDto extends createZodDto(QueryExchangeSchema) {}
 
 // ─── Response DTOs ────────────────────────────────────────────────────────────
 
-export class IssueVerificationResponseDto {
-  @ApiProperty()
-  exchangeId!: string;
-
-  @ApiProperty()
-  exchangeNumber!: string;
-
-  @ApiProperty()
-  verificationId!: string;
-
-  @ApiProperty()
-  expiresAt!: Date;
-}
 
 export class ActiveExchangeDto {
   @ApiProperty()

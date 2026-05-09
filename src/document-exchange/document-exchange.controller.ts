@@ -80,6 +80,7 @@ export class DocumentExchangeController {
   @ApiOperation({
     summary: 'Withdraw/cancel a scheduled exchange (end user)',
   })
+  @ApiCreatedResponse({ type: GetExchangeResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   withdraw(
     @Query() query: WithdrawScheduleQueryDto,
@@ -93,7 +94,7 @@ export class DocumentExchangeController {
   @ApiOperation({
     summary: 'Issue verification code for exchange (staff only)',
   })
-  @ApiCreatedResponse({ type: IssueVerificationResponseDto })
+  @ApiCreatedResponse({ type: GetExchangeResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
@@ -108,6 +109,7 @@ export class DocumentExchangeController {
   @ApiOperation({
     summary: 'Verify exchange',
   })
+  @ApiCreatedResponse({ type: GetExchangeResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
@@ -125,6 +127,7 @@ export class DocumentExchangeController {
       'Cancel active verification session, revert exchange to SCHEDULED (staff only)',
   })
   @ApiErrorsResponse({ badRequest: true })
+  @ApiCreatedResponse({ type: GetExchangeResponseDto })
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
   cancelInboundCode(
