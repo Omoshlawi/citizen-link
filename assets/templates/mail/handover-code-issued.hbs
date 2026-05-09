@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Collection Code — Citizen Link</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:'Inter', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#003b5a; border-radius:12px 12px 0 0; padding:28px 40px;">
+              <p style="margin:0; font-size:22px; font-weight:700; color:#ffffff; letter-spacing:-0.3px;">Citizen Link</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#ffffff; padding:40px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+              <p style="margin:0 0 8px; font-size:15px; color:#475569;">Hello,</p>
+              <h1 style="margin:0 0 20px; font-size:22px; font-weight:700; color:#003b5a; line-height:1.3;">
+                Your Document is Ready for Collection
+              </h1>
+              <p style="margin:0 0 28px; font-size:15px; color:#475569; line-height:1.7;">
+                A CitizenLink staff member is ready to hand over your document for claim
+                <strong>#{{handover.claim.claimNumber}}</strong>. Show the code below to the
+                staff member in front of you to complete the collection.
+              </p>
+
+              <!-- Code card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#f0f9ff; border:2px solid #006397; border-radius:12px; margin-bottom:28px;">
+                <tr>
+                  <td align="center" style="padding:28px 24px;">
+                    <p style="margin:0 0 8px; font-size:11px; font-weight:700; color:#006397; letter-spacing:1.2px; text-transform:uppercase;">Your Collection Code</p>
+                    <p style="margin:0; font-size:48px; font-weight:700; color:#003b5a; letter-spacing:10px; font-family:'Courier New', Courier, monospace;">{{handover.collection.code}}</p>
+                    <p style="margin:10px 0 0; font-size:12px; color:#64748b;">Expires: {{handover.collection.expiresAt}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security notice -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#fff7ed; border-left:4px solid #f59e0b; border-radius:0 8px 8px 0; margin-bottom:28px;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <p style="margin:0; font-size:13px; color:#92400e; line-height:1.6;">
+                      <strong>Important:</strong> Only share this code with the CitizenLink staff
+                      member standing in front of you. Do not share it via phone call, message,
+                      or with anyone else. If you did not request this collection, contact support immediately.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 32px;">
+                <tr>
+                  <td align="center" style="border-radius:8px; background-color:#003b5a;">
+                    <a href="citizenlinkapp://claims/{{handover.claim.id}}"
+                      style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">
+                      View Your Claim →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0; font-size:14px; color:#475569; line-height:1.7;">
+                Thank you for using Citizen Link.<br />
+                <strong style="color:#003b5a;">The Citizen Link Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 12px 12px; padding:20px 40px;" align="center">
+              <p style="margin:0 0 12px; font-size:11px; color:#94a3b8;">
+                If the button above does not open the app, open Citizen Link and go to <strong>My Claims → #{{handover.claim.claimNumber}}</strong>.
+              </p>
+              <p style="margin:0; font-size:11px; color:#94a3b8;">
+                This is an automated message from Citizen Link. For support, contact
+                <a href="mailto:support@citizenlink.app" style="color:#006397; text-decoration:none;">support@citizenlink.app</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

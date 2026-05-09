@@ -835,6 +835,134 @@
     }
   },
   {
+    "key": "notification.handover.code.issued",
+    "type": "notification",
+    "name": "Handover Code Issued",
+    "description": "Sent to the claimant when staff issues a 6-digit code to complete outbound document handover.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Your Collection Code — Claim #{{handover.claim.claimNumber}} — Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/handover-code-issued.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Collection Ready — Claim #{{handover.claim.claimNumber}}"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Show code {{handover.collection.code}} to the CitizenLink staff member to collect your document."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\":\"claim\",\"claimId\":\"{{handover.claim.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
+    "key": "notification.handover.completed",
+    "type": "notification",
+    "name": "Handover Completed",
+    "description": "Sent to the claimant when their document collection is confirmed by staff.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Document Collected — Claim #{{handover.claim.claimNumber}} — Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/handover-completed.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Document Collected!"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your {{handover.document.type.name}} has been successfully collected. Claim #{{handover.claim.claimNumber}} is now complete."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\":\"claim\",\"claimId\":\"{{handover.claim.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
+    "key": "notification.handover.code.cancelled",
+    "type": "notification",
+    "name": "Handover Code Cancelled",
+    "description": "Sent to the claimant when staff cancels their outbound collection code. The exchange remains SCHEDULED.",
+    "engine": "handlebars",
+    "slots": {
+      "push_title": {
+        "source": "text",
+        "text": "Collection Code Cancelled"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your collection code for claim #{{handover.claim.claimNumber}} was cancelled. Your appointment remains scheduled."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\":\"claim\",\"claimId\":\"{{handover.claim.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": false,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
     "key": "auth.email.change.alert",
     "type": "notification",
     "name": "Change Email Security Alert",

@@ -34,6 +34,7 @@ import {
   ExchangeDirection,
   ExchangeStatus,
   FoundDocumentCaseStatus,
+  LostDocumentCaseStatus,
   Prisma,
   VerificationStatus,
 } from '../../generated/prisma/client';
@@ -173,7 +174,7 @@ export class DocumentExchangeBidirectionService {
             },
           },
         },
-        claim: true,
+        claim: { include: { user: true, match: true } },
       },
     });
   }
@@ -319,15 +320,37 @@ export class DocumentExchangeBidirectionService {
           ),
         );
     }
-    //   TODO: Decide wether to  send notification
-    // if (exchange.direction === ExchangeDirection.OUTBOUND) {
-    //   const claimant = exchange.claim?.userId;
-    //   if (claimant) {
-    //     const docTypeName =
-    //       exchange.foundCase.case.document?.type?.name ?? 'document';
-    //     const caseNumber = exchange.foundCase.case.caseNumber;
-    //   }
-    // }
+    if (exchange.direction === ExchangeDirection.OUTBOUND) {
+      const claimant = exchange.claim?.user;
+      if (claimant) {
+        const claimNumber =
+          exchange.claim?.claimNumber ?? exchange.exchangeNumber;
+        const claimId = exchange.claimId;
+        this.notifications
+          .sendFromTemplate({
+            templateKey: 'notification.handover.code.issued',
+            data: {
+              handover: {
+                exchangeNumber: exchange.exchangeNumber,
+                claim: { id: claimId, claimNumber },
+                collection: { code, expiresAt },
+              },
+            },
+            userId: claimant.id,
+            priority: NotificationPriority.HIGH,
+            force: true,
+            eventTitle: 'Your Collection Code is Ready',
+            eventBody: `Show code ${code} to the CitizenLink agent to collect your document.`,
+            eventDescription: `Outbound verification issued for claim ${claimId} by staff ${user.id}`,
+          })
+          .catch((e) =>
+            this.logger.error(
+              `Failed to send outbound verification notification for exchange ${exchange.id}`,
+              e,
+            ),
+          );
+      }
+    }
     return await this.findOne(exchange.id, query, user);
   }
 
@@ -402,6 +425,33 @@ export class DocumentExchangeBidirectionService {
             },
           });
 
+    // Pre-fetch lost case state for OUTBOUND completion (must run outside transaction)
+    const lostDocumentCaseId =
+      exchange.direction === ExchangeDirection.OUTBOUND
+        ? (exchange.claim?.match?.lostDocumentCaseId ?? null)
+        : null;
+    let lostCaseCurrentStatus: LostDocumentCaseStatus | null = null;
+    let lostTransitionReason: { id: string } | null = null;
+    if (lostDocumentCaseId) {
+      const lostCase = await this.prisma.lostDocumentCase.findUnique({
+        where: { id: lostDocumentCaseId },
+        select: { status: true },
+      });
+      lostCaseCurrentStatus = lostCase?.status ?? null;
+      if (lostCaseCurrentStatus) {
+        lostTransitionReason = await this.prisma.transitionReason.findUnique({
+          where: {
+            entityType_fromStatus_toStatus_code: {
+              code: 'DOCUMENT_REUNITED_WITH_OWNER',
+              entityType: 'LostDocumentCase',
+              fromStatus: lostCaseCurrentStatus,
+              toStatus: LostDocumentCaseStatus.COMPLETED,
+            },
+          },
+        });
+      }
+    }
+
     const foundCaseId = exchange.foundCaseId;
     await this.prisma.$transaction(async (tx) => {
       await tx.exchangeVerification.update({
@@ -453,6 +503,23 @@ export class DocumentExchangeBidirectionService {
           reasonId: reason?.id,
         },
       });
+      // Complete the matched lost case atomically with found case completion
+      if (lostDocumentCaseId && lostCaseCurrentStatus) {
+        await tx.lostDocumentCase.update({
+          where: { id: lostDocumentCaseId },
+          data: { status: LostDocumentCaseStatus.COMPLETED },
+        });
+        await tx.statusTransition.create({
+          data: {
+            entityType: 'LostDocumentCase',
+            entityId: lostDocumentCaseId,
+            fromStatus: lostCaseCurrentStatus,
+            toStatus: LostDocumentCaseStatus.COMPLETED,
+            changedById: user.id,
+            reasonId: lostTransitionReason?.id,
+          },
+        });
+      }
     });
 
     if (exchange.direction === ExchangeDirection.INBOUND) {
@@ -485,15 +552,38 @@ export class DocumentExchangeBidirectionService {
           ),
         );
     }
-    // TODO: Implement notification for outbound
-    // if (exchange.direction === ExchangeDirection.OUTBOUND) {
-    //   const claimant = exchange.claim?.user;
-    //   if (claimant) {
-    //     const docTypeName =
-    //       exchange.foundCase.case.document?.type?.name ?? 'document';
-    //     const caseNumber = exchange.foundCase.case.caseNumber;
-    //   }
-    // }
+    if (exchange.direction === ExchangeDirection.OUTBOUND) {
+      const claimant = exchange.claim?.user;
+      if (claimant) {
+        const docTypeName =
+          exchange.foundCase.case.document?.type?.name ?? 'document';
+        const claimNumber =
+          exchange.claim?.claimNumber ?? exchange.exchangeNumber;
+        const claimId = exchange.claimId;
+        this.notifications
+          .sendFromTemplate({
+            templateKey: 'notification.handover.completed',
+            data: {
+              handover: {
+                exchangeNumber: exchange.exchangeNumber,
+                claim: { id: claimId, claimNumber },
+                document: { type: { name: docTypeName } },
+              },
+            },
+            userId: claimant.id,
+            priority: NotificationPriority.HIGH,
+            eventTitle: 'Document Collected Successfully',
+            eventBody: `Your ${docTypeName} has been handed over. Case complete.`,
+            eventDescription: `Outbound exchange ${exchange.id} completed by staff ${user.id}`,
+          })
+          .catch((e) =>
+            this.logger.error(
+              `Failed to send outbound completion notification for exchange ${exchange.id}`,
+              e,
+            ),
+          );
+      }
+    }
     return await this.findOne(exchange.id, query, user);
   }
 
@@ -546,15 +636,35 @@ export class DocumentExchangeBidirectionService {
           ),
         );
     }
-    // TODO: Dispatch notification
-    // if (exchange.direction === ExchangeDirection.OUTBOUND) {
-    //   const claimant = exchange.claim?.user;
-    //   if (claimant) {
-    //     const docTypeName =
-    //       exchange.foundCase.case.document?.type?.name ?? 'document';
-    //     const caseNumber = exchange.foundCase.case.caseNumber;
-    //   }
-    // }
+    if (exchange.direction === ExchangeDirection.OUTBOUND) {
+      const claimant = exchange.claim?.user;
+      if (claimant) {
+        const claimNumber =
+          exchange.claim?.claimNumber ?? exchange.exchangeNumber;
+        const claimId = exchange.claimId;
+        this.notifications
+          .sendFromTemplate({
+            templateKey: 'notification.handover.code.cancelled',
+            data: {
+              handover: {
+                exchangeNumber: exchange.exchangeNumber,
+                claim: { id: claimId, claimNumber },
+              },
+            },
+            userId: claimant.id,
+            priority: NotificationPriority.NORMAL,
+            eventTitle: 'Collection Code Cancelled',
+            eventBody: `Your collection code for claim #${claimNumber} was cancelled. Your appointment remains scheduled.`,
+            eventDescription: `Outbound verification ${verification.id} cancelled by staff ${user.id}. Reason: ${dto.reason}`,
+          })
+          .catch((e) =>
+            this.logger.error(
+              `Failed to send outbound code-cancelled notification for exchange ${exchange.id}`,
+              e,
+            ),
+          );
+      }
+    }
     return await this.findOne(exchange.id, query, user);
   }
 }

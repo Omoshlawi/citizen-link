@@ -484,5 +484,14 @@
     "auto": false,
     "label": "Circumstances changed",
     "description": "Conditions changed (e.g., document found damaged, case voided)."
+  },
+  {
+    "entityType": "LostDocumentCase",
+    "fromStatus": "SUBMITTED",
+    "toStatus": "COMPLETED",
+    "code": "DOCUMENT_REUNITED_WITH_OWNER",
+    "auto": true,
+    "label": "Document reunited with owner",
+    "description": "Lost document successfully handed over to owner via verified claim"
   }
 ]
