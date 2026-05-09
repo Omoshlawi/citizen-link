@@ -51,7 +51,7 @@ export class DocumentExchangeController {
     private readonly biderection: DocumentExchangeBidirectionService,
   ) {}
 
-  @Post('inbound/schedule')
+  @Post('inbound')
   @ApiOperation({ summary: 'Schedule inbound exchange (finder/case owner)' })
   @ApiCreatedResponse({ type: GetExchangeResponseDto })
   @ApiErrorsResponse({ badRequest: true })
