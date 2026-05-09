@@ -146,6 +146,57 @@ export class ScheduleOutboundExchangeDto extends createZodDto(
   ScheduleOutboundExchangeSchema,
 ) {}
 
+export const UpdateOutboundExchangeSchema = z
+  .object({
+    claimId: z.uuid(),
+    method: z.enum([
+      ExchangeMethod.OWNER_PICKUP,
+      ExchangeMethod.INHOUSE_DELIVERY,
+      ExchangeMethod.COURIER_DELIVERY,
+    ]),
+    scheduledAt: z.iso.datetime(),
+    stationId: z.uuid().optional().describe('Required for OWNER_PICKUP'),
+    addressId: z
+      .uuid()
+      .optional()
+      .describe('Required for INHOUSE_DELIVERY or COURIER_DELIVERY'),
+  })
+  .superRefine((data, ctx) => {
+    if (data.method === ExchangeMethod.OWNER_PICKUP && !data.stationId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['stationId'],
+        message: `A station is required for ${ExchangeMethod.OWNER_PICKUP}`,
+      });
+    }
+    if (
+      (
+        [
+          ExchangeMethod.INHOUSE_DELIVERY,
+          ExchangeMethod.COURIER_DELIVERY,
+        ] as Array<string>
+      ).includes(data.method) &&
+      !data.addressId
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['addressId'],
+        message: `An address is required for ${ExchangeMethod.INHOUSE_DELIVERY}/${ExchangeMethod.COURIER_DELIVERY}`,
+      });
+    }
+    if (!dayjs(data.scheduledAt).isAfter(dayjs())) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scheduledAt'],
+        message: 'Scheduled time must be a future date and time',
+      });
+    }
+  });
+
+export class UpdateOutboundExchangeDto extends createZodDto(
+  UpdateOutboundExchangeSchema,
+) {}
+
 // ─── Query ────────────────────────────────────────────────────────────────────
 
 export const WithdrawScheduleQuerySchema = z

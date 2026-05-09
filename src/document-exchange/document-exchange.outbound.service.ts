@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -19,7 +20,10 @@ import { HumanIdService } from '../human-id/human-id.service';
 import { NotificationPriority } from '../notifications/notification.interfaces';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ScheduleOutboundExchangeDto } from './document-exchange.dto';
+import {
+  ScheduleOutboundExchangeDto,
+  UpdateOutboundExchangeDto,
+} from './document-exchange.dto';
 
 @Injectable()
 export class DocumentExchangeOutboundService {
@@ -111,5 +115,40 @@ export class DocumentExchangeOutboundService {
     });
 
     return exchange;
+  }
+
+  async updateExchange(
+    dto: UpdateOutboundExchangeDto,
+    user: UserSession['user'],
+  ) {
+    const exchange = await this.prisma.documentExchange.findFirst({
+      where: {
+        claimId: dto.claimId,
+        direction: 'OUTBOUND',
+        status: ExchangeStatus.SCHEDULED,
+        claim: { userId: user.id },
+      },
+    });
+
+    if (!exchange) {
+      throw new NotFoundException(
+        'No active SCHEDULED outbound exchange found for this claim',
+      );
+    }
+
+    const stationId =
+      dto.method === 'OWNER_PICKUP' ? (dto.stationId ?? null) : null;
+    const addressId =
+      dto.method !== 'OWNER_PICKUP' ? (dto.addressId ?? null) : null;
+
+    return this.prisma.documentExchange.update({
+      where: { id: exchange.id },
+      data: {
+        method: dto.method,
+        scheduledAt: new Date(dto.scheduledAt),
+        stationId,
+        addressId,
+      },
+    });
   }
 }

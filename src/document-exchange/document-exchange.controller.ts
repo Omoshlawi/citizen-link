@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -35,6 +36,7 @@ import {
   QueryExchangeResponseDto,
   ScheduleInboundExchangeDto,
   ScheduleOutboundExchangeDto,
+  UpdateOutboundExchangeDto,
   VerifyCodeQueryDto,
   VerifyExchangeCodeDto,
   WithdrawScheduleQueryDto,
@@ -73,6 +75,20 @@ export class DocumentExchangeController {
     @Session() { user }: UserSession,
   ) {
     return this.outbound.scheduleExchange(dto, query, user);
+  }
+
+  @Patch('outbound')
+  @ApiOperation({
+    summary:
+      'Update the active SCHEDULED outbound exchange for a claim (claimant)',
+  })
+  @ApiOkResponse({ type: GetExchangeResponseDto })
+  @ApiErrorsResponse({ badRequest: true })
+  updateOutbound(
+    @Body() dto: UpdateOutboundExchangeDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.outbound.updateExchange(dto, user);
   }
 
   @Post('withdraw')
