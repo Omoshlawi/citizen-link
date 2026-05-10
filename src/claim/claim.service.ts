@@ -28,7 +28,7 @@ import { Prisma } from '../../generated/prisma/client';
 export class ClaimService {
   private readonly logger = new Logger(ClaimService.name);
   private readonly defaultRep =
-    'custom:include(verification,attachments,foundDocumentCase:select(caseId),exchanges)';
+    'custom:include(verification,attachments,foundDocumentCase:include(case:select(document:select(type,images:select(id,blurredUrl)))),exchanges,match:include(lostDocumentCase:include(case:select(caseNumber,document:select(type)))))';
 
   constructor(
     private readonly prismaService: PrismaService,
