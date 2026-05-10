@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserSession } from '../auth/auth.types';
 import {
@@ -8,13 +8,17 @@ import {
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import { InvoiceService } from '../invoice/invoice.service';
 import { ClaimStatus } from '../../generated/prisma/enums';
+import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
+import { NotificationPriority } from '../notifications/notification.interfaces';
 
 @Injectable()
 export class ClaimStatusTransitionService {
+  private readonly logger = new Logger(ClaimStatusTransitionService.name);
   constructor(
     private readonly prismaService: PrismaService,
     private readonly representationService: CustomRepresentationService,
     private readonly invoiceService: InvoiceService,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   private async isCurrentClaimLatestClaim(
@@ -185,7 +189,7 @@ export class ClaimStatusTransitionService {
     });
     if (!reason) throw new BadRequestException('Invalid reason');
     // Verify claim and transition match status to claimed if not claimed
-    return await this.prismaService.$transaction(async (tx) => {
+    const result = await this.prismaService.$transaction(async (tx) => {
       const claim = await tx.claim.update({
         where: { id: claimId },
         data: {
@@ -223,6 +227,39 @@ export class ClaimStatusTransitionService {
       }
       return claim;
     });
+
+    // Notify the claimant that their claim is verified and payment is required
+    const createdInvoice = await this.prismaService.invoice.findUnique({
+      where: { claimId },
+      select: { totalAmount: true },
+    });
+    const docTypeName =
+      canVerify.foundDocumentCase.case.document?.type?.name ?? 'document';
+    this.notifications
+      .sendFromTemplate({
+        templateKey: 'notification.claim.verified',
+        data: {
+          claim: { id: claimId, claimNumber: canVerify.claimNumber },
+          invoice: {
+            totalAmount: createdInvoice?.totalAmount?.toNumber() ?? 0,
+          },
+          document: { type: { name: docTypeName } },
+        },
+        userId: canVerify.userId,
+        priority: NotificationPriority.HIGH,
+        force: true,
+        eventTitle: 'Claim Approved — Payment Required',
+        eventBody: `Your claim for ${docTypeName} has been verified. Complete payment to arrange collection.`,
+        eventDescription: `Invoice created for claim ${claimId} after claim verification`,
+      })
+      .catch((e) =>
+        this.logger.error(
+          `Failed to send claim verified notification for claim ${claimId}`,
+          e,
+        ),
+      );
+
+    return result;
   }
 
   async cancel(

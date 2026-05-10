@@ -34,6 +34,7 @@ import {
   ExchangeDirection,
   ExchangeStatus,
   FoundDocumentCaseStatus,
+  InvoiceStatus,
   LostDocumentCaseStatus,
   Prisma,
   VerificationStatus,
@@ -174,7 +175,7 @@ export class DocumentExchangeBidirectionService {
             },
           },
         },
-        claim: { include: { user: true, match: true } },
+        claim: { include: { user: true, match: true, invoice: true } },
       },
     });
   }
@@ -252,6 +253,17 @@ export class DocumentExchangeBidirectionService {
     const exchange = await this.getActiveExchange(query);
     if (!exchange)
       throw new NotFoundException('No active scheduled exchange found');
+
+    if (exchange.direction === ExchangeDirection.OUTBOUND) {
+      const invoice = exchange.claim?.invoice;
+      if (!invoice || invoice.status !== InvoiceStatus.PAID) {
+        throw new HttpException(
+          'Payment must be completed before the collection code can be issued.',
+          HttpStatus.PAYMENT_REQUIRED,
+        );
+      }
+    }
+
     const ttlMinutes = await this.settings.get(
       'collection.code_ttl_minutes',
       z.coerce.number(),

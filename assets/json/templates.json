@@ -221,6 +221,57 @@
     }
   },
   {
+    "key": "notification.claim.verified",
+    "type": "notification",
+    "name": "Claim Approved — Payment Required",
+    "description": "Sent to the claimant when staff verifies their claim and an invoice is created. Prompts them to pay to proceed.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Your Claim Is Approved — Pay to Collect Your {{document.type.name}} — Claim #{{claim.claimNumber}}"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/claim-verified.hbs"
+      },
+      "sms_body": {
+        "source": "text",
+        "text": "Citizen Link: Your claim #{{claim.claimNumber}} for {{document.type.name}} is approved. Open the app to complete payment and arrange collection."
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Claim Approved — Pay to Collect"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your claim #{{claim.claimNumber}} is approved. Complete payment to arrange collection of your {{document.type.name}}."
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\":\"claim\",\"claimId\":\"{{claim.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "sms_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": true,
+        "push": true
+      }
+    }
+  },
+  {
     "key": "notification.case.found.matched",
     "type": "notification",
     "name": "Owner Match Found",

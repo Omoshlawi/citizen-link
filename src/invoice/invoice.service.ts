@@ -7,7 +7,11 @@ import { CreateInvoiceDto, QueryInvoiceDto } from './invoice.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { HumanIdService } from '../human-id/human-id.service';
-import { Prisma, PrismaClient } from '../../generated/prisma/client';
+import {
+  ClaimStatus,
+  Prisma,
+  PrismaClient,
+} from '../../generated/prisma/client';
 import { DefaultArgs } from '@prisma/client/runtime/client';
 import {
   CustomRepresentationQueryDto,
@@ -52,7 +56,7 @@ export class InvoiceService {
     }
 
     const claim = await prismaClient.claim.findUnique({
-      where: { id: createInvoiceDto.claimId },
+      where: { id: createInvoiceDto.claimId, status: ClaimStatus.VERIFIED },
       include: {
         match: true,
         foundDocumentCase: {
