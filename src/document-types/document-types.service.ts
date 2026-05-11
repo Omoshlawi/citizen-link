@@ -13,6 +13,8 @@ import {
   DeleteQueryDto,
 } from '../common/query-builder/query-builder.utils';
 import { DocumentType, Prisma } from '../../generated/prisma/client';
+import { Decimal } from '@prisma/client/runtime/client';
+import { RegionService } from '../region/region.service';
 
 @Injectable()
 export class DocumentTypesService {
@@ -21,6 +23,7 @@ export class DocumentTypesService {
     private readonly paginationService: PaginationService,
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
+    private readonly regionService: RegionService,
   ) {}
   create(
     createDocumentTypeDto: CreateDocumentTypeDto,
@@ -30,8 +33,11 @@ export class DocumentTypesService {
       data: {
         ...createDocumentTypeDto,
         verificationStrategy: {},
-        totalAmount:
-          createDocumentTypeDto.serviceFee + createDocumentTypeDto.finderReward,
+        currency:
+          createDocumentTypeDto.currency ?? this.regionService.getCurrency(),
+        totalAmount: new Decimal(createDocumentTypeDto.serviceFee).plus(
+          createDocumentTypeDto.finderReward,
+        ),
       },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
@@ -97,9 +103,11 @@ export class DocumentTypesService {
       data: {
         ...updateDocumentTypeDto,
         totalAmount:
-          updateDocumentTypeDto.serviceFee && updateDocumentTypeDto.finderReward
-            ? updateDocumentTypeDto.serviceFee +
-              updateDocumentTypeDto.finderReward
+          updateDocumentTypeDto.serviceFee != null &&
+          updateDocumentTypeDto.finderReward != null
+            ? new Decimal(updateDocumentTypeDto.serviceFee).plus(
+                updateDocumentTypeDto.finderReward,
+              )
             : undefined,
       },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),

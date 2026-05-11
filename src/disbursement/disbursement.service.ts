@@ -26,6 +26,7 @@ import {
   WithdrawDisbursementDto,
 } from './disbursement.dto';
 import { RegionService } from '../region/region.service';
+import { Decimal } from '@prisma/client/runtime/client';
 
 @Injectable()
 export class DisbursementService {
@@ -98,8 +99,11 @@ export class DisbursementService {
         throw new BadRequestException('Wallet not found for this user');
       }
 
-      const balanceBefore = wallet.balance.toNumber();
-      const balanceAfter = Math.max(0, balanceBefore - amount);
+      const balanceBefore = wallet.balance;
+      const diffWithdraw = balanceBefore.minus(disbursement.amount);
+      const balanceAfter = diffWithdraw.isNegative()
+        ? new Decimal(0)
+        : diffWithdraw;
 
       await tx.wallet.update({
         where: { id: wallet.id },
@@ -111,7 +115,8 @@ export class DisbursementService {
           walletId: wallet.id,
           type: WalletEntryType.DEBIT,
           reason: WalletEntryReason.WITHDRAWAL,
-          amount,
+          amount: disbursement.amount,
+          currency: this.regionService.getCurrency(),
           balanceBefore,
           balanceAfter,
           referenceType: 'Disbursement',
@@ -155,7 +160,7 @@ export class DisbursementService {
           where: { userId: disbursement.recipientId },
         });
         if (wallet) {
-          const balanceBefore = wallet.balance.toNumber();
+          const balanceBefore = wallet.balance;
           await tx.wallet.update({
             where: { id: wallet.id },
             data: { balance: { increment: amount } },
@@ -165,9 +170,10 @@ export class DisbursementService {
               walletId: wallet.id,
               type: WalletEntryType.CREDIT,
               reason: WalletEntryReason.WITHDRAWAL_REVERSAL,
-              amount,
+              amount: disbursement.amount,
+              currency: this.regionService.getCurrency(),
               balanceBefore,
-              balanceAfter: balanceBefore + amount,
+              balanceAfter: balanceBefore.plus(disbursement.amount),
               referenceType: 'Disbursement',
               referenceId: id,
               description: `Withdrawal reversal (Daraja initiation failed) for disbursement ${disbursement.disbursementNumber}`,
@@ -253,7 +259,7 @@ export class DisbursementService {
           where: { userId: disbursement.recipientId },
         });
         if (wallet) {
-          const balanceBefore = wallet.balance.toNumber();
+          const balanceBefore = wallet.balance;
           await tx.wallet.update({
             where: { id: wallet.id },
             data: { balance: { increment: amount } },
@@ -263,9 +269,10 @@ export class DisbursementService {
               walletId: wallet.id,
               type: WalletEntryType.CREDIT,
               reason: WalletEntryReason.WITHDRAWAL_REVERSAL,
-              amount,
+              amount: disbursement.amount,
+              currency: this.regionService.getCurrency(),
               balanceBefore,
-              balanceAfter: balanceBefore + amount,
+              balanceAfter: balanceBefore.plus(disbursement.amount),
               referenceType: 'Disbursement',
               referenceId: disbursement.id,
               description: `Withdrawal reversal (B2C failed: ${ResultDesc}) for disbursement ${disbursement.disbursementNumber}`,

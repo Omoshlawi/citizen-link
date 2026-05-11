@@ -27,6 +27,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { parseDate } from '../app.utils';
 import { DarajaService, StkCallbackBody } from './daraja.service';
 import { InitiatePaymentDto, QueryTransactionDto } from './transaction.dto';
+import { Decimal } from '@prisma/client/runtime/client';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { NotificationPriority } from '../notifications/notification.interfaces';
 import { RegionService } from '../region/region.service';
@@ -209,14 +210,13 @@ export class TransactionService {
 
     const receiptNumber = this.darajaService.extractReceiptNumber(body);
     const invoice = transaction.invoice;
-    const paidAmount = transaction.amount.toNumber();
-    const newAmountPaid = invoice.amountPaid.toNumber() + paidAmount;
-    const newBalanceDue = Math.max(
-      0,
-      invoice.totalAmount.toNumber() - newAmountPaid,
-    );
-    const newStatus =
-      newBalanceDue === 0 ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID;
+    const paidAmount = transaction.amount;
+    const newAmountPaid = invoice.amountPaid.plus(paidAmount);
+    const diff = invoice.totalAmount.minus(newAmountPaid);
+    const newBalanceDue = diff.isNegative() ? new Decimal(0) : diff;
+    const newStatus = newBalanceDue.isZero()
+      ? InvoiceStatus.PAID
+      : InvoiceStatus.PARTIALLY_PAID;
 
     // Captured inside $transaction for post-commit notification.
     // Wrapped in an object so TypeScript tracks the property mutation across
@@ -257,8 +257,8 @@ export class TransactionService {
 
       // When invoice is fully paid, auto-create a disbursement for the finder
       if (newStatus === InvoiceStatus.PAID) {
-        const finderReward = invoice.finderReward.toNumber();
-        if (finderReward > 0) {
+        const finderReward = invoice.finderReward;
+        if (finderReward.greaterThan(0)) {
           const fullInvoice = await tx.invoice.findUnique({
             where: { id: invoice.id },
             include: {
@@ -293,24 +293,29 @@ export class TransactionService {
               },
             });
             this.logger.log(
-              `Disbursement created for finder ${finderId} — ${this.regionService.getCurrency()} ${finderReward}`,
+              `Disbursement created for finder ${finderId} — ${this.regionService.getCurrency()} ${finderReward.toFixed(2)}`,
             );
 
             // Upsert wallet and record a CREDIT ledger entry atomically
             const wallet = await tx.wallet.upsert({
               where: { userId: finderId },
-              create: { userId: finderId, balance: finderReward },
+              create: {
+                userId: finderId,
+                balance: finderReward,
+                currency: this.regionService.getCurrency(),
+              },
               update: { balance: { increment: finderReward } },
             });
-            const balanceBefore = wallet.balance.toNumber();
+            const balanceBefore = wallet.balance;
             await tx.walletLedger.create({
               data: {
                 walletId: wallet.id,
                 type: WalletEntryType.CREDIT,
                 reason: WalletEntryReason.FINDER_REWARD,
                 amount: finderReward,
+                currency: this.regionService.getCurrency(),
                 balanceBefore,
-                balanceAfter: balanceBefore + finderReward,
+                balanceAfter: balanceBefore.plus(finderReward),
                 referenceType: 'Disbursement',
                 referenceId: disbursement.id,
                 description: `Finder reward for disbursement ${disbursement.disbursementNumber}`,
@@ -322,7 +327,7 @@ export class TransactionService {
               finderId,
               disbursementNumber: disbursement.disbursementNumber,
               disbursementId: disbursement.id,
-              amount: finderReward,
+              amount: finderReward.toNumber(),
             };
           }
         }

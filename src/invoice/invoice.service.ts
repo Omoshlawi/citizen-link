@@ -12,6 +12,7 @@ import {
   Prisma,
   PrismaClient,
 } from '../../generated/prisma/client';
+import { Decimal } from '@prisma/client/runtime/client';
 import { DefaultArgs } from '@prisma/client/runtime/client';
 import {
   CustomRepresentationQueryDto,
@@ -76,12 +77,11 @@ export class InvoiceService {
     });
     if (!claim) throw new BadRequestException('Claim not found');
     const finderReward =
-      claim.foundDocumentCase.case.document?.type?.finderReward?.toNumber() ??
-      0.0;
+      claim.foundDocumentCase.case.document?.type?.finderReward ??
+      new Decimal(0);
     const serviceFee =
-      claim.foundDocumentCase.case.document?.type?.serviceFee?.toNumber() ??
-      0.0;
-    const totalAmount = finderReward + serviceFee;
+      claim.foundDocumentCase.case.document?.type?.serviceFee ?? new Decimal(0);
+    const totalAmount = finderReward.plus(serviceFee);
     return await prismaClient.invoice.create({
       data: {
         claimId: createInvoiceDto.claimId,

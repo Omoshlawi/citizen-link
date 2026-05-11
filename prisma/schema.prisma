@@ -360,11 +360,11 @@ model DocumentType {
   serviceFee              Decimal          @default(0) @db.Decimal(10, 2)
   finderReward            Decimal          @default(0) @db.Decimal(10, 2) // Amount rewarded to finder
   totalAmount             Decimal          @default(0) @db.Decimal(10, 2) // Service fee + finder reward
-  currency                String           @default("KES")
+  currency                String
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
   replacementInstructions String?
-  averageReplacementCost  Float?
+  averageReplacementCost  Decimal?         @db.Decimal(10, 2)
   documents               Document[]
   voided                  Boolean          @default(false)
 
@@ -1094,7 +1094,7 @@ model Transaction {
 
   // The amount for this specific installment/attempt
   amount   Decimal @db.Decimal(10, 2)
-  currency String  @default("KES")
+  currency String
 
   // Payment Details
   paymentMethod         PaymentMethod
@@ -1154,7 +1154,7 @@ model Disbursement {
   recipient   User   @relation(fields: [recipientId], references: [id], onDelete: Restrict)
 
   amount   Decimal @db.Decimal(10, 2)
-  currency String  @default("KES")
+  currency String
 
   paymentMethod         PaymentMethod
   paymentProvider       PaymentProvider?
@@ -1190,7 +1190,7 @@ model Wallet {
   userId    String         @unique
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   balance   Decimal        @default(0.00) @db.Decimal(10, 2)
-  currency  String         @default("KES")
+  currency  String
   ledger    WalletLedger[]
   updatedAt DateTime       @updatedAt
 
@@ -1218,7 +1218,7 @@ model WalletLedger {
   type     WalletEntryType
   reason   WalletEntryReason
   amount   Decimal           @db.Decimal(10, 2)
-  currency String            @default("KES")
+  currency String
 
   // Snapshot before and after — enables full transparency
   balanceBefore Decimal @db.Decimal(10, 2)

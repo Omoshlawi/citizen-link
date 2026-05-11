@@ -5,30 +5,63 @@ import z from 'zod';
 @Configuration()
 export class RegionConfig {
   @Value('REGION_COUNTRY_CODE', { default: 'KE' })
-  countryCode: string;
+  countryCode!: string;
 
   @Value('REGION_COUNTRY_NAME', { default: 'Kenya' })
-  countryName: string;
+  countryName!: string;
 
   /** ISO 4217 currency code (e.g. KES, TZS, UGX) */
-  @Value('REGION_CURRENCY', { default: 'KES' })
-  currency: string;
+  @Value('REGION_CURRENCY', {
+    default: 'KES',
+    parse: (v: string) => {
+      const code = String(v).trim().toUpperCase();
+      try {
+        new Intl.NumberFormat('en', { style: 'currency', currency: code });
+      } catch {
+        throw new Error(
+          `REGION_CURRENCY "${code}" is not a valid ISO 4217 code`,
+        );
+      }
+      return code;
+    },
+  })
+  currency!: string;
 
   /** BCP 47 locale used for Intl.* date/time/number formatting (e.g. en-KE, en-TZ) */
-  @Value('REGION_LOCALE', { default: 'en-KE' })
-  locale: string;
+  @Value('REGION_LOCALE', {
+    default: 'en-KE',
+    parse: (v: string) => {
+      try {
+        new Intl.NumberFormat(v);
+      } catch {
+        throw new Error(`REGION_LOCALE "${v}" is not a valid BCP 47 locale`);
+      }
+      return v;
+    },
+  })
+  locale!: string;
 
   /** IANA timezone (e.g. Africa/Nairobi) */
-  @Value('REGION_TIMEZONE', { default: 'Africa/Nairobi' })
-  timezone: string;
+  @Value('REGION_TIMEZONE', {
+    default: 'Africa/Nairobi',
+    parse: (v: string) => {
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: v });
+      } catch {
+        throw new Error(`REGION_TIMEZONE "${v}" is not a valid IANA timezone`);
+      }
+      return v;
+    },
+  })
+  timezone!: string;
 
   /** Must match an AddressLocale.code seeded in the database */
   @Value('REGION_ADDRESS_LOCALE_CODE', { default: 'ke-default' })
-  addressLocaleCode: string;
+  addressLocaleCode!: string;
 
   /** Comma-separated BCP 47 language codes (e.g. en,sw) */
   @Value('REGION_LANGUAGES', { default: 'en,sw' })
-  languagesRaw: string;
+  languagesRaw!: string;
 
   get languages(): string[] {
     return this.languagesRaw.split(',').map((l) => l.trim());
@@ -38,13 +71,13 @@ export class RegionConfig {
     default: -1.2921,
     parse: z.coerce.number().optional().parse,
   })
-  mapDefaultLat: number;
+  mapDefaultLat!: number;
 
   @Value('REGION_MAP_LNG', {
     default: 36.8219,
     parse: z.coerce.number().optional().parse,
   })
-  mapDefaultLng: number;
+  mapDefaultLng!: number;
 
   /**
    * Phone number regex pattern as a plain string without surrounding slashes.
@@ -54,7 +87,7 @@ export class RegionConfig {
   @Value('REGION_PHONE_REGEX', {
     default: '^(\\+?254|0)((7|1)\\d{8})$',
   })
-  phoneRegexRaw: string;
+  phoneRegexRaw!: string;
 
   get phoneRegex(): RegExp {
     return new RegExp(this.phoneRegexRaw);
@@ -62,7 +95,7 @@ export class RegionConfig {
 
   /** E.164 country calling code prefix (e.g. +254, +255, +256) */
   @Value('REGION_CALLING_CODE', { default: '+254' })
-  callingCode: string;
+  callingCode!: string;
 
   /**
    * Regex that validates only the subscriber portion of a phone number —
@@ -71,7 +104,7 @@ export class RegionConfig {
    * e.g. Kenya: ^[71]\d{8}$  Tanzania: ^[76]\d{8}$
    */
   @Value('REGION_SUBSCRIBER_REGEX', { default: '^[71]\\d{8}$' })
-  subscriberRegexRaw: string;
+  subscriberRegexRaw!: string;
 
   get subscriberRegex(): RegExp {
     return new RegExp(this.subscriberRegexRaw);
@@ -83,11 +116,11 @@ export class RegionConfig {
    * e.g. Kenya: "712 345 678"  Tanzania: "712 345 678"
    */
   @Value('REGION_SUBSCRIBER_EXAMPLE', { default: '712 345 678' })
-  subscriberExample: string;
+  subscriberExample!: string;
 
   /** Comma-separated logical payment provider names (e.g. mpesa, tigopesa, mtn_momo) */
   @Value('REGION_PAYMENT_PROVIDERS', { default: 'mpesa' })
-  paymentProvidersRaw: string;
+  paymentProvidersRaw!: string;
 
   get paymentProviders(): string[] {
     return this.paymentProvidersRaw.split(',').map((p) => p.trim());
@@ -95,5 +128,5 @@ export class RegionConfig {
 
   /** Brand/display name for this deployment (e.g. CitizenLink Kenya) */
   @Value('REGION_APP_NAME', { default: 'CitizenLink Kenya' })
-  appName: string;
+  appName!: string;
 }
