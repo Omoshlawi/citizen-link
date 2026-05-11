@@ -129,14 +129,19 @@ export class CustomRepresentationService {
    * matchesPattern('custom.include.verifications',            'custom.include.user.**')  // false
    */
   private matchesPattern(path: string, pattern: string): boolean {
-    const regex = new RegExp(
-      '^' +
-        pattern
-          .replace(/\./g, '\\.')
-          .replace(/\*\*/g, '.*')
-          .replace(/\*/g, '[^.]+') +
-        '$',
-    );
+    const regexPattern = pattern
+      .replace(/\./g, '\\.')
+
+      // protect **
+      .replace(/\*\*/g, '__DOUBLE_WILDCARD__')
+
+      // replace single *
+      .replace(/\*/g, '[^.]+')
+
+      // restore **
+      .replace(/__DOUBLE_WILDCARD__/g, '.*');
+
+    const regex = new RegExp(`^${regexPattern}$`);
 
     return regex.test(path);
   }
@@ -185,7 +190,6 @@ export class CustomRepresentationService {
    */
   private buildAccessorMap(v: string, options?: RepresentationOptions) {
     const accessors = this.parseAccessors(v);
-
     const filteredAccessors = this.filterAccessors(accessors, options);
 
     return filteredAccessors.reduce<Record<string, boolean>>(

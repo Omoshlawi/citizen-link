@@ -8,27 +8,10 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import {
-  CancelCodeQueryDto,
-  CancelExchangeDto,
-  CancelVerificationDto,
-  IssueCodeQueryDto,
-  QueryExchangeDto,
-  VerifyCodeQueryDto,
-  VerifyExchangeCodeDto,
-  WithdrawScheduleQueryDto,
-} from './document-exchange.dto';
-import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
-import { HumanIdService } from '../human-id/human-id.service';
-import {
-  CustomRepresentationQueryDto,
-  CustomRepresentationService,
-  PaginationService,
-  SortService,
-} from '../common/query-builder';
-import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { AuthService } from '@thallesp/nestjs-better-auth';
+import dayjs from 'dayjs';
+import { PrismaService } from 'src/prisma/prisma.service';
+import z from 'zod';
 import {
   CustodyStatus,
   ExchangeDirection,
@@ -39,17 +22,36 @@ import {
   Prisma,
   VerificationStatus,
 } from '../../generated/prisma/client';
-import { NotificationPriority } from '../notifications/notification.interfaces';
+import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
+import {
+  CustomRepresentationQueryDto,
+  CustomRepresentationService,
+  PaginationService,
+  RepresentationOptions,
+  SortService,
+} from '../common/query-builder';
 import { SystemSettingService } from '../common/settings/settings.system.service';
-import z from 'zod';
-import dayjs from 'dayjs';
+import { NotificationPriority } from '../notifications/notification.interfaces';
+import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
+import {
+  CancelCodeQueryDto,
+  CancelExchangeDto,
+  CancelVerificationDto,
+  IssueCodeQueryDto,
+  QueryExchangeDto,
+  VerifyCodeQueryDto,
+  VerifyExchangeCodeDto,
+  WithdrawScheduleQueryDto,
+} from './document-exchange.dto';
 
 @Injectable()
 export class DocumentExchangeBidirectionService {
   private readonly logger = new Logger(DocumentExchangeBidirectionService.name);
+  private readonly repOptions: RepresentationOptions = {
+    denyPatterns: ['**.code'],
+  };
   constructor(
     private readonly prisma: PrismaService,
-    private readonly humanId: HumanIdService,
     private readonly pagination: PaginationService,
     private readonly representation: CustomRepresentationService,
     private readonly sort: SortService,
@@ -107,7 +109,10 @@ export class DocumentExchangeBidirectionService {
     const data = await this.prisma.documentExchange.findMany({
       where: dbQuery,
       ...this.pagination.buildSafePaginationQuery(query, totalCount),
-      ...this.representation.buildCustomRepresentationQuery(query?.v),
+      ...this.representation.buildCustomRepresentationQuery(
+        query?.v,
+        this.repOptions,
+      ),
       ...this.sort.buildSortQuery(query?.orderBy),
     });
 
@@ -134,7 +139,10 @@ export class DocumentExchangeBidirectionService {
         id,
         claim: isAdmin ? undefined : { userId: user.id },
       },
-      ...this.representation.buildCustomRepresentationQuery(query?.v),
+      ...this.representation.buildCustomRepresentationQuery(
+        query?.v,
+        this.repOptions,
+      ),
     });
     if (!exchange) throw new NotFoundException('Exchange not found');
     return exchange;
