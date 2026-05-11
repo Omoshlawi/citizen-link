@@ -49,6 +49,9 @@ export class DocumentExchangeBidirectionService {
   private readonly logger = new Logger(DocumentExchangeBidirectionService.name);
   private readonly repOptions: RepresentationOptions = {
     denyPatterns: ['**.code'],
+    autoOmit: {
+      '**.verifications': ['code', 'exchange'],
+    },
   };
   constructor(
     private readonly prisma: PrismaService,

@@ -25,6 +25,26 @@ export type RepresentationOptions = {
    * even if it also matches an allow pattern.
    */
   denyPatterns?: string[];
+  /**
+   * Automatically injects Prisma `omit` clauses for sensitive fields whenever a
+   * matched relation appears in the query — whether the caller used a nested
+   * `select` / `include` or referenced the relation as a bare field.
+   *
+   * Key:   glob pattern matched against the relation's **raw** accessor path
+   *        (including the `custom` prefix and any operation keyword).
+   *        e.g. `**.verifications`, `custom.select.user`
+   * Value: field names to omit on that relation.
+   *
+   * The omit is skipped for a field when the caller already named it explicitly
+   * inside a nested `select` — in that case `denyPatterns` is the right guard.
+   *
+   * @example
+   * autoOmit: {
+   *   '**.verifications': ['code', 'token'],
+   *   '**.user':          ['passwordHash', 'twoFactorSecret'],
+   * }
+   */
+  autoOmit?: Record<string, string[]>;
 };
 
 @Injectable()
@@ -65,26 +85,19 @@ export class CustomRepresentationService {
         }
       }
 
-      if (current) {
-        fields.push(current.trim());
-      }
+      if (current) fields.push(current.trim());
 
       return fields;
     };
 
     const buildPaths = (prefix: string, query: string): string[] => {
       const results: string[] = [];
-
       const match = query.match(/^\s*(\w+)\s*:\s*(\w+)\s*\((.*)\)\s*$/);
 
       if (match) {
-        const [, key, type, fields] = match.map((str) => str.trim());
-
+        const [, key, type, fields] = match.map((s) => s.trim());
         const newPrefix = `${prefix}.${key}.${type}`;
-
-        const subFields = splitFields(fields);
-
-        for (const field of subFields) {
+        for (const field of splitFields(fields)) {
           results.push(...buildPaths(newPrefix, field));
         }
       } else {
@@ -95,22 +108,18 @@ export class CustomRepresentationService {
     };
 
     const topLevelMatch = input.match(/^\s*(\w+)\s*:\s*(\w+)\s*\((.*)\)\s*$/);
-
     if (!topLevelMatch) {
       throw new Error('Invalid custom string representation input format');
     }
 
     const [, topLevelKey, topLevelType, topLevelFields] = topLevelMatch.map(
-      (str) => str.trim(),
+      (s) => s.trim(),
     );
 
     const topLevelPrefix = `${topLevelKey}.${topLevelType}`;
-
-    const fields = splitFields(topLevelFields);
-
     const accessors: string[] = [];
 
-    for (const field of fields) {
+    for (const field of splitFields(topLevelFields)) {
       accessors.push(...buildPaths(topLevelPrefix, field));
     }
 
@@ -131,19 +140,14 @@ export class CustomRepresentationService {
   private matchesPattern(path: string, pattern: string): boolean {
     const regexPattern = pattern
       .replace(/\./g, '\\.')
-
       // protect **
       .replace(/\*\*/g, '__DOUBLE_WILDCARD__')
-
       // replace single *
       .replace(/\*/g, '[^.]+')
-
       // restore **
       .replace(/__DOUBLE_WILDCARD__/g, '.*');
 
-    const regex = new RegExp(`^${regexPattern}$`);
-
-    return regex.test(path);
+    return new RegExp(`^${regexPattern}$`).test(path);
   }
 
   /**
@@ -168,18 +172,114 @@ export class CustomRepresentationService {
       // allow list check
       if (
         allowPatterns.length > 0 &&
-        !allowPatterns.some((pattern) => this.matchesPattern(path, pattern))
+        !allowPatterns.some((p) => this.matchesPattern(path, p))
       ) {
         return false;
       }
 
       // deny overrides allow
-      if (denyPatterns.some((pattern) => this.matchesPattern(path, pattern))) {
+      if (denyPatterns.some((p) => this.matchesPattern(path, p))) {
         return false;
       }
 
       return true;
     });
+  }
+
+  /**
+   * Injects synthetic `omit` paths for relations matched by `autoOmit` patterns.
+   *
+   * Handles three cases:
+   *   1. Bare leaf:
+   *      `custom.select.verifications`
+   *        → injects `custom.select.verifications.omit.<field>`
+   *
+   *   2. Nested select:
+   *      `custom.select.verifications.select.id`
+   *        → skipped; caller was explicit about scalar fields, use `denyPatterns`
+   *
+   *   3. Nested include:
+   *      `custom.select.verifications.include.exchange`
+   *        → injects `custom.select.verifications.omit.<field>`
+   *          because `include` expands the relation but does not restrict
+   *          the relation's own scalar fields.
+   *
+   * A path is only treated as a bare leaf when no other accessor in the list
+   * starts with `accessor + '.'` — this prevents intermediate segments like
+   * `custom.select.verifications` from being treated as leaves when
+   * `custom.select.verifications.select.id` is also present.
+   */
+  private applyAutoOmit(
+    accessors: string[],
+    options?: RepresentationOptions,
+  ): string[] {
+    const autoOmit = options?.autoOmit;
+    if (!autoOmit || Object.keys(autoOmit).length === 0) {
+      return accessors;
+    }
+
+    const injected = new Set<string>(accessors);
+
+    for (const accessor of accessors) {
+      const segments = accessor.split('.');
+
+      // -------------------------------------------------------------------------
+      // Case 3: Nested include traversal
+      //
+      // Walk every prefix of the path looking for a relation segment immediately
+      // followed by `include`. When found, inject omit guards on that relation
+      // since `include` expands all scalar fields but does not restrict them.
+      //
+      // Prefixes followed by `select` or `omit` are skipped — the caller was
+      // explicit about scalar fields in those cases.
+      // -------------------------------------------------------------------------
+      for (let i = 0; i < segments.length - 1; i++) {
+        const nextSegment = segments[i + 1];
+        const isOperation =
+          nextSegment === 'include' ||
+          nextSegment === 'select' ||
+          nextSegment === 'omit';
+
+        if (!isOperation) continue;
+
+        // Explicit nested select / omit → caller controls scalar fields
+        if (nextSegment !== 'include') continue;
+
+        const relationPath = segments.slice(0, i + 1).join('.');
+
+        for (const [pattern, fieldsToOmit] of Object.entries(autoOmit)) {
+          if (!this.matchesPattern(relationPath, pattern)) continue;
+
+          for (const field of fieldsToOmit) {
+            injected.add(`${relationPath}.omit.${field}`);
+          }
+        }
+      }
+
+      // -------------------------------------------------------------------------
+      // Case 1 & 2: Bare leaf guard
+      //
+      // Only proceed when this accessor has no deeper children in the list.
+      // If another accessor starts with `accessor + '.'`, this path is an
+      // intermediate node (case 2) and omit injection is skipped entirely —
+      // the nested operation that follows determines the correct handling above.
+      // -------------------------------------------------------------------------
+      const hasNestedChildren = accessors.some(
+        (other) => other !== accessor && other.startsWith(accessor + '.'),
+      );
+
+      if (hasNestedChildren) continue;
+
+      for (const [pattern, fieldsToOmit] of Object.entries(autoOmit)) {
+        if (!this.matchesPattern(accessor, pattern)) continue;
+
+        for (const field of fieldsToOmit) {
+          injected.add(`${accessor}.omit.${field}`);
+        }
+      }
+    }
+
+    return [...injected];
   }
 
   /**
@@ -190,21 +290,18 @@ export class CustomRepresentationService {
    */
   private buildAccessorMap(v: string, options?: RepresentationOptions) {
     const accessors = this.parseAccessors(v);
-    const filteredAccessors = this.filterAccessors(accessors, options);
+    const filtered = this.filterAccessors(accessors, options);
+    const withOmits = this.applyAutoOmit(filtered, options);
 
-    return filteredAccessors.reduce<Record<string, boolean>>(
-      (acc, accessor) => {
-        acc[
-          accessor.replace(
-            `${CustomRepresentationService.REPRESENTATION_KEY}.`,
-            '',
-          )
-        ] = true;
-
-        return acc;
-      },
-      {},
-    );
+    return withOmits.reduce<Record<string, boolean>>((acc, accessor) => {
+      acc[
+        accessor.replace(
+          `${CustomRepresentationService.REPRESENTATION_KEY}.`,
+          '',
+        )
+      ] = true;
+      return acc;
+    }, {});
   }
 
   /**
@@ -237,19 +334,25 @@ export class CustomRepresentationService {
    *   ? ['**.passwordHash']
    *   : ['**.passwordHash', 'custom.**.user.**', 'custom.**.account.**'];
    * this.representation.buildCustomRepresentationQuery(query.v, { denyPatterns })
+   *
+   * @example — auto-omit sensitive fields on bare relations
+   * this.representation.buildCustomRepresentationQuery(query.v, {
+   *   autoOmit: {
+   *     '**.verifications': ['code', 'token'],
+   *     '**.user':          ['passwordHash', 'twoFactorSecret'],
+   *   },
+   * })
    */
   buildCustomRepresentationQuery(
     queryString?: string,
     options?: RepresentationOptions,
   ) {
     if (
-      queryString &&
-      queryString.startsWith(
+      queryString?.startsWith(
         `${CustomRepresentationService.REPRESENTATION_KEY}:`,
       )
     ) {
       const flatRep = this.buildAccessorMap(queryString, options);
-
       const query: Record<string, any> = {};
 
       for (const [path, value] of Object.entries(flatRep)) {
