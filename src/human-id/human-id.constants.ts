@@ -10,6 +10,7 @@ export enum EntityPrefix {
   DOCUMENT = 'DOC',
   LOST_DOCUMENT_CASE = 'LDC',
   FOUND_DOCUMENT_CASE = 'FDC',
+  MAUZO_PAYMENT_INTENT = 'MPI',
 }
 
 export const HUMAN_ID_OPTIONS = 'HUMAN_ID_OPTIONS';

@@ -54,6 +54,7 @@ import { RegionModule } from './region/region.module';
 import { DocumentOperationTypesModule } from './document-operation-types/document-operation-types.module';
 import { StationOperationTypesModule } from './station-operation-types/station-operation-types.module';
 import { StaffOperationScopeModule } from './staff-operation-scope/staff-operation-scope.module';
+import { MauzoModule } from './mauzo/mauzo.module';
 
 @Module({
   imports: [
@@ -142,6 +143,7 @@ import { StaffOperationScopeModule } from './staff-operation-scope/staff-operati
     StationOperationTypesModule,
     StationOperationTypesModule,
     StaffOperationScopeModule,
+    MauzoModule,
   ],
   controllers: [AppController],
   providers: [
