@@ -47,12 +47,6 @@ import {
 @Injectable()
 export class DocumentExchangeBidirectionService {
   private readonly logger = new Logger(DocumentExchangeBidirectionService.name);
-  private readonly repOptions: RepresentationOptions = {
-    denyPatterns: ['**.code'],
-    autoOmit: {
-      '**.verifications': ['code', 'exchange'],
-    },
-  };
   constructor(
     private readonly prisma: PrismaService,
     private readonly pagination: PaginationService,
@@ -77,6 +71,16 @@ export class DocumentExchangeBidirectionService {
       }),
     ]);
     const canSeeAll = isAdmin || isStaff;
+    // Staff/admin must not see the code via the API — they receive it verbally from
+    // the participant. Participants only see their own exchanges (scoped by WHERE below).
+    const repOptions: RepresentationOptions = {
+      denyPatterns: canSeeAll ? ['**.code'] : [],
+      autoOmit: canSeeAll
+        ? {
+            '**.verifications': ['code', 'exchange'],
+          }
+        : undefined,
+    };
 
     const dbQuery: Prisma.DocumentExchangeWhereInput = {
       direction: query.direction,
@@ -114,7 +118,7 @@ export class DocumentExchangeBidirectionService {
       ...this.pagination.buildSafePaginationQuery(query, totalCount),
       ...this.representation.buildCustomRepresentationQuery(
         query?.v,
-        this.repOptions,
+        repOptions,
       ),
       ...this.sort.buildSortQuery(query?.orderBy),
     });
@@ -134,17 +138,41 @@ export class DocumentExchangeBidirectionService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const { success: isAdmin } = await this.auth.api.userHasPermission({
-      body: { userId: user.id, permission: { handover: ['manage-any'] } },
-    });
+    const [{ success: isAdmin }, { success: isStaff }] = await Promise.all([
+      this.auth.api.userHasPermission({
+        body: { userId: user.id, permission: { handover: ['manage-any'] } },
+      }),
+      this.auth.api.userHasPermission({
+        body: { userId: user.id, permission: { documentCase: ['collect'] } },
+      }),
+    ]);
+    const canSeeAll = isAdmin || isStaff;
+    const repOptions: RepresentationOptions = {
+      denyPatterns: canSeeAll ? ['**.code'] : [],
+      autoOmit: canSeeAll
+        ? {
+            '**.verifications': ['code', 'exchange'],
+          }
+        : undefined,
+    };
     const exchange = await this.prisma.documentExchange.findUnique({
       where: {
         id,
-        claim: isAdmin ? undefined : { userId: user.id },
+        ...(canSeeAll
+          ? {}
+          : {
+              OR: [
+                {
+                  direction: ExchangeDirection.INBOUND,
+                  foundCase: { case: { userId: user.id } },
+                },
+                { claim: { userId: user.id } },
+              ],
+            }),
       },
       ...this.representation.buildCustomRepresentationQuery(
         query?.v,
-        this.repOptions,
+        repOptions,
       ),
     });
     if (!exchange) throw new NotFoundException('Exchange not found');

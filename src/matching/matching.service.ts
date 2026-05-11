@@ -29,7 +29,7 @@ import { MatchingVectorSearchService } from './matching.vector-search';
 export class MatchingService {
   private readonly logger = new Logger(MatchingService.name);
   private readonly defaultRep =
-    'custom:select(id,matchNumber,verdict,vectorScore,exactScore,finalScore,layer2FieldScores,status,createdAt,updatedAt,foundDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(userId,document:select(images:select(blurredUrl)))))';
+    'custom:select(id,matchNumber,verdict,vectorScore,exactScore,finalScore,layer2FieldScores,status,createdAt,updatedAt,foundDocumentCase:select(case:select(document:select(images:select(blurredUrl)))),lostDocumentCase:select(case:select(document:select(images:select(blurredUrl)))))';
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -296,12 +296,16 @@ export class MatchingService {
         },
       ],
     };
+    const repOptions = isAdmin
+      ? {}
+      : { denyPatterns: ['**.userId', '**.user', '**.user.**'] };
     const totalCount = await this.prismaService.match.count({ where: dbQuery });
     const data = await this.prismaService.match.findMany({
       where: dbQuery,
       ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(
         isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
+        repOptions,
       ),
       ...this.sortService.buildSortQuery(query?.orderBy),
     });
@@ -327,10 +331,14 @@ export class MatchingService {
     const { success: isAdmin } = await this.authService.api.userHasPermission({
       body: { userId: user.id, permission: { match: ['list-any'] } },
     });
+    const repOptions = isAdmin
+      ? {}
+      : { denyPatterns: ['**.userId', '**.user', '**.user.**'] };
     const data = await this.prismaService.match.findUnique({
       where: { id },
       ...this.representationService.buildCustomRepresentationQuery(
         isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
+        repOptions,
       ),
     });
     if (!data) throw new NotFoundException('Document type not found');

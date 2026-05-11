@@ -283,12 +283,16 @@ export class ClaimService {
         },
       ],
     };
+    const repOptions = isAdmin
+      ? {}
+      : { denyPatterns: ['**.userId', '**.user', '**.user.**'] };
     const totalCount = await this.prismaService.claim.count({ where: dbQuery });
     const data = await this.prismaService.claim.findMany({
       where: dbQuery,
       ...this.paginationService.buildSafePaginationQuery(query, totalCount),
       ...this.representationService.buildCustomRepresentationQuery(
         isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
+        repOptions,
       ),
       ...this.sortService.buildSortQuery(query?.orderBy),
     });
@@ -336,6 +340,7 @@ export class ClaimService {
       },
       ...this.representationService.buildCustomRepresentationQuery(
         isAdmin ? (query?.v ?? this.defaultRep) : this.defaultRep,
+        isAdmin ? {} : { denyPatterns: ['**.userId', '**.user', '**.user.**'] },
       ),
     });
     if (!data) throw new NotFoundException('Claim not found');
