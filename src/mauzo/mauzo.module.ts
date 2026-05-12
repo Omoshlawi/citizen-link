@@ -1,8 +1,7 @@
-import { Module } from '@nestjs/common';
-import { MauzoController } from './mauzo.controller';
-import { MauzoService } from './mauzo.service';
 import { HttpModule } from '@nestjs/axios';
+import { Module } from '@nestjs/common';
 import { MauzoConfig } from './mauzo.config';
+import { MauzoService } from './mauzo.service';
 
 @Module({
   imports: [
@@ -13,7 +12,7 @@ import { MauzoConfig } from './mauzo.config';
       inject: [MauzoConfig],
     }),
   ],
-  controllers: [MauzoController],
+  controllers: [],
   providers: [MauzoService],
 })
 export class MauzoModule {}

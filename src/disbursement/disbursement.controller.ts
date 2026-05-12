@@ -15,7 +15,7 @@ import {
   CustomRepresentationQueryDto,
   OriginalUrl,
 } from '../common/query-builder';
-import { B2CCallbackBody } from '../payment/daraja.service';
+import { B2CCallbackBodyDto } from '../daraja/daraja.dto';
 import {
   GetDisbursementResponseDto,
   QueryDisbursementDto,
@@ -76,7 +76,7 @@ export class DisbursementController {
   @Post('callback/daraja-b2c')
   @ApiOperation({ summary: 'Daraja B2C result callback (internal)' })
   @AllowAnonymous()
-  async darajaB2CCallback(@Body() body: B2CCallbackBody) {
+  async darajaB2CCallback(@Body() body: B2CCallbackBodyDto) {
     await this.disbursementService.handleB2CCallback(body);
     return { ResultCode: 0, ResultDesc: 'Accepted' };
   }

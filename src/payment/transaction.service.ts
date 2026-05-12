@@ -25,7 +25,8 @@ import { EntityPrefix } from '../human-id/human-id.constants';
 import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseDate } from '../app.utils';
-import { DarajaService, StkCallbackBody } from './daraja.service';
+import { DarajaService } from '../daraja/daraja.service';
+import { StkCallbackBodyDto } from '../daraja/daraja.dto';
 import { InitiatePaymentDto, QueryTransactionDto } from './transaction.dto';
 import { Decimal } from '@prisma/client/runtime/client';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
@@ -166,7 +167,7 @@ export class TransactionService {
    * No authentication — Daraja posts to this URL directly.
    * Matched by CheckoutRequestID.
    */
-  async handleDarajaCallback(body: StkCallbackBody) {
+  async handleDarajaCallback(body: StkCallbackBodyDto) {
     const { CheckoutRequestID, ResultCode, ResultDesc } = body.Body.stkCallback;
 
     const transaction = await this.prismaService.transaction.findUnique({

@@ -20,7 +20,8 @@ import {
 } from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseDate } from '../app.utils';
-import { B2CCallbackBody, DarajaService } from '../payment/daraja.service';
+import { DarajaService } from '../daraja/daraja.service';
+import { B2CCallbackBodyDto } from '../daraja/daraja.dto';
 import {
   QueryDisbursementDto,
   WithdrawDisbursementDto,
@@ -190,7 +191,7 @@ export class DisbursementService {
    * Daraja B2C result callback — no session auth, Daraja posts directly.
    * Matches by ConversationID stored in disbursement metadata.
    */
-  async handleB2CCallback(body: B2CCallbackBody) {
+  async handleB2CCallback(body: B2CCallbackBodyDto) {
     const { ConversationID, ResultCode, ResultDesc, TransactionID } =
       body.Result;
 

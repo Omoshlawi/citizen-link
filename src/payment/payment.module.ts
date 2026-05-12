@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { DarajaService } from './daraja.service';
 import { TransactionController } from './transaction.controller';
 import { TransactionService } from './transaction.service';
 import { MauzoModule } from 'src/mauzo/mauzo.module';
+import { DarajaModule } from 'src/daraja/daraja.module';
 
 @Module({
-  imports: [MauzoModule],
+  imports: [DarajaModule, MauzoModule],
   controllers: [TransactionController],
-  providers: [DarajaService, TransactionService],
-  exports: [TransactionService, DarajaService],
+  providers: [TransactionService],
+  exports: [TransactionService],
 })
 export class PaymentModule {}

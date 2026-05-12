@@ -22,7 +22,7 @@ import {
   QueryTransactionResponseDto,
 } from './transaction.dto';
 import { TransactionService } from './transaction.service';
-import { StkCallbackBody } from './daraja.service';
+import { StkCallbackBodyDto } from '../daraja/daraja.dto';
 
 @Controller('transaction')
 export class TransactionController {
@@ -52,7 +52,7 @@ export class TransactionController {
   @Post('callback/daraja')
   @ApiOperation({ summary: 'Daraja STK push callback (internal)' })
   @AllowAnonymous()
-  async darajaCallback(@Body() body: StkCallbackBody) {
+  async darajaCallback(@Body() body: StkCallbackBodyDto) {
     await this.transactionService.handleDarajaCallback(body);
     return { ResultCode: 0, ResultDesc: 'Accepted' };
   }

@@ -32,7 +32,7 @@ export class MauzoService implements OnModuleInit {
   async initiatePayment(dto: PaymentintentDto) {
     const key = await this.getIdempotencyKey();
     const res = await lastValueFrom(
-      this.httpService.post<PaymentIntentResponseDto>('payment_intents', dto, {
+      this.httpService.post<PaymentIntentResponseDto>('/payment_intents', dto, {
         headers: {
           'Idempotency-Key': key,
         },

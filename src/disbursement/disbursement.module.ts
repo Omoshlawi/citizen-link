@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { DisbursementController } from './disbursement.controller';
 import { DisbursementService } from './disbursement.service';
-import { PaymentModule } from '../payment/payment.module';
+import { DarajaModule } from '../daraja/daraja.module';
 import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
-  imports: [PaymentModule, WalletModule],
+  imports: [DarajaModule, WalletModule],
   controllers: [DisbursementController],
   providers: [DisbursementService],
   exports: [DisbursementService],

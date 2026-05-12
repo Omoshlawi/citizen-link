@@ -1,63 +1,21 @@
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
+import { HttpService } from '@nestjs/axios';
 import {
   Injectable,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { isAxiosError } from 'axios';
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
+import { lastValueFrom } from 'rxjs';
 import { DarajaConfig } from './daraja.config';
-
-interface DarajaTokenResponse {
-  access_token: string;
-  expires_in: string;
-}
-
-export interface StkPushResponse {
-  MerchantRequestID: string;
-  CheckoutRequestID: string;
-  ResponseCode: string;
-  ResponseDescription: string;
-  CustomerMessage: string;
-}
-
-export interface B2CResponse {
-  ConversationID: string;
-  OriginatorConversationID: string;
-  ResponseCode: string;
-  ResponseDescription: string;
-}
-
-export interface B2CCallbackBody {
-  Result: {
-    ResultType: number;
-    ResultCode: number; // 0 = success
-    ResultDesc: string;
-    OriginatorConversationID: string;
-    ConversationID: string;
-    TransactionID: string; // M-Pesa receipt number
-    ResultParameters?: {
-      ResultParameter: Array<{ Key: string; Value: string | number }>;
-    };
-    ReferenceData?: {
-      ReferenceItem: { Key: string; Value: string };
-    };
-  };
-}
-
-export interface StkCallbackBody {
-  Body: {
-    stkCallback: {
-      MerchantRequestID: string;
-      CheckoutRequestID: string;
-      ResultCode: number; // 0 = success
-      ResultDesc: string;
-      CallbackMetadata?: {
-        Item: Array<{ Name: string; Value?: string | number }>;
-      };
-    };
-  };
-}
+import {
+  B2CResponseDto,
+  DarajaTokenResponseDto,
+  StkCallbackBodyDto,
+  StkPushResponseDto,
+} from './daraja.dto';
 
 @Injectable()
 export class DarajaService {
@@ -65,7 +23,10 @@ export class DarajaService {
   private cachedToken: string | null = null;
   private tokenExpiresAt: number = 0;
 
-  constructor(private readonly config: DarajaConfig) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly config: DarajaConfig,
+  ) {}
 
   private async getAccessToken(): Promise<string> {
     if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
@@ -76,21 +37,24 @@ export class DarajaService {
       `${this.config.consumerKey}:${this.config.consumerSecret}`,
     ).toString('base64');
 
-    const res = await fetch(
-      `${this.config.baseUrl}/oauth/v1/generate?grant_type=client_credentials`,
-      { headers: { Authorization: `Basic ${credentials}` } },
-    );
-
-    if (!res.ok) {
-      this.logger.error(`Daraja OAuth failed: ${res.status}`);
+    try {
+      const res = await lastValueFrom(
+        this.httpService.get<DarajaTokenResponseDto>(
+          '/oauth/v1/generate?grant_type=client_credentials',
+          { headers: { Authorization: `Basic ${credentials}` } },
+        ),
+      );
+      this.cachedToken = res.data.access_token;
+      // expire 60s before actual expiry to avoid edge-case stale tokens
+      this.tokenExpiresAt =
+        Date.now() + (Number(res.data.expires_in) - 60) * 1000;
+      return this.cachedToken;
+    } catch (error) {
+      this.logger.error(
+        `Daraja OAuth failed: ${isAxiosError(error) ? error.response?.status : String(error)}`,
+      );
       throw new ServiceUnavailableException('Payment provider unavailable');
     }
-
-    const data = (await res.json()) as DarajaTokenResponse;
-    this.cachedToken = data.access_token;
-    // expire 60s before actual expiry to avoid edge-case stale tokens
-    this.tokenExpiresAt = Date.now() + (Number(data.expires_in) - 60) * 1000;
-    return this.cachedToken;
   }
 
   /** Generates the base64 password required by Daraja STK push */
@@ -109,7 +73,7 @@ export class DarajaService {
     amount: number; // in KES, integer
     accountRef: string; // e.g. invoice number
     description: string;
-  }): Promise<StkPushResponse> {
+  }): Promise<StkPushResponseDto> {
     const token = await this.getAccessToken();
     const { password, timestamp } = this.buildPassword();
 
@@ -127,25 +91,22 @@ export class DarajaService {
       TransactionDesc: params.description,
     };
 
-    const res = await fetch(
-      `${this.config.baseUrl}/mpesa/stkpush/v1/processrequest`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      },
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      this.logger.error(`STK push failed: ${res.status} — ${text}`);
+    let data: StkPushResponseDto;
+    try {
+      const res = await lastValueFrom(
+        this.httpService.post<StkPushResponseDto>(
+          '/mpesa/stkpush/v1/processrequest',
+          body,
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+      data = res.data;
+    } catch (error) {
+      this.logger.error(
+        `STK push failed: ${isAxiosError(error) ? `${error.response?.status} — ${JSON.stringify(error.response?.data)}` : String(error)}`,
+      );
       throw new ServiceUnavailableException('Failed to initiate payment');
     }
-
-    const data = (await res.json()) as StkPushResponse;
 
     if (data.ResponseCode !== '0') {
       this.logger.error(`STK push rejected: ${data.ResponseDescription}`);
@@ -196,7 +157,7 @@ export class DarajaService {
     amount: number; // in KES, integer
     reference: string; // disbursement number shown in M-Pesa message
     remarks: string;
-  }): Promise<B2CResponse> {
+  }): Promise<B2CResponseDto> {
     const token = await this.getAccessToken();
     const securityCredential = this.buildSecurityCredential();
 
@@ -213,25 +174,22 @@ export class DarajaService {
       Occassion: params.reference, // Daraja typo in spec — keep as-is
     };
 
-    const res = await fetch(
-      `${this.config.baseUrl}/mpesa/b2c/v3/paymentrequest`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      },
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      this.logger.error(`B2C payout failed: ${res.status} — ${text}`);
+    let data: B2CResponseDto;
+    try {
+      const res = await lastValueFrom(
+        this.httpService.post<B2CResponseDto>(
+          '/mpesa/b2c/v3/paymentrequest',
+          body,
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+      data = res.data;
+    } catch (error) {
+      this.logger.error(
+        `B2C payout failed: ${isAxiosError(error) ? `${error.response?.status} — ${JSON.stringify(error.response?.data)}` : String(error)}`,
+      );
       throw new ServiceUnavailableException('Failed to initiate payout');
     }
-
-    const data = (await res.json()) as B2CResponse;
 
     if (data.ResponseCode !== '0') {
       this.logger.error(`B2C payout rejected: ${data.ResponseDescription}`);
@@ -247,7 +205,7 @@ export class DarajaService {
   }
 
   /** Extracts the M-Pesa receipt number from a successful callback */
-  extractReceiptNumber(callback: StkCallbackBody): string | null {
+  extractReceiptNumber(callback: StkCallbackBodyDto): string | null {
     const items = callback.Body.stkCallback.CallbackMetadata?.Item ?? [];
     const item = items.find((i) => i.Name === 'MpesaReceiptNumber');
     return item?.Value ? String(item.Value) : null;
