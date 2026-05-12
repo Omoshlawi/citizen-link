@@ -15,5 +15,6 @@ import { MauzoWebHookService } from './mauzo.webhook.service';
   ],
   controllers: [],
   providers: [MauzoService, MauzoWebHookService],
+  exports: [MauzoService],
 })
 export class MauzoModule {}

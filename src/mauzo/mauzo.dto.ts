@@ -54,45 +54,45 @@ enum PaymentIntentStatus {
 
 export class PaymentResponseDto {
   @ApiProperty()
-  id: string;
+  id!: string;
   @ApiProperty({ enum: PaymentProviders })
-  provider: PaymentProviders;
+  provider!: PaymentProviders;
   @ApiProperty({ enum: PaymentStatus })
-  status: PaymentStatus;
+  status!: PaymentStatus;
 }
 
 export class PaymentIntentResponseDto {
   @ApiProperty({ type: 'string' })
-  id: string;
+  id!: string;
   @ApiProperty()
-  amount: number;
+  amount!: number;
   @ApiProperty()
-  currency: string;
+  currency!: string;
   @ApiProperty({ enum: PaymentIntentStatus })
-  status: PaymentIntentStatus;
+  status!: PaymentIntentStatus;
   @ApiProperty()
-  short_code: string;
+  short_code!: string;
   @ApiProperty()
-  description: string;
+  description!: string;
   @ApiProperty({ nullable: true, required: false })
-  failure_reason: string;
+  failure_reason!: string;
   @ApiProperty({ isArray: true, type: PaymentResponseDto })
-  payments: Array<PaymentResponseDto>;
+  payments!: Array<PaymentResponseDto>;
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
 }
 
 export class GetWalletBalanceDto {
   @ApiProperty()
-  balance: number;
+  balance!: number;
   @ApiProperty()
-  currency: string;
+  currency!: string;
   @ApiProperty()
-  available: number;
+  available!: number;
   @ApiProperty()
-  pending: number;
+  pending!: number;
   @ApiProperty()
-  lastUpdated: string;
+  lastUpdated!: string;
 }
 
 export enum ErrorTypes {
@@ -105,13 +105,13 @@ export enum ErrorTypes {
 }
 export class ErrorPayloadDto {
   @ApiProperty()
-  message: string;
+  message!: string;
   @ApiProperty({ enum: ErrorTypes })
-  type: ErrorTypes;
+  type!: ErrorTypes;
   @ApiProperty({ example: 'phone_number' })
-  param: string;
+  param!: string;
 }
-export class ErrorResponseDto {
-  @ApiProperty({ type: ErrorPayloadDto })
-  error: ErrorPayloadDto;
+export class ErrorResponseDto extends ErrorPayloadDto {
+  // @ApiProperty({ type: ErrorPayloadDto })
+  // error: ErrorPayloadDto;
 }

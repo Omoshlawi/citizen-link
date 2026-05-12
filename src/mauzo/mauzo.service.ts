@@ -1,6 +1,18 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { MauzoConfig } from './mauzo.config';
 import { HttpService } from '@nestjs/axios';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
+import { AxiosError } from 'axios';
+import { lastValueFrom } from 'rxjs';
+import { EntityPrefix } from 'src/human-id/human-id.constants';
+import { HumanIdService } from 'src/human-id/human-id.service';
+import { MauzoConfig } from './mauzo.config';
 import {
   ErrorResponseDto,
   ErrorTypes,
@@ -8,13 +20,10 @@ import {
   PaymentintentDto,
   PaymentIntentResponseDto,
 } from './mauzo.dto';
-import { HumanIdService } from 'src/human-id/human-id.service';
-import { EntityPrefix } from 'src/human-id/human-id.constants';
-import { lastValueFrom } from 'rxjs';
-import { AxiosError } from 'axios';
 
 @Injectable()
 export class MauzoService implements OnModuleInit {
+  private readonly logger = new Logger(MauzoService.name);
   constructor(
     private readonly config: MauzoConfig,
     private readonly httpService: HttpService,
@@ -59,20 +68,28 @@ export class MauzoService implements OnModuleInit {
       if (err instanceof AxiosError && err.response) {
         // Cast the backend error body to your ErrorResponseDto
         const errorData = err.response.data as ErrorResponseDto;
-
-        if (errorData.error.type === ErrorTypes.RATE_LIMIT_ERROR) {
+        if (errorData.type === ErrorTypes.RATE_LIMIT_ERROR) {
           // await sleep(errorData.retryAfter * 1000);
           // return createPayment(data);
+          this.logger.error(errorData.type, errorData.message); // TODO: properly log
+          throw new HttpException(
+            errorData.message,
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
         }
-        if (errorData.error.type === ErrorTypes.INVALID_REQUEST_ERROR) {
+        if (errorData.type === ErrorTypes.INVALID_REQUEST_ERROR) {
+          this.logger.error(errorData.type, errorData.message); // TODO: properly log
           // throw new ValidationError(errorData.param);
+          throw new BadRequestException(errorData.message);
         }
-        if (errorData.error.type === ErrorTypes.API_ERROR) {
+        if (errorData.type === ErrorTypes.API_ERROR) {
+          this.logger.error(errorData.type, errorData.message); // TODO: properly log
           // return retryWithBackoff(() => createPayment(data));
+          throw new InternalServerErrorException();
         }
       }
 
-      throw err;
+      throw new InternalServerErrorException();
     }
   }
 

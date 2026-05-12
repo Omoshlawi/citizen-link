@@ -32,6 +32,7 @@ import { Decimal } from '@prisma/client/runtime/client';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { NotificationPriority } from '../notifications/notification.interfaces';
 import { RegionService } from '../region/region.service';
+import { MauzoService } from 'src/mauzo/mauzo.service';
 
 @Injectable()
 export class TransactionService {
@@ -47,6 +48,7 @@ export class TransactionService {
     private readonly notificationService: NotificationDispatchService,
     private readonly regionService: RegionService,
     private readonly authService: AuthService<BetterAuthWithPlugins>,
+    private readonly mauzoService: MauzoService,
   ) {}
 
   /**

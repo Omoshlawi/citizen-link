@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuthService } from '@thallesp/nestjs-better-auth';
-import { ClaimStatus, ExchangeStatus } from '../../generated/prisma/client';
+import {
+  ClaimStatus,
+  ExchangeMethod,
+  ExchangeStatus,
+} from '../../generated/prisma/client';
 import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
@@ -19,6 +23,7 @@ import { HumanIdService } from '../human-id/human-id.service';
 import { NotificationPriority } from '../notifications/notification.interfaces';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { InvoiceService } from '../invoice/invoice.service';
 import {
   ScheduleOutboundExchangeDto,
   UpdateOutboundExchangeDto,
@@ -37,6 +42,7 @@ export class DocumentExchangeOutboundService {
     private readonly notifications: NotificationDispatchService,
     private readonly auth: AuthService<BetterAuthWithPlugins>,
     private readonly settings: SystemSettingService,
+    private readonly invoiceService: InvoiceService,
   ) {}
 
   async scheduleExchange(
@@ -97,6 +103,12 @@ export class DocumentExchangeOutboundService {
         station: { select: { name: true } },
       },
     });
+
+    // TODO: When INHOUSE_DELIVERY or COURIER_DELIVERY is selected, fetch the
+    // configured delivery fee from SystemSettingService and call:
+    //   await this.invoiceService.addItem(invoice.id, { type: InvoiceItemType.DELIVERY_FEE, label: '...', amount: fee })
+    // The invoice is reachable via: claim.invoice (include it in the claim query above).
+    // ExchangeMethod.INHOUSE_DELIVERY and ExchangeMethod.COURIER_DELIVERY are the triggers.
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const claimNumber = String((exchange as any).claim?.claimNumber ?? '');

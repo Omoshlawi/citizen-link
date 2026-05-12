@@ -112,7 +112,7 @@ export class GetDocumentTypeResponseDto implements DocumentType {
   replacementInstructions: string | null;
 
   @ApiProperty()
-  averageReplacementCost: number | null;
+  averageReplacementCost: Decimal | null;
 
   @ApiProperty()
   id: string;

@@ -1058,6 +1058,7 @@ model Invoice {
   // 1-to-Many relationship with Transactions
   transactions  Transaction[]
   disbursements Disbursement[]
+  items         InvoiceItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1074,6 +1075,28 @@ enum InvoiceStatus {
   PAID
   OVERDUE
   CANCELLED
+}
+
+enum InvoiceItemType {
+  SERVICE_FEE
+  FINDER_REWARD
+  DELIVERY_FEE
+  COURIER_FEE
+  CUSTOM
+}
+
+model InvoiceItem {
+  id          String          @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  type        InvoiceItemType
+  label       String
+  description String?
+  amount      Decimal         @db.Decimal(10, 2)
+  createdAt   DateTime        @default(now())
+
+  @@index([invoiceId])
+  @@map("invoice_items")
 }
 
 model Transaction {

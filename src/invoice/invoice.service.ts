@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   BadRequestException,
   Injectable,
@@ -9,6 +11,7 @@ import { EntityPrefix } from '../human-id/human-id.constants';
 import { HumanIdService } from '../human-id/human-id.service';
 import {
   ClaimStatus,
+  InvoiceItemType,
   Prisma,
   PrismaClient,
 } from '../../generated/prisma/client';
@@ -92,8 +95,49 @@ export class InvoiceService {
         finderReward,
         totalAmount,
         balanceDue: totalAmount,
+        items: {
+          create: [
+            {
+              type: InvoiceItemType.SERVICE_FEE,
+              label: 'Recovery Service Fee',
+              amount: serviceFee,
+            },
+            {
+              type: InvoiceItemType.FINDER_REWARD,
+              label: 'Finder Reward',
+              amount: finderReward,
+            },
+          ],
+        },
       },
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
+    });
+  }
+
+  async addItem(
+    invoiceId: string,
+    item: {
+      type: InvoiceItemType;
+      label: string;
+      description?: string;
+      amount: Decimal;
+    },
+    prismaClient: Omit<
+      PrismaClient<never, undefined, DefaultArgs>,
+      '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'
+    > = this.prismaService,
+  ) {
+    const invoice = await prismaClient.invoice.findUniqueOrThrow({
+      where: { id: invoiceId },
+    });
+    const newTotal = invoice.totalAmount.plus(item.amount);
+    await prismaClient.invoiceItem.create({ data: { invoiceId, ...item } });
+    await prismaClient.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        totalAmount: newTotal,
+        balanceDue: newTotal.minus(invoice.amountPaid),
+      },
     });
   }
 
