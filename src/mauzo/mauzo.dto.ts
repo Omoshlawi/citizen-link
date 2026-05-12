@@ -10,7 +10,39 @@ export const PaymentIntentSchema = z.object({
   metadata: z.record(z.string(), z.any()),
 });
 
+export enum WebHookEvents {
+  PAYMENT_SUCCEDED = 'payment.succeeded',
+  PAYMENT_FIAILED = 'payment.failed',
+  PAYMENT_PROCESSING = 'payment.processing',
+}
+
+export enum PaymentStatus {
+  SUCCEEDED = 'SUCCEEDED',
+}
+
+export enum PaymentProviders {
+  MPESA = 'MPESA',
+}
+
+export const WebHookSchema = z.object({
+  event: z.enum(WebHookEvents),
+  api_version: z.string(),
+  created: z.number(),
+  data: z.object({
+    id: z.string(),
+    amount: z.number(),
+    currency: z.string(),
+    status: z.enum(PaymentStatus),
+    payments: z.object({
+      provider: z.enum(PaymentProviders),
+      provider_ref: z.string(),
+      status: z.enum(PaymentStatus),
+    }),
+  }),
+});
+
 export class PaymentintentDto extends createZodDto(PaymentIntentSchema) {}
+export class WebHookDto extends createZodDto(WebHookSchema) {}
 
 enum PaymentIntentStatus {
   CREATED = 'CREATED',
@@ -23,10 +55,10 @@ enum PaymentIntentStatus {
 export class PaymentResponseDto {
   @ApiProperty()
   id: string;
-  @ApiProperty()
-  provider: string;
-  @ApiProperty({ enum: PaymentIntentStatus })
-  status: PaymentIntentStatus;
+  @ApiProperty({ enum: PaymentProviders })
+  provider: PaymentProviders;
+  @ApiProperty({ enum: PaymentStatus })
+  status: PaymentStatus;
 }
 
 export class PaymentIntentResponseDto {
@@ -48,4 +80,38 @@ export class PaymentIntentResponseDto {
   payments: Array<PaymentResponseDto>;
   @ApiProperty()
   createdAt: Date;
+}
+
+export class GetWalletBalanceDto {
+  @ApiProperty()
+  balance: number;
+  @ApiProperty()
+  currency: string;
+  @ApiProperty()
+  available: number;
+  @ApiProperty()
+  pending: number;
+  @ApiProperty()
+  lastUpdated: string;
+}
+
+export enum ErrorTypes {
+  INVALID_REQUEST_ERROR = 'invalid_request_error',
+  UNAUTHORIZED_REQUEST_ERROR = 'authentication_error',
+  CARD_ERROR = 'card_error',
+  CONFLICT_ERROR = 'conflict_error',
+  RATE_LIMIT_ERROR = 'rate_limit_error',
+  API_ERROR = 'api_error',
+}
+export class ErrorPayloadDto {
+  @ApiProperty()
+  message: string;
+  @ApiProperty({ enum: ErrorTypes })
+  type: ErrorTypes;
+  @ApiProperty({ example: 'phone_number' })
+  param: string;
+}
+export class ErrorResponseDto {
+  @ApiProperty({ type: ErrorPayloadDto })
+  error: ErrorPayloadDto;
 }

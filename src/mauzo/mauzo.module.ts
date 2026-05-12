@@ -2,6 +2,7 @@ import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { MauzoConfig } from './mauzo.config';
 import { MauzoService } from './mauzo.service';
+import { MauzoWebHookService } from './mauzo.webhook.service';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { MauzoService } from './mauzo.service';
     }),
   ],
   controllers: [],
-  providers: [MauzoService],
+  providers: [MauzoService, MauzoWebHookService],
 })
 export class MauzoModule {}
