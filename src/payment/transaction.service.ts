@@ -113,6 +113,14 @@ export class TransactionService {
         'No phone number available for STK push. Please provide phoneNumber in the request.',
       );
     }
+    if (
+      dto.phoneNumber &&
+      !this.regionService.getSubscriberRegex().test(dto.phoneNumber)
+    ) {
+      throw new BadRequestException(
+        `Phone number must be subscriber digits only, e.g. ${this.regionService.getSubscriberExample()}`,
+      );
+    }
     const phone = this.regionService.toDarajaPhone(rawPhone);
 
     // Create the Transaction in PENDING state before calling Daraja.
@@ -135,22 +143,40 @@ export class TransactionService {
 
     // Call Daraja — if it fails, mark the transaction FAILED so the UI gets a clear error
     try {
-      const stkResponse = await this.darajaService.initiateStkPush({
-        phoneNumber: phone,
+      // const stkResponse = await this.darajaService.initiateStkPush({
+      //   phoneNumber: phone,
+      //   amount,
+      //   accountRef: invoice.invoiceNumber,
+      //   description: `Payment for invoice ${invoice.invoiceNumber}`,
+      // });
+      const stkResponse = await this.mauzoService.initiatePayment({
+        phone_number: phone,
         amount,
-        accountRef: invoice.invoiceNumber,
         description: `Payment for invoice ${invoice.invoiceNumber}`,
+        currency: 'KES', // TODO: Use regional configured payment
+        metadata: {
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceId: invoice.id,
+        },
       });
 
       // Advance to PROCESSING and store CheckoutRequestID for callback matching
       return await this.prismaService.transaction.update({
         where: { id: transaction.id },
         data: {
-          checkoutRequestId: stkResponse.CheckoutRequestID,
+          // Daraja
+          // checkoutRequestId: stkResponse.CheckoutRequestID,
+          // status: TransactionStatus.PROCESSING,
+          // metadata: {
+          //   merchantRequestId: stkResponse.MerchantRequestID,
+          //   customerMessage: stkResponse.CustomerMessage,
+          // },
+          // mauzo
+          checkoutRequestId: stkResponse.id,
           status: TransactionStatus.PROCESSING,
           metadata: {
-            merchantRequestId: stkResponse.MerchantRequestID,
-            customerMessage: stkResponse.CustomerMessage,
+            // merchantRequestId: stkResponse.,
+            // customerMessage: stkResponse.CustomerMessage,
           },
         },
         ...this.representationService.buildCustomRepresentationQuery(query?.v),

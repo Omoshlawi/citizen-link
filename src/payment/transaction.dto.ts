@@ -11,11 +11,8 @@ import {
 
 export const InitiatePaymentSchema = z.object({
   invoiceId: z.uuid(),
-  /** E.164 phone number for STK push, e.g. 254712345678. Defaults to the authenticated user's phone number. */
-  phoneNumber: z
-    .string()
-    .regex(/^254\d{9}$/, 'Phone number must be in format 2547XXXXXXXX')
-    .optional(),
+  /** Phone number for STK push. Any format accepted (subscriber, E.164, Daraja) — normalized by RegionService.toDarajaPhone(). Defaults to the authenticated user's phone number. */
+  phoneNumber: z.string().optional(),
   /** Partial amount for installment. Defaults to full balanceDue. */
   amount: z.number().positive().optional(),
 });

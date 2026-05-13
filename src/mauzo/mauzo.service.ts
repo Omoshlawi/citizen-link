@@ -33,6 +33,7 @@ export class MauzoService implements OnModuleInit {
     this.httpService.axiosRef.interceptors.request.use((conf) => {
       conf.headers.Authorization = `Bearer ${this.config.secreteKey}`;
       conf.headers['Content-Type'] = 'application/json';
+      conf.headers['X-Public-Key'] = this.config.publicKey;
       return conf;
     });
   }
@@ -53,7 +54,7 @@ export class MauzoService implements OnModuleInit {
       const res = await lastValueFrom(
         this.httpService.post<PaymentIntentResponseDto>(
           '/payment_intents',
-          dto,
+          { ...dto, public_key: this.config.publicKey },
           {
             headers: {
               'Idempotency-Key': key,
@@ -71,19 +72,17 @@ export class MauzoService implements OnModuleInit {
         if (errorData.type === ErrorTypes.RATE_LIMIT_ERROR) {
           // await sleep(errorData.retryAfter * 1000);
           // return createPayment(data);
-          this.logger.error(errorData.type, errorData.message); // TODO: properly log
-          throw new HttpException(
-            errorData.message,
-            HttpStatus.TOO_MANY_REQUESTS,
-          );
+          this.logger.error(errorData); // TODO: properly log
+          throw new HttpException(errorData, HttpStatus.TOO_MANY_REQUESTS);
         }
         if (errorData.type === ErrorTypes.INVALID_REQUEST_ERROR) {
-          this.logger.error(errorData.type, errorData.message); // TODO: properly log
+          this.logger.error(errorData); // TODO: properly log
           // throw new ValidationError(errorData.param);
-          throw new BadRequestException(errorData.message);
+
+          throw new BadRequestException(errorData);
         }
         if (errorData.type === ErrorTypes.API_ERROR) {
-          this.logger.error(errorData.type, errorData.message); // TODO: properly log
+          this.logger.error(errorData); // TODO: properly log
           // return retryWithBackoff(() => createPayment(data));
           throw new InternalServerErrorException();
         }

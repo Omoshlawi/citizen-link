@@ -106,6 +106,8 @@ export enum ErrorTypes {
 export class ErrorPayloadDto {
   @ApiProperty()
   message!: string;
+  @ApiProperty()
+  error!: string;
   @ApiProperty({ enum: ErrorTypes })
   type!: ErrorTypes;
   @ApiProperty({ example: 'phone_number' })

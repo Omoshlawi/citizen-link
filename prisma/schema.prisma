@@ -45,14 +45,14 @@ model User {
   disbursements         Disbursement[]
   wallet                Wallet?
 
-  twoFactorEnabled     Boolean?             @default(false)
-  phoneNumber          String?
-  phoneNumberVerified  Boolean?
-  twofactors           TwoFactor[]
-  claimAttachments     ClaimAttachment[]
-  statusTransitions    StatusTransition[]
-  pushTokens           UserPushToken[]
-  templateVersions     TemplateVersion[]
+  twoFactorEnabled       Boolean?               @default(false)
+  phoneNumber            String?
+  phoneNumberVerified    Boolean?
+  twofactors             TwoFactor[]
+  claimAttachments       ClaimAttachment[]
+  statusTransitions      StatusTransition[]
+  pushTokens             UserPushToken[]
+  templateVersions       TemplateVersion[]
   exchangesCreated       DocumentExchange[]     @relation("ExchangeCreatedBy")
   exchangesCompleted     DocumentExchange[]     @relation("ExchangeCompletedBy")
   exchangesCancelled     DocumentExchange[]     @relation("ExchangeCancelledBy")
@@ -890,12 +890,12 @@ model Station {
   operatingHours Json?
 
   // Relations
-  exchanges               DocumentExchange[]
-  currentCustodyDocuments FoundDocumentCase[]     @relation("CurrentCustodyStation")
-  stationOperationTypes   StationOperationType[]
-  staffStationOperations  StaffStationOperation[]
-  documentOperationsAt          DocumentOperation[] @relation("OpStation")
-  documentOperationsCounterpart DocumentOperation[] @relation("OpCounterpart")
+  exchanges                     DocumentExchange[]
+  currentCustodyDocuments       FoundDocumentCase[]     @relation("CurrentCustodyStation")
+  stationOperationTypes         StationOperationType[]
+  staffStationOperations        StaffStationOperation[]
+  documentOperationsAt          DocumentOperation[]     @relation("OpStation")
+  documentOperationsCounterpart DocumentOperation[]     @relation("OpCounterpart")
 
   @@map("stations")
 }
@@ -911,25 +911,25 @@ enum ExchangeDirection {
 }
 
 enum ExchangeMethod {
-  STATION_DROPOFF  // INBOUND: finder walks to a partner station
-  AGENT_PICKUP     // INBOUND: agent dispatched to finder's address
-  OWNER_PICKUP     // OUTBOUND: owner comes to station to collect
+  STATION_DROPOFF // INBOUND: finder walks to a partner station
+  AGENT_PICKUP // INBOUND: agent dispatched to finder's address
+  OWNER_PICKUP // OUTBOUND: owner comes to station to collect
   INHOUSE_DELIVERY // OUTBOUND: in-house staff dispatched to owner's address
   COURIER_DELIVERY // OUTBOUND: third-party courier dispatched to owner's address
 }
 
 enum ExchangeStatus {
-  SCHEDULED   // created, awaiting logistics
+  SCHEDULED // created, awaiting logistics
   IN_PROGRESS // code issued (INBOUND) or document ready/out-for-delivery (OUTBOUND)
-  COMPLETED   // code confirmed (INBOUND) or delivery confirmed (OUTBOUND)
-  FAILED      // delivery failed, no-show, etc.
+  COMPLETED // code confirmed (INBOUND) or delivery confirmed (OUTBOUND)
+  FAILED // delivery failed, no-show, etc.
   CANCELLED
 }
 
 enum VerificationStatus {
-  PENDING   // code issued, awaiting confirmation
+  PENDING // code issued, awaiting confirmation
   CONFIRMED // code matched; exchange transitions to COMPLETED
-  EXPIRED   // TTL elapsed or max attempts reached
+  EXPIRED // TTL elapsed or max attempts reached
   CANCELLED // staff cancelled
 }
 
@@ -961,11 +961,11 @@ model DocumentExchange {
   externalShipmentId String?
 
   createdById   String
-  createdBy     User   @relation("ExchangeCreatedBy", fields: [createdById], references: [id])
+  createdBy     User    @relation("ExchangeCreatedBy", fields: [createdById], references: [id])
   completedById String?
-  completedBy   User?  @relation("ExchangeCompletedBy", fields: [completedById], references: [id])
+  completedBy   User?   @relation("ExchangeCompletedBy", fields: [completedById], references: [id])
   cancelledById String?
-  cancelledBy   User?  @relation("ExchangeCancelledBy", fields: [cancelledById], references: [id])
+  cancelledBy   User?   @relation("ExchangeCancelledBy", fields: [cancelledById], references: [id])
   cancelReason  String?
 
   verifications ExchangeVerification[]
@@ -984,18 +984,18 @@ model ExchangeVerification {
   exchangeId String
   exchange   DocumentExchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
 
-  code        String             // plaintext 6-digit numeric
+  code        String // plaintext 6-digit numeric
   status      VerificationStatus @default(PENDING)
   expiresAt   DateTime
   attempts    Int                @default(0)
   maxAttempts Int                @default(3) // snapshot from settings at initiation time
 
   issuedById    String
-  issuedBy      User   @relation("VerificationIssuedBy", fields: [issuedById], references: [id])
+  issuedBy      User    @relation("VerificationIssuedBy", fields: [issuedById], references: [id])
   confirmedById String?
-  confirmedBy   User?  @relation("VerificationConfirmedBy", fields: [confirmedById], references: [id])
+  confirmedBy   User?   @relation("VerificationConfirmedBy", fields: [confirmedById], references: [id])
   cancelledById String?
-  cancelledBy   User?  @relation("VerificationCancelledBy", fields: [cancelledById], references: [id])
+  cancelledBy   User?   @relation("VerificationCancelledBy", fields: [cancelledById], references: [id])
   cancelReason  String?
 
   createdAt DateTime @default(now())
@@ -1040,7 +1040,7 @@ model Invoice {
 
   // Restrict deletion — financial records must never cascade-delete
   claimId String @unique
-  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
   // Use Decimal for money!
   serviceFee   Decimal @db.Decimal(10, 2)
@@ -1105,7 +1105,7 @@ model Transaction {
 
   // The claimant who is paying
   userId String
-  user   User   @relation("TransactionPayer", fields: [userId], references: [id], onDelete: Restrict)
+  user   User   @relation("TransactionPayer", fields: [userId], references: [id], onDelete: Cascade)
 
   // The staff/agent who triggered the payment request (null = client self-initiated)
   initiatedById String?
@@ -1113,7 +1113,7 @@ model Transaction {
 
   // Restrict deletion — financial records must never cascade-delete
   invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   // The amount for this specific installment/attempt
   amount   Decimal @db.Decimal(10, 2)
@@ -1170,11 +1170,11 @@ model Disbursement {
   disbursementNumber String @unique
 
   invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   // The finder receiving the reward
   recipientId String
-  recipient   User   @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  recipient   User   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
   amount   Decimal @db.Decimal(10, 2)
   currency String
