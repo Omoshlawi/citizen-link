@@ -61,9 +61,18 @@ export class PaymentResponseDto {
   status!: PaymentStatus;
 }
 
+export class PaymentIntentMetadata {
+  @ApiProperty()
+  invoiceId: string;
+  @ApiProperty()
+  invoiceNumber: string;
+}
+
 export class PaymentIntentResponseDto {
   @ApiProperty({ type: 'string' })
   id!: string;
+  @ApiProperty({ type: 'string', example: 'payment_intent' })
+  object: string;
   @ApiProperty()
   amount!: number;
   @ApiProperty()
@@ -74,12 +83,18 @@ export class PaymentIntentResponseDto {
   short_code!: string;
   @ApiProperty()
   description!: string;
-  @ApiProperty({ nullable: true, required: false })
-  failure_reason!: string;
   @ApiProperty({ isArray: true, type: PaymentResponseDto })
   payments!: Array<PaymentResponseDto>;
+  @ApiProperty({ nullable: true, required: false })
+  failure_reason?: string;
+  @ApiProperty({ type: PaymentIntentMetadata })
+  metadata: PaymentIntentMetadata;
+  @ApiProperty({ required: false, nullable: true })
+  customerId?: string;
   @ApiProperty()
-  createdAt!: Date;
+  created!: number;
+  @ApiProperty()
+  updated!: number;
 }
 
 export class GetWalletBalanceDto {

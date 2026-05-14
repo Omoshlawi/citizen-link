@@ -91,8 +91,6 @@ export class InvoiceService {
         invoiceNumber: await this.humanIdService.generate({
           prefix: EntityPrefix.INVOICE,
         }),
-        serviceFee,
-        finderReward,
         totalAmount,
         balanceDue: totalAmount,
         items: {

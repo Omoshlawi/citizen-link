@@ -1043,8 +1043,6 @@ model Invoice {
   claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
   // Use Decimal for money!
-  serviceFee   Decimal @db.Decimal(10, 2)
-  finderReward Decimal @db.Decimal(10, 2)
   totalAmount  Decimal @db.Decimal(10, 2)
 
   // Installment tracking — ALWAYS update both fields atomically in a $transaction

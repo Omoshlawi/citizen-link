@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  InvoiceItemType,
   InvoiceStatus,
   PaymentMethod,
   PaymentProvider,
@@ -200,7 +201,7 @@ export class TransactionService {
 
     const transaction = await this.prismaService.transaction.findUnique({
       where: { checkoutRequestId: CheckoutRequestID },
-      include: { invoice: true },
+      include: { invoice: { include: { items: true } } },
     });
 
     if (!transaction) {
@@ -286,7 +287,9 @@ export class TransactionService {
 
       // When invoice is fully paid, auto-create a disbursement for the finder
       if (newStatus === InvoiceStatus.PAID) {
-        const finderReward = invoice.finderReward;
+        const finderReward = invoice.items
+          .filter((item) => item.type === InvoiceItemType.FINDER_REWARD)
+          .reduce((sum, item) => sum.plus(item.amount), new Decimal(0));
         if (finderReward.greaterThan(0)) {
           const fullInvoice = await tx.invoice.findUnique({
             where: { id: invoice.id },
