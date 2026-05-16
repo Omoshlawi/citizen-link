@@ -77,10 +77,13 @@ export class RequireActiveStationGuard implements CanActivate {
     const session = (await this.authService.api.getSession({
       headers: fromNodeHeaders(request.headers),
     })) as UserSession | null;
+    if (!mode) return true;
     if (!session?.user) {
       this.logger.warn(
-        `Access denied. Missing user for session ${session?.session.id}`,
+        `Access denied. You must be logged in to access this resource`,
       );
+      this.logger.error('Throwing here-------');
+
       throw new UnauthorizedException(
         'Access denied. You must be logged in to access this resource',
       );
