@@ -299,12 +299,21 @@ export class ConfirmDeliveryQueryDto extends createZodDto(
 export const FailDeliveryQuerySchema = z.object({
   exchangeNumber: z.string().min(1),
 });
-export class FailDeliveryQueryDto extends createZodDto(FailDeliveryQuerySchema) {}
+export class FailDeliveryQueryDto extends createZodDto(
+  FailDeliveryQuerySchema,
+) {}
 
 export const FailDeliverySchema = z.object({
   reason: z.string().min(5, 'Reason must be at least 5 characters'),
 });
 export class FailDeliveryDto extends createZodDto(FailDeliverySchema) {}
+
+export const GetDeliveryLabelQuerySchema = z.object({
+  exchangeNumber: z.string().min(1),
+});
+export class GetDeliveryLabelQueryDto extends createZodDto(
+  GetDeliveryLabelQuerySchema,
+) {}
 
 // ─── Response DTOs ────────────────────────────────────────────────────────────
 

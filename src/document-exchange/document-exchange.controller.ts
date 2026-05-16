@@ -26,10 +26,7 @@ import {
   CustomRepresentationQueryDto,
   OriginalUrl,
 } from '../common/query-builder';
-import { DocumentExchangeBidirectionService } from './document-exchange.bidirection.service';
-import { DocumentExchangeDeliveryService } from './document-exchange.delivery.service';
-import { DocumentExchangeLabelService } from './document-exchange.label.service';
-import { DocumentExchangePolicyService } from './document-exchange.policy.service';
+import { DocumentExchangeService } from './document-exchange.service';
 import {
   CancelCodeQueryDto,
   CancelExchangeDto,
@@ -37,6 +34,7 @@ import {
   ConfirmDeliveryQueryDto,
   FailDeliveryDto,
   FailDeliveryQueryDto,
+  GetDeliveryLabelQueryDto,
   GetExchangeResponseDto,
   IssueCodeQueryDto,
   QueryExchangeDto,
@@ -48,19 +46,10 @@ import {
   VerifyExchangeCodeDto,
   WithdrawScheduleQueryDto,
 } from './document-exchange.dto';
-import { DocumentExchangeInboundService } from './document-exchange.inbound.service';
-import { DocumentExchangeOutboundService } from './document-exchange.outbound.service';
 
 @Controller('exchange')
 export class DocumentExchangeController {
-  constructor(
-    private readonly inbound: DocumentExchangeInboundService,
-    private readonly outbound: DocumentExchangeOutboundService,
-    private readonly biderection: DocumentExchangeBidirectionService,
-    private readonly delivery: DocumentExchangeDeliveryService,
-    private readonly label: DocumentExchangeLabelService,
-    private readonly policyService: DocumentExchangePolicyService,
-  ) {}
+  constructor(private readonly exchanges: DocumentExchangeService) {}
 
   @Post('inbound')
   @ApiOperation({ summary: 'Schedule inbound exchange (finder/case owner)' })
@@ -70,7 +59,7 @@ export class DocumentExchangeController {
     @Body() dto: ScheduleInboundExchangeDto,
     @Session() userSession: UserSession,
   ) {
-    return this.inbound.scheduleExchange(dto, userSession);
+    return this.exchanges.scheduleInbound(dto, userSession);
   }
 
   @Post('outbound')
@@ -84,7 +73,7 @@ export class DocumentExchangeController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.outbound.scheduleExchange(dto, query, user);
+    return this.exchanges.scheduleOutbound(dto, query, user);
   }
 
   @Patch('outbound')
@@ -98,13 +87,11 @@ export class DocumentExchangeController {
     @Body() dto: UpdateOutboundExchangeDto,
     @Session() { user }: UserSession,
   ) {
-    return this.outbound.updateExchange(dto, user);
+    return this.exchanges.updateOutbound(dto, user);
   }
 
   @Post('withdraw')
-  @ApiOperation({
-    summary: 'Withdraw/cancel a scheduled exchange (end user)',
-  })
+  @ApiOperation({ summary: 'Withdraw/cancel a scheduled exchange (end user)' })
   @ApiCreatedResponse({ type: GetExchangeResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   withdraw(
@@ -112,7 +99,7 @@ export class DocumentExchangeController {
     @Body() dto: CancelExchangeDto,
     @Session() { user }: UserSession,
   ) {
-    return this.biderection.withDraw(query, dto, user);
+    return this.exchanges.withDraw(query, dto, user);
   }
 
   @Post('issue-code')
@@ -127,23 +114,21 @@ export class DocumentExchangeController {
     @Query() query: IssueCodeQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.biderection.issueCode(query, user);
+    return this.exchanges.issueCode(query, user);
   }
 
   @Post('verify-code')
-  @ApiOperation({
-    summary: 'Verify exchange',
-  })
+  @ApiOperation({ summary: 'Verify exchange' })
   @ApiCreatedResponse({ type: GetExchangeResponseDto })
   @ApiErrorsResponse({ badRequest: true })
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
-  verifyInbound(
+  verifyCode(
     @Query() query: VerifyCodeQueryDto,
     @Body() dto: VerifyExchangeCodeDto,
     @Session() userSession: UserSession,
   ) {
-    return this.biderection.verifyCode(query, dto, userSession);
+    return this.exchanges.verifyCode(query, dto, userSession);
   }
 
   @Post('cancel-code')
@@ -155,13 +140,14 @@ export class DocumentExchangeController {
   @ApiCreatedResponse({ type: GetExchangeResponseDto })
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
-  cancelInboundCode(
+  cancelCode(
     @Query() query: CancelCodeQueryDto,
     @Body() dto: CancelVerificationDto,
     @Session() { user }: UserSession,
   ) {
-    return this.biderection.cancelCode(query, dto, user);
+    return this.exchanges.cancelCode(query, dto, user);
   }
+
   @Post('confirm-delivery')
   @ApiOperation({
     summary: 'Owner confirms document receipt using code from package label',
@@ -172,7 +158,7 @@ export class DocumentExchangeController {
     @Query() query: ConfirmDeliveryQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.delivery.confirmDelivery(query.code, user);
+    return this.exchanges.confirmDelivery(query.code, user);
   }
 
   @Post('fail-delivery')
@@ -186,10 +172,10 @@ export class DocumentExchangeController {
     @Body() dto: FailDeliveryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.delivery.failDelivery(query.exchangeNumber, dto.reason, user);
+    return this.exchanges.failDelivery(query.exchangeNumber, dto.reason, user);
   }
 
-  @Get('delivery-label/:exchangeNumber')
+  @Get('delivery-label')
   @Header('Content-Type', 'text/html; charset=utf-8')
   @ApiOperation({ summary: 'Get printable delivery label HTML (staff only)' })
   @ApiOkResponse({ description: 'Printable HTML label' })
@@ -197,17 +183,18 @@ export class DocumentExchangeController {
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
   getDeliveryLabel(
-    @Param('exchangeNumber') exchangeNumber: string,
+    @Query() query: GetDeliveryLabelQueryDto,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Session() _: UserSession,
   ) {
-    return this.label.getLabel(exchangeNumber);
+    return this.exchanges.getDeliveryLabel(query.exchangeNumber);
   }
 
   @Get('delivery-policy')
   @ApiOperation({ summary: 'Get courier delivery policy and zone fees' })
   @ApiOkResponse()
   getDeliveryPolicy() {
-    return this.policyService.getPolicy();
+    return this.exchanges.getDeliveryPolicy();
   }
 
   @Get()
@@ -219,7 +206,7 @@ export class DocumentExchangeController {
     @OriginalUrl() originalUrl: string,
     @Session() { user }: UserSession,
   ) {
-    return this.biderection.findAll(query, originalUrl, user);
+    return this.exchanges.findAll(query, originalUrl, user);
   }
 
   @Get(':id')
@@ -231,6 +218,6 @@ export class DocumentExchangeController {
     @Query() query: CustomRepresentationQueryDto,
     @Session() { user }: UserSession,
   ) {
-    return this.biderection.findOne(id, query, user);
+    return this.exchanges.findOne(id, query, user);
   }
 }

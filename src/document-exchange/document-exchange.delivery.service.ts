@@ -290,7 +290,8 @@ export class DocumentExchangeDeliveryService {
 
       const docTypeName =
         exchange.foundCase.case.document?.type?.name ?? 'document';
-      const claimNumber = exchange.claim?.claimNumber ?? exchange.exchangeNumber;
+      const claimNumber =
+        exchange.claim?.claimNumber ?? exchange.exchangeNumber;
       const attemptsLeft = maxAttempts - failedCount;
       const isMaxReached = failedCount >= maxAttempts;
 

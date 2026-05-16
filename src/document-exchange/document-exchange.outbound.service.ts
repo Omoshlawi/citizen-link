@@ -4,23 +4,19 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AuthService } from '@thallesp/nestjs-better-auth';
 import {
   ClaimStatus,
+  ExchangeDirection,
   ExchangeMethod,
   ExchangeStatus,
   InvoiceItemType,
+  Prisma,
+  DeliveryZone as PrismaDeliveryZone,
 } from '../../generated/prisma/client';
 import { Decimal } from '@prisma/client/runtime/client';
-import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
-import {
-  CustomRepresentationQueryDto,
-  CustomRepresentationService,
-  PaginationService,
-  SortService,
-} from '../common/query-builder';
+import { UserSession } from '../auth/auth.types';
+import { CustomRepresentationQueryDto } from '../common/query-builder';
 import { EntityPrefix } from '../human-id/human-id.constants';
-// SystemSettingService is @Global() — consumed via DocumentExchangePolicyService
 import { HumanIdService } from '../human-id/human-id.service';
 import { NotificationPriority } from '../notifications/notification.interfaces';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
@@ -30,8 +26,19 @@ import {
   ScheduleOutboundExchangeDto,
   UpdateOutboundExchangeDto,
 } from './document-exchange.dto';
-import { resolveDeliveryZone } from './delivery-zone.util';
+import { DeliveryZone, resolveDeliveryZone } from './delivery-zone.util';
 import { DocumentExchangePolicyService } from './document-exchange.policy.service';
+
+const DELIVERY_METHODS: ExchangeMethod[] = [
+  ExchangeMethod.COURIER_DELIVERY,
+  ExchangeMethod.INHOUSE_DELIVERY,
+];
+
+const ZONE_LABELS: Record<DeliveryZone, string> = {
+  [DeliveryZone.LOCAL]: 'Local',
+  [DeliveryZone.COUNTY]: 'County',
+  [DeliveryZone.NATIONAL]: 'National',
+};
 
 @Injectable()
 export class DocumentExchangeOutboundService {
@@ -40,11 +47,7 @@ export class DocumentExchangeOutboundService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly humanId: HumanIdService,
-    private readonly pagination: PaginationService,
-    private readonly representation: CustomRepresentationService,
-    private readonly sort: SortService,
     private readonly notifications: NotificationDispatchService,
-    private readonly auth: AuthService<BetterAuthWithPlugins>,
     private readonly invoiceService: InvoiceService,
     private readonly policy: DocumentExchangePolicyService,
   ) {}
@@ -54,17 +57,13 @@ export class DocumentExchangeOutboundService {
     query: CustomRepresentationQueryDto,
     user: UserSession['user'],
   ) {
-    const isDelivery =
-      dto.method === ExchangeMethod.COURIER_DELIVERY ||
-      dto.method === ExchangeMethod.INHOUSE_DELIVERY;
+    const isDelivery = DELIVERY_METHODS.includes(dto.method);
 
     const claim = await this.prisma.claim.findUnique({
       where: { id: dto.claimId, status: ClaimStatus.VERIFIED },
       include: {
         invoice: true,
-        foundDocumentCase: {
-          include: { currentStation: true },
-        },
+        foundDocumentCase: { include: { currentStation: true } },
       },
     });
 
@@ -94,7 +93,7 @@ export class DocumentExchangeOutboundService {
       );
     }
 
-    // Policy guard: block COURIER_DELIVERY after max failed attempts
+    // Block COURIER_DELIVERY after max failed attempts
     if (dto.method === ExchangeMethod.COURIER_DELIVERY) {
       const maxAttempts = await this.policy.getMaxAttempts();
       const failedCount = await this.prisma.documentExchange.count({
@@ -111,10 +110,9 @@ export class DocumentExchangeOutboundService {
       }
     }
 
-    // Resolve zone and capture snapshots for delivery methods
-    let deliveryZone: string | null = null;
-    let stationSnapshot: object | null = null;
-    let addressSnapshot: object | null = null;
+    let deliveryZone: DeliveryZone | null = null;
+    let stationSnapshot: Prisma.InputJsonObject | null = null;
+    let addressSnapshot: Prisma.InputJsonObject | null = null;
 
     if (isDelivery && dto.addressId) {
       const [address, station] = await Promise.all([
@@ -163,7 +161,7 @@ export class DocumentExchangeOutboundService {
         exchangeNumber: await this.humanId.generate({
           prefix: EntityPrefix.EXCHANGE,
         }),
-        direction: 'OUTBOUND',
+        direction: ExchangeDirection.OUTBOUND,
         method: dto.method,
         status: ExchangeStatus.SCHEDULED,
         foundCaseId: claim.foundDocumentCaseId,
@@ -172,36 +170,28 @@ export class DocumentExchangeOutboundService {
         addressId: dto.addressId ?? null,
         scheduledAt: new Date(dto.scheduledAt),
         createdById: user.id,
-        deliveryZone: deliveryZone as any,
+        // Safe cast — both enums share identical string values; Prisma requires its own type
+        deliveryZone: deliveryZone as unknown as PrismaDeliveryZone,
         stationSnapshot: stationSnapshot ?? undefined,
         addressSnapshot: addressSnapshot ?? undefined,
       },
-      include: {
-        claim: { select: { claimNumber: true } },
-        station: { select: { name: true } },
-      },
     });
 
-    // Add delivery fee to the invoice when a delivery method is selected
     if (isDelivery && deliveryZone && claim.invoice) {
-      const fee = await this.policy.getFeeForZone(deliveryZone as any);
-      const zoneLabel =
-        deliveryZone === 'LOCAL'
-          ? 'Local'
-          : deliveryZone === 'COUNTY'
-            ? 'County'
-            : 'National';
+      const fee = await this.policy.getFeeForZone(deliveryZone);
+      const zoneLabel = ZONE_LABELS[deliveryZone];
+      const methodLabel = dto.method.replace(/_/g, ' ').toLowerCase();
       await this.invoiceService.addItem(claim.invoice.id, {
         type: InvoiceItemType.DELIVERY_FEE,
         label: `Courier Delivery Fee (${zoneLabel})`,
-        description: `Zone-based flat delivery fee for ${dto.method.replace('_', ' ').toLowerCase()} to ${zoneLabel.toLowerCase()} destination`,
+        description: `Zone-based flat delivery fee for ${methodLabel} to ${zoneLabel.toLowerCase()} destination`,
         amount: new Decimal(fee),
       });
     }
 
-    const claimNumber = String((exchange as any).claim?.claimNumber ?? '');
-    const method = String(exchange.method).toLowerCase().replace('_', ' ');
-    const scheduledDate = exchange.scheduledAt.toDateString();
+    const claimNumber = String(claim.claimNumber ?? '');
+    const methodLabel = dto.method.replace(/_/g, ' ').toLowerCase();
+    const scheduledDate = new Date(dto.scheduledAt).toDateString();
 
     await this.notifications.sendFromTemplate({
       templateKey: 'notification.handover.scheduled',
@@ -209,7 +199,7 @@ export class DocumentExchangeOutboundService {
       userId: user.id,
       priority: NotificationPriority.NORMAL,
       eventTitle: 'Document Exchange Scheduled',
-      eventBody: `Your ${method} exchange for claim #${claimNumber} is confirmed for ${scheduledDate}.`,
+      eventBody: `Your ${methodLabel} exchange for claim #${claimNumber} is confirmed for ${scheduledDate}.`,
       eventDescription: `Outbound exchange ${exchange.exchangeNumber} scheduled for claim ${exchange.claimId}`,
     });
 
@@ -220,15 +210,10 @@ export class DocumentExchangeOutboundService {
     dto: UpdateOutboundExchangeDto,
     user: UserSession['user'],
   ) {
-    const DELIVERY_METHODS: ExchangeMethod[] = [
-      ExchangeMethod.COURIER_DELIVERY,
-      ExchangeMethod.INHOUSE_DELIVERY,
-    ];
-
     const exchange = await this.prisma.documentExchange.findFirst({
       where: {
         claimId: dto.claimId,
-        direction: 'OUTBOUND',
+        direction: ExchangeDirection.OUTBOUND,
         status: ExchangeStatus.SCHEDULED,
         claim: { userId: user.id },
       },
@@ -248,15 +233,17 @@ export class DocumentExchangeOutboundService {
       );
     }
 
-    const oldIsDelivery = DELIVERY_METHODS.includes(
-      exchange.method as ExchangeMethod,
-    );
-    const newIsDelivery = DELIVERY_METHODS.includes(dto.method as ExchangeMethod);
+    const oldIsDelivery = DELIVERY_METHODS.includes(exchange.method);
+    const newIsDelivery = DELIVERY_METHODS.includes(dto.method);
 
     const stationId =
-      dto.method === ExchangeMethod.OWNER_PICKUP ? (dto.stationId ?? null) : null;
+      dto.method === ExchangeMethod.OWNER_PICKUP
+        ? (dto.stationId ?? null)
+        : null;
     const addressId =
-      dto.method !== ExchangeMethod.OWNER_PICKUP ? (dto.addressId ?? null) : null;
+      dto.method !== ExchangeMethod.OWNER_PICKUP
+        ? (dto.addressId ?? null)
+        : null;
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.documentExchange.update({
@@ -290,19 +277,15 @@ export class DocumentExchangeOutboundService {
             address.level1,
             address.level2,
           );
-          const fee = await this.policy.getFeeForZone(deliveryZone as any);
-          const zoneLabel =
-            deliveryZone === 'LOCAL'
-              ? 'Local'
-              : deliveryZone === 'COUNTY'
-                ? 'County'
-                : 'National';
+          const fee = await this.policy.getFeeForZone(deliveryZone);
+          const zoneLabel = ZONE_LABELS[deliveryZone];
+          const methodLabel = dto.method.replace(/_/g, ' ').toLowerCase();
           await this.invoiceService.addItem(
             invoice.id,
             {
               type: InvoiceItemType.DELIVERY_FEE,
               label: `Courier Delivery Fee (${zoneLabel})`,
-              description: `Zone-based flat delivery fee for ${dto.method.replace('_', ' ').toLowerCase()} to ${zoneLabel.toLowerCase()} destination`,
+              description: `Zone-based flat delivery fee for ${methodLabel} to ${zoneLabel.toLowerCase()} destination`,
               amount: new Decimal(fee),
             },
             tx,

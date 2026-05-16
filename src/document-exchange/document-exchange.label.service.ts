@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import * as QRCode from 'qrcode';
 import { AppConfig } from '../app.config';
 import { PrismaService } from '../prisma/prisma.service';
-import { ExchangeMethod, VerificationStatus } from '../../generated/prisma/client';
+import {
+  ExchangeMethod,
+  VerificationStatus,
+} from '../../generated/prisma/client';
 
 @Injectable()
 export class DocumentExchangeLabelService {
@@ -35,7 +38,9 @@ export class DocumentExchangeLabelService {
 
     if (!exchange) throw new NotFoundException('Exchange not found');
     if (exchange.method !== ExchangeMethod.COURIER_DELIVERY) {
-      throw new NotFoundException('Labels are only generated for courier deliveries');
+      throw new NotFoundException(
+        'Labels are only generated for courier deliveries',
+      );
     }
 
     const verification = exchange.verifications[0];
@@ -56,10 +61,18 @@ export class DocumentExchangeLabelService {
       width: 200,
     });
 
-    const addressSnap = exchange.addressSnapshot as Record<string, string> | null;
-    const stationSnap = exchange.stationSnapshot as Record<string, string> | null;
-    const docTypeName = exchange.foundCase.case.document?.type?.name ?? 'Document';
-    const recipientName = addressSnap?.name ?? exchange.claim?.user?.name ?? 'Recipient';
+    const addressSnap = exchange.addressSnapshot as Record<
+      string,
+      string
+    > | null;
+    const stationSnap = exchange.stationSnapshot as Record<
+      string,
+      string
+    > | null;
+    const docTypeName =
+      exchange.foundCase.case.document?.type?.name ?? 'Document';
+    const recipientName =
+      addressSnap?.name ?? exchange.claim?.user?.name ?? 'Recipient';
 
     const addressLines = [
       addressSnap?.address1,
@@ -71,7 +84,9 @@ export class DocumentExchangeLabelService {
       .filter(Boolean)
       .join(', ');
 
-    const landmark = addressSnap?.landmark ? `Near: ${addressSnap.landmark}` : '';
+    const landmark = addressSnap?.landmark
+      ? `Near: ${addressSnap.landmark}`
+      : '';
     const recipientPhone = addressSnap?.phoneNumber
       ? `Tel: ${addressSnap.phoneNumber}`
       : '';

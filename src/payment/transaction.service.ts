@@ -5,14 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  InvoiceItemType,
   InvoiceStatus,
   PaymentMethod,
   PaymentProvider,
   Prisma,
   TransactionStatus,
-  WalletEntryReason,
-  WalletEntryType,
 } from '../../generated/prisma/client';
 import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import { AuthService } from '@thallesp/nestjs-better-auth';
@@ -30,8 +27,6 @@ import { DarajaService } from '../daraja/daraja.service';
 import { StkCallbackBodyDto } from '../daraja/daraja.dto';
 import { InitiatePaymentDto, QueryTransactionDto } from './transaction.dto';
 import { Decimal } from '@prisma/client/runtime/client';
-import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
-import { NotificationPriority } from '../notifications/notification.interfaces';
 import { RegionService } from '../region/region.service';
 import { MauzoService } from 'src/mauzo/mauzo.service';
 
@@ -46,7 +41,6 @@ export class TransactionService {
     private readonly representationService: CustomRepresentationService,
     private readonly sortService: SortService,
     private readonly darajaService: DarajaService,
-    private readonly notificationService: NotificationDispatchService,
     private readonly regionService: RegionService,
     private readonly authService: AuthService<BetterAuthWithPlugins>,
     private readonly mauzoService: MauzoService,
@@ -248,18 +242,6 @@ export class TransactionService {
       ? InvoiceStatus.PAID
       : InvoiceStatus.PARTIALLY_PAID;
 
-    // Captured inside $transaction for post-commit notification.
-    // Wrapped in an object so TypeScript tracks the property mutation across
-    // the async closure (bare `let` mutations in closures don't narrow correctly).
-    const rewardCtx: {
-      notification: {
-        finderId: string;
-        disbursementNumber: string;
-        disbursementId: string;
-        amount: number;
-      } | null;
-    } = { notification: null };
-
     await this.prismaService.$transaction(async (tx) => {
       // Complete the transaction record
       await tx.transaction.update({
@@ -284,106 +266,11 @@ export class TransactionService {
           status: newStatus,
         },
       });
-
-      // When invoice is fully paid, auto-create a disbursement for the finder
-      if (newStatus === InvoiceStatus.PAID) {
-        const finderReward = invoice.items
-          .filter((item) => item.type === InvoiceItemType.FINDER_REWARD)
-          .reduce((sum, item) => sum.plus(item.amount), new Decimal(0));
-        if (finderReward.greaterThan(0)) {
-          const fullInvoice = await tx.invoice.findUnique({
-            where: { id: invoice.id },
-            include: {
-              claim: {
-                include: {
-                  match: {
-                    include: {
-                      foundDocumentCase: {
-                        include: { case: { select: { userId: true } } },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          });
-          const finderId =
-            fullInvoice?.claim.match.foundDocumentCase.case.userId;
-
-          if (finderId) {
-            const disbursement = await tx.disbursement.create({
-              data: {
-                disbursementNumber: await this.humanIdService.generate({
-                  prefix: EntityPrefix.DISBURSEMENT,
-                }),
-                invoiceId: invoice.id,
-                recipientId: finderId,
-                amount: finderReward,
-                currency: this.regionService.getCurrency(),
-                paymentMethod: PaymentMethod.MOBILE_MONEY,
-                paymentProvider: PaymentProvider.MPESA,
-              },
-            });
-            this.logger.log(
-              `Disbursement created for finder ${finderId} — ${this.regionService.getCurrency()} ${finderReward.toFixed(2)}`,
-            );
-
-            // Upsert wallet and record a CREDIT ledger entry atomically
-            const wallet = await tx.wallet.upsert({
-              where: { userId: finderId },
-              create: {
-                userId: finderId,
-                balance: finderReward,
-                currency: this.regionService.getCurrency(),
-              },
-              update: { balance: { increment: finderReward } },
-            });
-            const balanceBefore = wallet.balance;
-            await tx.walletLedger.create({
-              data: {
-                walletId: wallet.id,
-                type: WalletEntryType.CREDIT,
-                reason: WalletEntryReason.FINDER_REWARD,
-                amount: finderReward,
-                currency: this.regionService.getCurrency(),
-                balanceBefore,
-                balanceAfter: balanceBefore.plus(finderReward),
-                referenceType: 'Disbursement',
-                referenceId: disbursement.id,
-                description: `Finder reward for disbursement ${disbursement.disbursementNumber}`,
-              },
-            });
-
-            // Capture for post-transaction notification (cannot send inside $transaction)
-            rewardCtx.notification = {
-              finderId,
-              disbursementNumber: disbursement.disbursementNumber,
-              disbursementId: disbursement.id,
-              amount: finderReward.toNumber(),
-            };
-          }
-        }
-      }
     });
 
     this.logger.log(
       `Payment confirmed — txn ${transaction.transactionNumber}, receipt ${receiptNumber ?? 'N/A'}, invoice now ${newStatus}`,
     );
-
-    // Send reward-ready notification to finder (outside $transaction — cannot enqueue inside)
-    if (rewardCtx.notification) {
-      const { finderId, disbursementNumber, disbursementId, amount } =
-        rewardCtx.notification;
-      await this.notificationService.sendFromTemplate({
-        templateKey: 'notification.disbursement.reward_ready',
-        data: { disbursementNumber, disbursementId, amount },
-        userId: finderId,
-        priority: NotificationPriority.NORMAL,
-        eventTitle: 'Reward Ready to Withdraw',
-        eventBody: `Your finder reward of ${this.regionService.getCurrency()} ${amount} is ready to withdraw.`,
-        eventDescription: `Disbursement ${disbursementNumber} created for finder ${finderId}`,
-      });
-    }
   }
 
   async findAll(
