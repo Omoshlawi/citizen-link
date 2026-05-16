@@ -187,7 +187,7 @@ export class DocumentExchangeController {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Session() _: UserSession,
   ) {
-    return this.exchanges.getDeliveryLabel(query.exchangeNumber);
+    return this.exchanges.getDeliveryLabel(query);
   }
 
   @Get('delivery-policy')

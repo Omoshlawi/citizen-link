@@ -6,6 +6,7 @@ import {
   ExchangeMethod,
   VerificationStatus,
 } from '../../generated/prisma/client';
+import { GetDeliveryLabelQueryDto } from './document-exchange.dto';
 
 @Injectable()
 export class DocumentExchangeLabelService {
@@ -14,9 +15,9 @@ export class DocumentExchangeLabelService {
     private readonly appConfig: AppConfig,
   ) {}
 
-  async getLabel(exchangeNumber: string): Promise<string> {
+  async getLabel(dto: GetDeliveryLabelQueryDto): Promise<string> {
     const exchange = await this.prisma.documentExchange.findUnique({
-      where: { exchangeNumber },
+      where: { exchangeNumber: dto.exchangeNumber },
       include: {
         verifications: {
           where: { status: VerificationStatus.PENDING },
@@ -102,7 +103,7 @@ export class DocumentExchangeLabelService {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Delivery Label — ${exchangeNumber}</title>
+  <title>Delivery Label — ${dto.exchangeNumber}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -229,7 +230,7 @@ export class DocumentExchangeLabelService {
             ${stationAddress ? `<div class="address">${stationAddress}</div>` : ''}
           </div>
 
-          <div class="exchange-number">Exchange: ${exchangeNumber}</div>
+          <div class="exchange-number">Exchange: ${dto.exchangeNumber}</div>
         </div>
 
         <div class="right">

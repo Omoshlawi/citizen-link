@@ -9,6 +9,7 @@ import {
   CancelCodeQueryDto,
   CancelExchangeDto,
   CancelVerificationDto,
+  GetDeliveryLabelQueryDto,
   IssueCodeQueryDto,
   QueryExchangeDto,
   ScheduleInboundExchangeDto,
@@ -128,8 +129,8 @@ export class DocumentExchangeService {
     return this.delivery.failDelivery(exchangeNumber, reason, user);
   }
 
-  getDeliveryLabel(exchangeNumber: string) {
-    return this.label.getLabel(exchangeNumber);
+  getDeliveryLabel(dto: GetDeliveryLabelQueryDto) {
+    return this.label.getLabel(dto);
   }
 
   getDeliveryPolicy() {
