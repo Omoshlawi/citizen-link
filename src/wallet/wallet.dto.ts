@@ -12,7 +12,7 @@ export const QueryWalletLedgerSchema = z.object({
   type: z.enum(WalletEntryType).optional(),
   reason: z.enum(WalletEntryReason).optional(),
   /** Admin only — view another user's wallet */
-  userId: z.uuid().optional(),
+  userId: z.string().optional(),
   createdAtFrom: z.iso.date().optional(),
   createdAtTo: z.iso.date().optional(),
 });
