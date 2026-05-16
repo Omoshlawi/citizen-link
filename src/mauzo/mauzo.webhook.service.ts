@@ -22,7 +22,7 @@ export class MauzoWebHookService {
       provider: PaymentCallbackProvider.MAUZO,
       correlationId: dto.data.id,
       success,
-      receiptNumber: success ? dto.data.payments.provider_ref : undefined,
+      receiptNumber: success ? dto.data.payment.provider_ref : undefined,
       amount: dto.data.amount,
       errorMessage: success ? undefined : dto.event,
       raw: dto,
