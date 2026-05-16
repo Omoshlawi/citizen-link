@@ -58,7 +58,7 @@ import { MauzoModule } from './mauzo/mauzo.module';
 
 @Module({
   imports: [
-    ConfigifyModule.forRootAsync({}),
+    ConfigifyModule.forRootAsync(),
     RegionModule,
     PromptsModule,
     QueueModule,

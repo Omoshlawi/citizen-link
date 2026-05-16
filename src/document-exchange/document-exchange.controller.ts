@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -26,10 +27,16 @@ import {
   OriginalUrl,
 } from '../common/query-builder';
 import { DocumentExchangeBidirectionService } from './document-exchange.bidirection.service';
+import { DocumentExchangeDeliveryService } from './document-exchange.delivery.service';
+import { DocumentExchangeLabelService } from './document-exchange.label.service';
+import { DocumentExchangePolicyService } from './document-exchange.policy.service';
 import {
   CancelCodeQueryDto,
   CancelExchangeDto,
   CancelVerificationDto,
+  ConfirmDeliveryQueryDto,
+  FailDeliveryDto,
+  FailDeliveryQueryDto,
   GetExchangeResponseDto,
   IssueCodeQueryDto,
   QueryExchangeDto,
@@ -50,6 +57,9 @@ export class DocumentExchangeController {
     private readonly inbound: DocumentExchangeInboundService,
     private readonly outbound: DocumentExchangeOutboundService,
     private readonly biderection: DocumentExchangeBidirectionService,
+    private readonly delivery: DocumentExchangeDeliveryService,
+    private readonly label: DocumentExchangeLabelService,
+    private readonly policyService: DocumentExchangePolicyService,
   ) {}
 
   @Post('inbound')
@@ -152,6 +162,54 @@ export class DocumentExchangeController {
   ) {
     return this.biderection.cancelCode(query, dto, user);
   }
+  @Post('confirm-delivery')
+  @ApiOperation({
+    summary: 'Owner confirms document receipt using code from package label',
+  })
+  @ApiCreatedResponse()
+  @ApiErrorsResponse({ badRequest: true })
+  confirmDelivery(
+    @Query() query: ConfirmDeliveryQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.delivery.confirmDelivery(query.code, user);
+  }
+
+  @Post('fail-delivery')
+  @ApiOperation({ summary: 'Staff marks courier delivery as failed' })
+  @ApiCreatedResponse()
+  @ApiErrorsResponse({ badRequest: true })
+  @RequireSystemPermission({ documentCase: ['collect'] })
+  @RequireActiveStation(ActiveStationMode.REQUIRED)
+  failDelivery(
+    @Query() query: FailDeliveryQueryDto,
+    @Body() dto: FailDeliveryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.delivery.failDelivery(query.exchangeNumber, dto.reason, user);
+  }
+
+  @Get('delivery-label/:exchangeNumber')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @ApiOperation({ summary: 'Get printable delivery label HTML (staff only)' })
+  @ApiOkResponse({ description: 'Printable HTML label' })
+  @ApiErrorsResponse()
+  @RequireSystemPermission({ documentCase: ['collect'] })
+  @RequireActiveStation(ActiveStationMode.REQUIRED)
+  getDeliveryLabel(
+    @Param('exchangeNumber') exchangeNumber: string,
+    @Session() _: UserSession,
+  ) {
+    return this.label.getLabel(exchangeNumber);
+  }
+
+  @Get('delivery-policy')
+  @ApiOperation({ summary: 'Get courier delivery policy and zone fees' })
+  @ApiOkResponse()
+  getDeliveryPolicy() {
+    return this.policyService.getPolicy();
+  }
+
   @Get()
   @ApiOperation({ summary: 'Query exchanges' })
   @ApiOkResponse({ type: QueryExchangeResponseDto })

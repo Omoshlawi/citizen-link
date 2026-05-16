@@ -139,6 +139,42 @@ export class InvoiceService {
     });
   }
 
+  async removeDeliveryFees(
+    invoiceId: string,
+    prismaClient: Omit<
+      PrismaClient<never, undefined, DefaultArgs>,
+      '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'
+    > = this.prismaService,
+  ) {
+    const deliveryTypes = [
+      InvoiceItemType.DELIVERY_FEE,
+      InvoiceItemType.COURIER_FEE,
+    ];
+    const items = await prismaClient.invoiceItem.findMany({
+      where: { invoiceId, type: { in: deliveryTypes } },
+    });
+    if (items.length === 0) return;
+
+    const totalToRemove = items.reduce(
+      (sum, item) => sum.plus(item.amount),
+      new Decimal(0),
+    );
+    await prismaClient.invoiceItem.deleteMany({
+      where: { invoiceId, type: { in: deliveryTypes } },
+    });
+    const invoice = await prismaClient.invoice.findUniqueOrThrow({
+      where: { id: invoiceId },
+    });
+    const newTotal = invoice.totalAmount.minus(totalToRemove);
+    await prismaClient.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        totalAmount: newTotal,
+        balanceDue: newTotal.minus(invoice.amountPaid),
+      },
+    });
+  }
+
   async findAll(
     query: QueryInvoiceDto,
     originalUrl: string,

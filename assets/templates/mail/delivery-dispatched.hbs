@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Document Is On Its Way — Citizen Link</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:'Inter', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#003b5a; border-radius:12px 12px 0 0; padding:28px 40px;">
+              <p style="margin:0; font-size:22px; font-weight:700; color:#ffffff; letter-spacing:-0.3px;">Citizen Link</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#ffffff; padding:40px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+              <p style="margin:0 0 20px; font-size:22px; font-weight:700; color:#003b5a; line-height:1.3;">
+                Your Document Is On Its Way
+              </p>
+              <p style="margin:0 0 20px; font-size:15px; color:#475569; line-height:1.7;">
+                Your <strong>{{exchange.document.type.name}}</strong> (claim <strong>#{{exchange.claim.claimNumber}}</strong>)
+                has been dispatched to your delivery address. A courier will deliver it to you shortly.
+              </p>
+
+              <!-- Info box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#f0f9ff; border:1.5px solid #006397; border-radius:10px; margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 8px; font-size:13px; font-weight:700; color:#006397; letter-spacing:0.5px; text-transform:uppercase;">How to Confirm Receipt</p>
+                    <p style="margin:0; font-size:14px; color:#334155; line-height:1.7;">
+                      When your package arrives, you will find a <strong>6-digit confirmation code</strong> and a
+                      <strong>QR code</strong> on the label. Scan the QR code or open the Citizen Link app and enter
+                      the code to confirm receipt. This confirms the document has been safely delivered to you.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security notice -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                style="background-color:#fff7ed; border-left:4px solid #f59e0b; border-radius:0 8px 8px 0; margin-bottom:28px;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <p style="margin:0; font-size:13px; color:#92400e; line-height:1.6;">
+                      <strong>Important:</strong> Only confirm receipt after you have physically received your package
+                      and verified its contents. Do not confirm delivery if the package has not arrived.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 32px;">
+                <tr>
+                  <td align="center" style="border-radius:8px; background-color:#003b5a;">
+                    <a href="citizenlinkapp://document-case/{{exchange.claim.id}}"
+                      style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">
+                      Open My Case →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0; font-size:14px; color:#475569; line-height:1.7;">
+                Thank you for using Citizen Link.<br />
+                <strong style="color:#003b5a;">The Citizen Link Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 12px 12px; padding:20px 40px;" align="center">
+              <p style="margin:0; font-size:11px; color:#94a3b8;">
+                This is an automated message from Citizen Link. For support, contact
+                <a href="mailto:support@citizenlink.app" style="color:#006397; text-decoration:none;">support@citizenlink.app</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

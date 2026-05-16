@@ -95,7 +95,7 @@
     "key": "notification.case.found.collection.initiated",
     "type": "notification",
     "name": "Found Case Collection Initiated",
-    "description": "Sent to the finder when a CitizenLink staff member initiates collection — contains the 6-digit handover code.",
+    "description": "Sent to the finder when a CitizenLink staff member initiates collection \u2014 contains the 6-digit handover code.",
     "engine": "handlebars",
     "slots": {
       "email_subject": {
@@ -159,7 +159,11 @@
     },
     "schema": {
       "required": [],
-      "optional": ["push_title", "push_body", "push_data"]
+      "optional": [
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
     },
     "metadata": {
       "channels": {
@@ -223,13 +227,13 @@
   {
     "key": "notification.claim.verified",
     "type": "notification",
-    "name": "Claim Approved — Payment Required",
+    "name": "Claim Approved \u2014 Payment Required",
     "description": "Sent to the claimant when staff verifies their claim and an invoice is created. Prompts them to pay to proceed.",
     "engine": "handlebars",
     "slots": {
       "email_subject": {
         "source": "text",
-        "text": "Your Claim Is Approved — Pay to Collect Your {{document.type.name}} — Claim #{{claim.claimNumber}}"
+        "text": "Your Claim Is Approved \u2014 Pay to Collect Your {{document.type.name}} \u2014 Claim #{{claim.claimNumber}}"
       },
       "email_body": {
         "source": "file",
@@ -241,7 +245,7 @@
       },
       "push_title": {
         "source": "text",
-        "text": "Claim Approved — Pay to Collect"
+        "text": "Claim Approved \u2014 Pay to Collect"
       },
       "push_body": {
         "source": "text",
@@ -570,8 +574,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -588,8 +596,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -606,8 +618,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -624,8 +640,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -642,8 +662,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -660,8 +684,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -678,8 +706,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -696,8 +728,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -714,8 +750,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -732,8 +772,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -750,8 +794,12 @@
       }
     },
     "schema": {
-      "required": ["user"],
-      "optional": ["system"]
+      "required": [
+        "user"
+      ],
+      "optional": [
+        "system"
+      ]
     },
     "metadata": {}
   },
@@ -772,7 +820,10 @@
       }
     },
     "schema": {
-      "required": ["email_subject", "email_body"],
+      "required": [
+        "email_subject",
+        "email_body"
+      ],
       "optional": []
     },
     "metadata": {
@@ -800,7 +851,10 @@
       }
     },
     "schema": {
-      "required": ["email_subject", "email_body"],
+      "required": [
+        "email_subject",
+        "email_body"
+      ],
       "optional": []
     },
     "metadata": {
@@ -828,7 +882,10 @@
       }
     },
     "schema": {
-      "required": ["email_subject", "email_body"],
+      "required": [
+        "email_subject",
+        "email_body"
+      ],
       "optional": []
     },
     "metadata": {
@@ -894,7 +951,7 @@
     "slots": {
       "email_subject": {
         "source": "text",
-        "text": "Your Collection Code — Claim #{{handover.claim.claimNumber}} — Citizen Link"
+        "text": "Your Collection Code \u2014 Claim #{{handover.claim.claimNumber}} \u2014 Citizen Link"
       },
       "email_body": {
         "source": "file",
@@ -902,7 +959,7 @@
       },
       "push_title": {
         "source": "text",
-        "text": "Collection Ready — Claim #{{handover.claim.claimNumber}}"
+        "text": "Collection Ready \u2014 Claim #{{handover.claim.claimNumber}}"
       },
       "push_body": {
         "source": "text",
@@ -940,7 +997,7 @@
     "slots": {
       "email_subject": {
         "source": "text",
-        "text": "Document Collected — Claim #{{handover.claim.claimNumber}} — Citizen Link"
+        "text": "Document Collected \u2014 Claim #{{handover.claim.claimNumber}} \u2014 Citizen Link"
       },
       "email_body": {
         "source": "file",
@@ -1030,7 +1087,10 @@
       }
     },
     "schema": {
-      "required": ["email_subject", "email_body"],
+      "required": [
+        "email_subject",
+        "email_body"
+      ],
       "optional": []
     },
     "metadata": {
@@ -1105,11 +1165,137 @@
     },
     "schema": {
       "required": [],
-      "optional": ["email_subject", "email_body"]
+      "optional": [
+        "email_subject",
+        "email_body"
+      ]
     },
     "metadata": {
       "channels": {
         "email": true
+      }
+    }
+  },
+  {
+    "key": "notification.case.found.delivery.dispatched",
+    "type": "notification",
+    "name": "Courier Delivery Dispatched",
+    "description": "Sent to the document owner when staff dispatches their document via courier.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Your Document Is On Its Way \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/delivery-dispatched.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Document Dispatched"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your {{exchange.document.type.name}} is on its way. Find the confirmation code on the package label to confirm receipt."
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
+    "key": "notification.case.found.delivery.confirmed",
+    "type": "notification",
+    "name": "Courier Delivery Confirmed",
+    "description": "Sent to the document owner after they confirm receipt via the package label code.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Document Received \u2014 Case Complete | Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/delivery-confirmed.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Document Received \u2714"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "Your {{exchange.document.type.name}} has been delivered and confirmed. Your case is now complete."
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
+    "key": "notification.case.found.delivery.failed",
+    "type": "notification",
+    "name": "Courier Delivery Failed",
+    "description": "Sent to the document owner when a courier delivery attempt fails.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Delivery Attempt Unsuccessful \u2014 Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/delivery-failed.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Delivery Attempt Failed"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "{{#if exchange.isMaxReached}}Maximum delivery attempts reached. Please collect your {{exchange.document.type.name}} in person at a CitizenLink station.{{else}}Delivery of your {{exchange.document.type.name}} was unsuccessful. You have {{exchange.attemptsLeft}} attempt(s) remaining.{{/if}}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
       }
     }
   }

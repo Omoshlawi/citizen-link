@@ -377,29 +377,61 @@ export class DocumentExchangeBidirectionService {
         const claimNumber =
           exchange.claim?.claimNumber ?? exchange.exchangeNumber;
         const claimId = exchange.claimId;
-        this.notifications
-          .sendFromTemplate({
-            templateKey: 'notification.handover.code.issued',
-            data: {
-              handover: {
-                exchangeNumber: exchange.exchangeNumber,
-                claim: { id: claimId, claimNumber },
-                collection: { code, expiresAt },
+        const isCourierDelivery = exchange.method === 'COURIER_DELIVERY';
+
+        if (isCourierDelivery) {
+          // For COURIER_DELIVERY the code lives only on the physical label — never sent digitally.
+          // Send a "your document is on its way" notification instead.
+          const docTypeName =
+            exchange.foundCase.case.document?.type?.name ?? 'document';
+          this.notifications
+            .sendFromTemplate({
+              templateKey: 'notification.case.found.delivery.dispatched',
+              data: {
+                exchange: {
+                  exchangeNumber: exchange.exchangeNumber,
+                  claim: { id: claimId, claimNumber },
+                  document: { type: { name: docTypeName } },
+                },
               },
-            },
-            userId: claimant.id,
-            priority: NotificationPriority.HIGH,
-            force: true,
-            eventTitle: 'Your Collection Code is Ready',
-            eventBody: `Show code ${code} to the CitizenLink agent to collect your document.`,
-            eventDescription: `Outbound verification issued for claim ${claimId} by staff ${user.id}`,
-          })
-          .catch((e) =>
-            this.logger.error(
-              `Failed to send outbound verification notification for exchange ${exchange.id}`,
-              e,
-            ),
-          );
+              userId: claimant.id,
+              priority: NotificationPriority.HIGH,
+              force: true,
+              eventTitle: 'Your Document Is On Its Way',
+              eventBody: `Your ${docTypeName} has been dispatched. The confirmation code is printed on the package label — use it to confirm receipt when delivered.`,
+              eventDescription: `Courier delivery dispatched for claim ${claimId} by staff ${user.id}`,
+            })
+            .catch((e) =>
+              this.logger.error(
+                `Failed to send courier dispatch notification for exchange ${exchange.id}`,
+                e,
+              ),
+            );
+        } else {
+          this.notifications
+            .sendFromTemplate({
+              templateKey: 'notification.handover.code.issued',
+              data: {
+                handover: {
+                  exchangeNumber: exchange.exchangeNumber,
+                  claim: { id: claimId, claimNumber },
+                  collection: { code, expiresAt },
+                },
+              },
+              userId: claimant.id,
+              priority: NotificationPriority.HIGH,
+              force: true,
+              eventTitle: 'Your Collection Code is Ready',
+              eventBody: `Show code ${code} to the CitizenLink agent to collect your document.`,
+              eventDescription: `Outbound verification issued for claim ${claimId} by staff ${user.id}`,
+            })
+            .catch((e) =>
+              this.logger.error(
+                `Failed to send outbound verification notification for exchange ${exchange.id}`,
+                e,
+              ),
+            );
+        }
       }
     }
     return await this.findOne(exchange.id, query, user);

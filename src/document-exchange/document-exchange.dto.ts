@@ -1,12 +1,14 @@
 import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
 import {
+  DeliveryZone,
   DocumentExchange,
   ExchangeDirection,
   ExchangeMethod,
   ExchangeStatus,
   VerificationStatus,
 } from '../../generated/prisma/client';
+import type { JsonValue } from '../../generated/prisma/internal/prismaNamespace';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   CustomRepresentationQuerySchema,
@@ -282,6 +284,28 @@ export const QueryExchangeSchema = z.object({
 });
 export class QueryExchangeDto extends createZodDto(QueryExchangeSchema) {}
 
+// ─── Courier Delivery ─────────────────────────────────────────────────────────
+
+export const ConfirmDeliveryQuerySchema = z.object({
+  code: z
+    .string()
+    .length(6)
+    .regex(/^\d{6}$/, 'Code must be exactly 6 digits'),
+});
+export class ConfirmDeliveryQueryDto extends createZodDto(
+  ConfirmDeliveryQuerySchema,
+) {}
+
+export const FailDeliveryQuerySchema = z.object({
+  exchangeNumber: z.string().min(1),
+});
+export class FailDeliveryQueryDto extends createZodDto(FailDeliveryQuerySchema) {}
+
+export const FailDeliverySchema = z.object({
+  reason: z.string().min(5, 'Reason must be at least 5 characters'),
+});
+export class FailDeliveryDto extends createZodDto(FailDeliverySchema) {}
+
 // ─── Response DTOs ────────────────────────────────────────────────────────────
 
 export class ActiveExchangeDto {
@@ -364,6 +388,15 @@ export class GetExchangeResponseDto implements DocumentExchange {
 
   @ApiProperty({ required: false, nullable: true })
   cancelReason!: string | null;
+
+  @ApiProperty({ required: false, nullable: true, enum: DeliveryZone })
+  deliveryZone!: DeliveryZone | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  stationSnapshot!: JsonValue | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  addressSnapshot!: JsonValue | null;
 
   @ApiProperty()
   createdAt!: Date;

@@ -910,6 +910,12 @@ enum ExchangeDirection {
   OUTBOUND // station → owner (claimant)
 }
 
+enum DeliveryZone {
+  LOCAL // same sub-county as dispatching station
+  COUNTY // same county, different sub-county
+  NATIONAL // cross-county
+}
+
 enum ExchangeMethod {
   STATION_DROPOFF // INBOUND: finder walks to a partner station
   AGENT_PICKUP // INBOUND: agent dispatched to finder's address
@@ -959,6 +965,11 @@ model DocumentExchange {
   courierProvider    String?
   trackingNumber     String? @unique
   externalShipmentId String?
+
+  // Delivery audit fields — set at scheduleExchange() time, immune to future edits
+  deliveryZone    DeliveryZone? // resolved zone for COURIER_DELIVERY / INHOUSE_DELIVERY
+  stationSnapshot Json? // snapshot of dispatching Station at schedule time
+  addressSnapshot Json? // snapshot of delivery Address at schedule time
 
   createdById   String
   createdBy     User    @relation("ExchangeCreatedBy", fields: [createdById], references: [id])
