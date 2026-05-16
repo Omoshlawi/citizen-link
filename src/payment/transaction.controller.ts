@@ -1,14 +1,14 @@
 import {
-  Body,
   Controller,
   Get,
   Param,
   ParseUUIDPipe,
   Post,
   Query,
+  Body,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
+import { Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
 import { UserSession } from '../auth/auth.types';
 import {
@@ -22,7 +22,6 @@ import {
   QueryTransactionResponseDto,
 } from './transaction.dto';
 import { TransactionService } from './transaction.service';
-import { StkCallbackBodyDto } from '../daraja/daraja.dto';
 
 @Controller('transaction')
 export class TransactionController {
@@ -43,18 +42,6 @@ export class TransactionController {
     @Session() { user }: UserSession,
   ) {
     return this.transactionService.initiatePayment(dto, query, user);
-  }
-
-  /**
-   * Daraja STK push callback — no session auth (Daraja posts here directly).
-   * Returns 200 immediately regardless of result so Daraja does not retry.
-   */
-  @Post('callback/daraja')
-  @ApiOperation({ summary: 'Daraja STK push callback (internal)' })
-  @AllowAnonymous()
-  async darajaCallback(@Body() body: StkCallbackBodyDto) {
-    await this.transactionService.handleDarajaCallback(body);
-    return { ResultCode: 0, ResultDesc: 'Accepted' };
   }
 
   @Get()

@@ -24,8 +24,8 @@ import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseDate } from '../app.utils';
 import { DarajaService } from '../daraja/daraja.service';
-import { StkCallbackBodyDto } from '../daraja/daraja.dto';
 import { InitiatePaymentDto, QueryTransactionDto } from './transaction.dto';
+import { PaymentCallbackJob } from './payment-callback.interfaces';
 import { Decimal } from '@prisma/client/runtime/client';
 import { RegionService } from '../region/region.service';
 import { MauzoService } from 'src/mauzo/mauzo.service';
@@ -186,23 +186,21 @@ export class TransactionService {
   }
 
   /**
-   * Daraja STK push callback handler.
-   * No authentication — Daraja posts to this URL directly.
-   * Matched by CheckoutRequestID.
+   * Provider-agnostic payment callback handler — called by PaymentCallbackProcessor.
+   * All providers (Mauzo, Daraja STK, future) normalise their callbacks to
+   * PaymentCallbackJob before enqueuing; this method never knows the provider.
    */
-  async handleDarajaCallback(body: StkCallbackBodyDto) {
-    const { CheckoutRequestID, ResultCode, ResultDesc } = body.Body.stkCallback;
-
+  async handlePaymentCallback(job: PaymentCallbackJob): Promise<void> {
     const transaction = await this.prismaService.transaction.findUnique({
-      where: { checkoutRequestId: CheckoutRequestID },
+      where: { checkoutRequestId: job.correlationId },
       include: { invoice: { include: { items: true } } },
     });
 
     if (!transaction) {
       this.logger.warn(
-        `Callback for unknown CheckoutRequestID: ${CheckoutRequestID}`,
+        `Callback for unknown correlationId: ${job.correlationId} (provider: ${job.provider})`,
       );
-      return; // Daraja expects 200 regardless
+      return;
     }
 
     if (transaction.status === TransactionStatus.COMPLETED) {
@@ -212,11 +210,9 @@ export class TransactionService {
       return;
     }
 
-    const success = ResultCode === 0;
-
-    if (!success) {
+    if (!job.success) {
       this.logger.warn(
-        `STK push failed — ${ResultDesc} (txn ${transaction.id})`,
+        `Payment failed — ${job.errorMessage} (txn ${transaction.id})`,
       );
       await this.prismaService.transaction.update({
         where: { id: transaction.id },
@@ -224,15 +220,14 @@ export class TransactionService {
           status: TransactionStatus.FAILED,
           metadata: {
             ...(transaction.metadata as object),
-            resultDesc: ResultDesc,
-            resultCode: ResultCode,
+            errorCode: job.errorCode,
+            errorMessage: job.errorMessage,
           },
         },
       });
       return;
     }
 
-    const receiptNumber = this.darajaService.extractReceiptNumber(body);
     const invoice = transaction.invoice;
     const paidAmount = transaction.amount;
     const newAmountPaid = invoice.amountPaid.plus(paidAmount);
@@ -243,21 +238,19 @@ export class TransactionService {
       : InvoiceStatus.PARTIALLY_PAID;
 
     await this.prismaService.$transaction(async (tx) => {
-      // Complete the transaction record
       await tx.transaction.update({
         where: { id: transaction.id },
         data: {
           status: TransactionStatus.COMPLETED,
-          providerTransactionId: receiptNumber,
+          providerTransactionId: job.receiptNumber ?? null,
           metadata: {
             ...(transaction.metadata as object),
-            resultDesc: ResultDesc,
-            resultCode: ResultCode,
+            errorCode: job.errorCode,
+            errorMessage: job.errorMessage,
           },
         },
       });
 
-      // Update invoice amountPaid + balanceDue atomically
       await tx.invoice.update({
         where: { id: invoice.id },
         data: {
@@ -269,7 +262,7 @@ export class TransactionService {
     });
 
     this.logger.log(
-      `Payment confirmed — txn ${transaction.transactionNumber}, receipt ${receiptNumber ?? 'N/A'}, invoice now ${newStatus}`,
+      `Payment confirmed — txn ${transaction.transactionNumber}, receipt ${job.receiptNumber ?? 'N/A'}, invoice now ${newStatus}`,
     );
   }
 
