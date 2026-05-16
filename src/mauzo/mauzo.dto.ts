@@ -33,7 +33,7 @@ export const WebHookSchema = z.object({
     amount: z.number(),
     currency: z.string(),
     status: z.enum(PaymentStatus),
-    payments: z.object({
+    payment: z.object({
       provider: z.enum(PaymentProviders),
       provider_ref: z.string(),
       status: z.enum(PaymentStatus),
