@@ -70,6 +70,8 @@ export class PaymentResponseDto {
   provider!: PaymentProviders;
   @ApiProperty({ enum: PaymentStatus })
   status!: PaymentStatus;
+  @ApiProperty()
+  provider_ref: string;
 }
 
 export class PaymentIntentMetadata {
@@ -78,6 +80,33 @@ export class PaymentIntentMetadata {
   @ApiProperty()
   invoiceNumber: string;
 }
+
+/**
+ * {
+  id: 'TXS3ZPRWDQ',
+  object: 'payment_intent',
+  amount: 600,
+  currency: 'KES',
+  status: 'processing',
+  description: 'Payment for invoice INV-TEZV1B-000008',
+  failure_reason: null,
+  short_code: 'X4Y0A',
+  metadata: {
+    invoiceId: '49a952e6-c5db-4efc-a03b-83c5f76983b5',
+    invoiceNumber: 'INV-TEZV1B-000008'
+  },
+  customer_id: null,
+  public_key: 'pk_2a9a54591f1829cddf61bf84',
+  created: 1778709139,
+  updated: 1778709139,
+  latest_payment: {
+    id: 'MP5XS28FLH',
+    provider: 'mpesa',
+    provider_ref: 'ws_CO_14052026005222767793889658',
+    status: 'pending'
+  }
+}
+ */
 
 export class PaymentIntentResponseDto {
   @ApiProperty({ type: 'string' })
@@ -94,14 +123,14 @@ export class PaymentIntentResponseDto {
   short_code!: string;
   @ApiProperty()
   description!: string;
-  @ApiProperty({ isArray: true, type: PaymentResponseDto })
-  payments!: Array<PaymentResponseDto>;
   @ApiProperty({ nullable: true, required: false })
   failure_reason?: string;
+  @ApiProperty({ type: PaymentResponseDto })
+  latest_payment: PaymentResponseDto;
   @ApiProperty({ type: PaymentIntentMetadata })
   metadata: PaymentIntentMetadata;
   @ApiProperty({ required: false, nullable: true })
-  customerId?: string;
+  customer_id?: string;
   @ApiProperty()
   created!: number;
   @ApiProperty()

@@ -15,12 +15,12 @@ export class MauzoWebHookService {
     private readonly callbacksQueue: Queue<PaymentCallbackJob>,
   ) {}
 
-  async onPaymentEvent(dto: WebHookDto): Promise<void> {
+  async onPaymentEvent(dto: WebHookDto) {
     const success = dto.event === WebHookEvents.PAYMENT_SUCCEDED;
 
     const job: PaymentCallbackJob = {
       provider: PaymentCallbackProvider.MAUZO,
-      correlationId: dto.data.payment.provider_data.checkoutRequestId,
+      correlationId: dto.data.id,
       success,
       receiptNumber: success
         ? dto.data.payment.provider_data.mpesaReceiptNumber
@@ -31,5 +31,6 @@ export class MauzoWebHookService {
     };
 
     await this.callbacksQueue.add('mauzo-event', job);
+    return { ResultCode: 0, ResultDesc: 'Accepted' };
   }
 }

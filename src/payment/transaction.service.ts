@@ -169,9 +169,10 @@ export class TransactionService {
           // mauzo
           checkoutRequestId: stkResponse.id,
           status: TransactionStatus.PROCESSING,
+          providerTransactionId: stkResponse.latest_payment.provider_ref,
           metadata: {
             // merchantRequestId: stkResponse.,
-            // customerMessage: stkResponse.CustomerMessage,
+            customerMessage: stkResponse.description,
           },
         },
         ...this.representationService.buildCustomRepresentationQuery(query?.v),
