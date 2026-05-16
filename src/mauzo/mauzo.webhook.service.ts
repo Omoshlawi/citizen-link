@@ -20,9 +20,11 @@ export class MauzoWebHookService {
 
     const job: PaymentCallbackJob = {
       provider: PaymentCallbackProvider.MAUZO,
-      correlationId: dto.data.id,
+      correlationId: dto.data.payment.provider_data.checkoutRequestId,
       success,
-      receiptNumber: success ? dto.data.payment.provider_ref : undefined,
+      receiptNumber: success
+        ? dto.data.payment.provider_data.mpesaReceiptNumber
+        : undefined,
       amount: dto.data.amount,
       errorMessage: success ? undefined : dto.event,
       raw: dto,

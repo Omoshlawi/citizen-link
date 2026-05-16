@@ -31,12 +31,23 @@ export const WebHookSchema = z.object({
   data: z.object({
     id: z.string(),
     amount: z.number(),
-    currency: z.string(),
+    object: z.string().optional().nullable(),
     status: z.enum(PaymentStatus),
     payment: z.object({
+      id: z.string(),
       provider: z.enum(PaymentProviders),
       provider_ref: z.string(),
-      status: z.enum(PaymentStatus),
+      provider_data: z.object({
+        isSandbox: z.boolean().optional().default(true),
+        phoneNumber: z.string(),
+        callbackData: z.object({
+          Source: z.string().optional().nullable(),
+          ResultCode: z.number(),
+          ResultDesc: z.string().optional().nullable(),
+        }),
+        checkoutRequestId: z.string(),
+        mpesaReceiptNumber: z.string(),
+      }),
     }),
   }),
 });
