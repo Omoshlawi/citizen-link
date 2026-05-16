@@ -1,0 +1,38 @@
+[
+  {
+    "key": "collection.code_ttl_minutes",
+    "value": "60",
+    "description": "How long (in minutes) a handover code stays valid before expiring",
+    "isPublic": false
+  },
+  {
+    "key": "collection.max_attempts",
+    "value": "3",
+    "description": "Maximum code entry attempts before the verification is voided",
+    "isPublic": false
+  },
+  {
+    "key": "delivery.max_attempts",
+    "value": "2",
+    "description": "Maximum courier delivery attempts before fallback to station pickup",
+    "isPublic": false
+  },
+  {
+    "key": "delivery.fee.local",
+    "value": "200",
+    "description": "Flat delivery fee (base currency units) for same-sub-county deliveries",
+    "isPublic": false
+  },
+  {
+    "key": "delivery.fee.county",
+    "value": "450",
+    "description": "Flat delivery fee for same-county / cross-sub-county deliveries",
+    "isPublic": false
+  },
+  {
+    "key": "delivery.fee.national",
+    "value": "900",
+    "description": "Flat delivery fee for cross-county / national deliveries",
+    "isPublic": false
+  }
+]
