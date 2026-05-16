@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { DarajaConfig } from './daraja.config';
 import { DarajaService } from './daraja.service';
+import { DarajaController } from './daraja.controller';
 
 @Module({
   imports: [
@@ -12,5 +13,6 @@ import { DarajaService } from './daraja.service';
   ],
   providers: [DarajaService],
   exports: [DarajaService],
+  controllers: [DarajaController],
 })
 export class DarajaModule {}

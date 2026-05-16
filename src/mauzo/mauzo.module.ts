@@ -1,8 +1,10 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { MauzoConfig } from './mauzo.config';
+import { MauzoWebhookSignatureGuard } from './mauzo.guard';
 import { MauzoService } from './mauzo.service';
 import { MauzoWebHookService } from './mauzo.webhook.service';
+import { MauzoController } from './mauzo.controller';
 
 @Module({
   imports: [
@@ -13,8 +15,8 @@ import { MauzoWebHookService } from './mauzo.webhook.service';
       inject: [MauzoConfig],
     }),
   ],
-  controllers: [],
-  providers: [MauzoService, MauzoWebHookService],
+  controllers: [MauzoController],
+  providers: [MauzoService, MauzoWebHookService, MauzoWebhookSignatureGuard],
   exports: [MauzoService],
 })
 export class MauzoModule {}
