@@ -15,8 +15,6 @@ import {
   FoundDocumentCaseStatus,
   InvoiceItemType,
   LostDocumentCaseStatus,
-  PaymentMethod,
-  PaymentProvider,
   VerificationStatus,
   WalletEntryReason,
   WalletEntryType,
@@ -255,8 +253,6 @@ export class DocumentExchangeCodeVerifyService {
               recipientId: finderId,
               amount: finderReward,
               currency: this.region.getCurrency(),
-              paymentMethod: PaymentMethod.MOBILE_MONEY,
-              paymentProvider: PaymentProvider.MPESA,
             },
           });
 

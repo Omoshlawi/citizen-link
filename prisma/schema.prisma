@@ -44,6 +44,7 @@ model User {
   initiatedTransactions Transaction[]       @relation("TransactionInitiator")
   disbursements         Disbursement[]
   wallet                Wallet?
+  walletWithdrawals     WalletWithdrawal[]
 
   twoFactorEnabled       Boolean?               @default(false)
   phoneNumber            String?
@@ -1188,43 +1189,24 @@ model Disbursement {
   amount   Decimal @db.Decimal(10, 2)
   currency String
 
-  paymentMethod         PaymentMethod
-  paymentProvider       PaymentProvider?
-  providerTransactionId String? // M-Pesa receipt or bank ref
-
-  status DisbursementStatus @default(PENDING)
-
-  // Provider-specific data
-  metadata Json?
-
-  initiatedAt DateTime?
-  completedAt DateTime?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([invoiceId])
   @@index([recipientId])
-  @@index([status])
   @@map("disbursements")
-}
-
-enum DisbursementStatus {
-  PENDING // invoice paid, disbursement not yet initiated
-  INITIATED // payment sent to provider
-  COMPLETED // confirmed received by finder
-  FAILED // provider rejected or timed out
 }
 
 // Generic wallet — usable for finder rewards, refunds, in-app credits, etc.
 model Wallet {
-  id        String         @id @default(uuid())
-  userId    String         @unique
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance   Decimal        @default(0.00) @db.Decimal(10, 2)
-  currency  String
-  ledger    WalletLedger[]
-  updatedAt DateTime       @updatedAt
+  id          String               @id @default(uuid())
+  userId      String               @unique
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance     Decimal              @default(0.00) @db.Decimal(10, 2)
+  currency    String
+  ledger      WalletLedger[]
+  withdrawals WalletWithdrawal[]
+  updatedAt   DateTime             @updatedAt
 
   @@map("wallets")
 }
@@ -1266,6 +1248,38 @@ model WalletLedger {
   @@index([walletId])
   @@index([referenceType, referenceId])
   @@map("wallet_ledger")
+}
+
+// User-initiated outbound payout — decoupled from Disbursement (finder reward records)
+model WalletWithdrawal {
+  id                    String                 @id @default(uuid())
+  withdrawalNumber      String                 @unique
+  walletId              String
+  wallet                Wallet                 @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount                Decimal                @db.Decimal(10, 2)
+  currency              String
+  phoneNumber           String // Daraja-format: 254XXXXXXXXX
+  status                WalletWithdrawalStatus @default(INITIATED)
+  paymentProvider       PaymentProvider        @default(MPESA)
+  providerTransactionId String? // M-Pesa receipt on success
+  metadata              Json? // Daraja ConversationID etc.
+  completedAt           DateTime?
+  failedAt              DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([status])
+  @@map("wallet_withdrawals")
+}
+
+enum WalletWithdrawalStatus {
+  INITIATED // B2C sent to Daraja, awaiting callback
+  COMPLETED // Daraja confirmed success
+  FAILED // Daraja failed, wallet balance restored
 }
 
 model Rating {

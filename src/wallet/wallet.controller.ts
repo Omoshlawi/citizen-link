@@ -1,4 +1,12 @@
-import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
@@ -11,7 +19,11 @@ import {
   GetWalletResponseDto,
   QueryWalletLedgerDto,
   QueryWalletLedgerResponseDto,
+  QueryWalletWithdrawalDto,
+  QueryWalletWithdrawalResponseDto,
   WalletLedgerEntryDto,
+  WalletWithdrawalDto,
+  WithdrawFromWalletDto,
 } from './wallet.dto';
 import { WalletService } from './wallet.service';
 
@@ -66,5 +78,37 @@ export class WalletController {
     @Session() { user }: UserSession,
   ) {
     return this.walletService.getLedgerEntry(id, query, user);
+  }
+
+  /**
+   * Returns paginated withdrawal history for the authenticated user.
+   * Admins can pass ?userId= to view any user's withdrawals.
+   */
+  @Get('withdrawals')
+  @ApiOperation({ summary: "Get the authenticated user's withdrawal history" })
+  @ApiOkResponse({ type: QueryWalletWithdrawalResponseDto })
+  @ApiErrorsResponse()
+  getWithdrawals(
+    @Query() query: QueryWalletWithdrawalDto,
+    @OriginalUrl() originalUrl: string,
+    @Session() { user }: UserSession,
+  ) {
+    return this.walletService.getWithdrawals(query, originalUrl, user);
+  }
+
+  /**
+   * User requests a payout to their M-Pesa account.
+   * Atomically debits the wallet and initiates a Daraja B2C payment.
+   */
+  @Post('withdraw')
+  @ApiOperation({ summary: 'Withdraw funds from wallet to M-Pesa' })
+  @ApiOkResponse({ type: WalletWithdrawalDto })
+  @ApiErrorsResponse({ badRequest: true })
+  withdraw(
+    @Body() dto: WithdrawFromWalletDto,
+    @Query() query: CustomRepresentationQueryDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.walletService.withdraw(dto, query, user);
   }
 }

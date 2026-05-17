@@ -6,6 +6,7 @@ export enum EntityPrefix {
   INVOICE = 'INV',
   TRANSACTION = 'TRX',
   DISBURSEMENT = 'DSB',
+  WITHDRAWAL = 'WDR',
   DISPUTE = 'DSP',
   DOCUMENT = 'DOC',
   LOST_DOCUMENT_CASE = 'LDC',

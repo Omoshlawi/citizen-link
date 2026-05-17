@@ -20,7 +20,6 @@ import {
   GetDisbursementResponseDto,
   QueryDisbursementDto,
   QueryDisbursementResponseDto,
-  WithdrawDisbursementDto,
 } from './disbursement.dto';
 import { DisbursementService } from './disbursement.service';
 
@@ -50,23 +49,6 @@ export class DisbursementController {
     @Session() { user }: UserSession,
   ) {
     return this.disbursementService.findOne(id, query, user);
-  }
-
-  /**
-   * Finder requests payout for a PENDING disbursement.
-   * Triggers a Daraja B2C payment to the finder's M-Pesa account.
-   */
-  @Post(':id/withdraw')
-  @ApiOperation({ summary: 'Request payout for a pending disbursement' })
-  @ApiOkResponse({ type: GetDisbursementResponseDto })
-  @ApiErrorsResponse({ badRequest: true })
-  withdraw(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: WithdrawDisbursementDto,
-    @Query() query: CustomRepresentationQueryDto,
-    @Session() { user }: UserSession,
-  ) {
-    return this.disbursementService.withdraw(id, dto, query, user);
   }
 
   /**

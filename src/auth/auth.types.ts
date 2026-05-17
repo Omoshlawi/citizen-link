@@ -28,7 +28,8 @@ export type BetterAuthWithPlugins = ReturnType<
 export interface UserSession extends BetterAuthUserSession {
   user: BetterAuthUserSession['user'] & {
     isAnonymous?: boolean;
-    // Add any other user fields as needed
+    phoneNumber?: string | null;
+    phoneNumberVerified?: boolean;
   };
   session: BetterAuthUserSession['session'] & {
     activeOrganizationId?: string;
