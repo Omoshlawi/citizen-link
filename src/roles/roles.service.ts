@@ -25,6 +25,10 @@ import {
 export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Held so Better Auth picks up permission changes on the next request without a restart.
+  // Better Auth stores a shallow-spread copy of its options, so opts.roles IS this object.
+  private readonly liveRoles: Record<string, ReturnType<typeof role>> = {};
+
   // ─── Startup ────────────────────────────────────────────────────────────────
 
   async loadForStartup() {
@@ -61,10 +65,9 @@ export class RolesService {
     }
     const adminRoleObj = role(allStatements as any);
 
-    const roles: Record<string, ReturnType<typeof role>> = {};
     for (const dbRole of dbRoles) {
       if (dbRole.slug === 'admin') {
-        roles['admin'] = adminRoleObj;
+        this.liveRoles['admin'] = adminRoleObj;
         continue;
       }
       const stmts: Record<string, string[]> = {};
@@ -72,10 +75,25 @@ export class RolesService {
         if (!stmts[perm.resource.slug]) stmts[perm.resource.slug] = [];
         stmts[perm.resource.slug].push(perm.resourceAction.slug);
       }
-      roles[dbRole.slug] = role(stmts as any);
+      this.liveRoles[dbRole.slug] = role(stmts as any);
     }
 
-    return { ac: extendedAc, roles };
+    return { ac: extendedAc, roles: this.liveRoles };
+  }
+
+  private syncRoleToMemory(
+    slug: string,
+    permissions: Array<{
+      resource: { slug: string };
+      resourceAction: { slug: string };
+    }>,
+  ) {
+    const stmts: Record<string, string[]> = {};
+    for (const perm of permissions) {
+      if (!stmts[perm.resource.slug]) stmts[perm.resource.slug] = [];
+      stmts[perm.resource.slug].push(perm.resourceAction.slug);
+    }
+    this.liveRoles[slug] = role(stmts as any);
   }
 
   // ─── Effective permissions (real-time display) ───────────────────────────────
@@ -301,10 +319,12 @@ export class RolesService {
   }
 
   async createRole(dto: CreateRoleDto) {
-    return this.prisma.role.create({
+    const created = await this.prisma.role.create({
       data: dto,
       include: { permissions: true },
     });
+    this.liveRoles[created.slug] = role({} as any);
+    return created;
   }
 
   async updateRole(id: string, dto: UpdateRoleDto) {
@@ -322,11 +342,24 @@ export class RolesService {
     if (!roleRecord) throw new NotFoundException('Role not found');
     if (!roleRecord.canDelete)
       throw new ForbiddenException('This role cannot be deleted');
-    return this.prisma.role.update({ where: { id }, data: { voided: true } });
+    const deleted = await this.prisma.role.update({
+      where: { id },
+      data: { voided: true },
+    });
+    delete this.liveRoles[roleRecord.slug];
+    return deleted;
   }
 
   async restoreRole(id: string) {
-    return this.prisma.role.update({ where: { id }, data: { voided: false } });
+    const restored = await this.prisma.role.update({
+      where: { id },
+      data: { voided: false },
+      include: {
+        permissions: { include: { resource: true, resourceAction: true } },
+      },
+    });
+    this.syncRoleToMemory(restored.slug, restored.permissions);
+    return restored;
   }
 
   // ─── Role Permissions ────────────────────────────────────────────────────────
@@ -353,7 +386,7 @@ export class RolesService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.rolePermission.deleteMany({ where: { roleId } });
       await tx.rolePermission.createMany({
         data: actions.map((action) => ({
@@ -369,5 +402,7 @@ export class RolesService {
         },
       });
     });
+    if (updated) this.syncRoleToMemory(roleRecord.slug, updated.permissions);
+    return updated;
   }
 }
