@@ -1,0 +1,262 @@
+{
+  "resources": {
+    "user": ["create", "list", "set-role", "ban", "impersonate", "delete", "set-password", "get", "update"],
+    "session": ["list", "revoke", "delete"],
+    "documentType": ["create", "update", "delete", "restore"],
+    "addressLocale": ["create", "update", "delete", "restore"],
+    "addressHierarchy": ["create", "update", "delete", "restore"],
+    "station": ["create", "update", "delete", "restore"],
+    "documentCase": ["list-any", "view-any", "verify", "reject", "update", "delete", "collect"],
+    "match": ["list-any", "create", "update", "delete", "restore", "verify", "query-case-matches"],
+    "claim": ["list-any", "verify", "reject", "delete", "review-dispute"],
+    "extraction": ["debug"],
+    "templates": ["create", "update", "delete", "restore"],
+    "notification": ["list-any", "view-any", "manage-any", "delete", "test"],
+    "transitionReason": ["create", "update", "delete", "restore"],
+    "statusTransition": ["view"],
+    "documentOperation": ["manage", "approve", "reject"],
+    "documentOperationType": ["manage"],
+    "stationOperationType": ["manage"],
+    "staffOperationScope": ["view", "manage"],
+    "wallet": ["view-any"],
+    "address": ["view-any"],
+    "transaction": ["list-any"],
+    "disbursement": ["list-any", "view-any"],
+    "invoice": ["list-any"],
+    "setting": ["view-any", "manage-system"],
+    "pushToken": ["list-any"],
+    "handover": ["manage-any"]
+  },
+  "roles": [
+    {
+      "slug": "admin",
+      "name": "Administrator",
+      "description": "Full system access. Permissions are granted automatically.",
+      "canDelete": false,
+      "canEditPermissions": false,
+      "allPermissions": true,
+      "permissions": []
+    },
+    {
+      "slug": "user",
+      "name": "User",
+      "description": "Standard authenticated user.",
+      "canDelete": false,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "user", "action": "create" },
+        { "resource": "user", "action": "get" },
+        { "resource": "user", "action": "update" },
+        { "resource": "session", "action": "list" },
+        { "resource": "session", "action": "revoke" }
+      ]
+    },
+    {
+      "slug": "staff",
+      "name": "Staff",
+      "description": "Base staff role with case and match list access.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "user", "action": "create" },
+        { "resource": "user", "action": "get" },
+        { "resource": "user", "action": "update" },
+        { "resource": "user", "action": "list" },
+        { "resource": "session", "action": "list" },
+        { "resource": "session", "action": "revoke" },
+        { "resource": "address", "action": "view-any" },
+        { "resource": "documentOperation", "action": "manage" },
+        { "resource": "documentCase", "action": "list-any" },
+        { "resource": "documentCase", "action": "view-any" },
+        { "resource": "match", "action": "list-any" },
+        { "resource": "match", "action": "query-case-matches" },
+        { "resource": "match", "action": "create" }
+      ]
+    },
+    {
+      "slug": "case-verifier",
+      "name": "Case Verifier",
+      "description": "Verifies and rejects found document cases.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "documentCase", "action": "list-any" },
+        { "resource": "documentCase", "action": "view-any" },
+        { "resource": "documentCase", "action": "verify" },
+        { "resource": "documentCase", "action": "reject" }
+      ]
+    },
+    {
+      "slug": "collection-officer",
+      "name": "Collection Officer",
+      "description": "Issues and confirms collection codes at the counter.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "documentCase", "action": "list-any" },
+        { "resource": "documentCase", "action": "view-any" },
+        { "resource": "documentCase", "action": "collect" }
+      ]
+    },
+    {
+      "slug": "case-manager",
+      "name": "Case Manager",
+      "description": "Updates and manages document case records.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "documentCase", "action": "list-any" },
+        { "resource": "documentCase", "action": "view-any" },
+        { "resource": "documentCase", "action": "update" },
+        { "resource": "documentCase", "action": "delete" }
+      ]
+    },
+    {
+      "slug": "match-officer",
+      "name": "Match Officer",
+      "description": "Reviews, verifies, and manages document matches.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "documentCase", "action": "list-any" },
+        { "resource": "documentCase", "action": "view-any" },
+        { "resource": "match", "action": "list-any" },
+        { "resource": "match", "action": "query-case-matches" },
+        { "resource": "match", "action": "verify" },
+        { "resource": "match", "action": "create" },
+        { "resource": "match", "action": "update" },
+        { "resource": "match", "action": "delete" },
+        { "resource": "match", "action": "restore" }
+      ]
+    },
+    {
+      "slug": "claim-reviewer",
+      "name": "Claim Reviewer",
+      "description": "Reviews, verifies, rejects, and handles disputed claims.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "claim", "action": "list-any" },
+        { "resource": "claim", "action": "verify" },
+        { "resource": "claim", "action": "reject" },
+        { "resource": "claim", "action": "delete" },
+        { "resource": "claim", "action": "review-dispute" },
+        { "resource": "documentCase", "action": "view-any" }
+      ]
+    },
+    {
+      "slug": "content-admin",
+      "name": "Content Admin",
+      "description": "Manages document types, locales, stations, templates, and transition reasons.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "documentType", "action": "create" },
+        { "resource": "documentType", "action": "update" },
+        { "resource": "documentType", "action": "delete" },
+        { "resource": "documentType", "action": "restore" },
+        { "resource": "addressLocale", "action": "create" },
+        { "resource": "addressLocale", "action": "update" },
+        { "resource": "addressLocale", "action": "delete" },
+        { "resource": "addressLocale", "action": "restore" },
+        { "resource": "addressHierarchy", "action": "create" },
+        { "resource": "addressHierarchy", "action": "update" },
+        { "resource": "addressHierarchy", "action": "delete" },
+        { "resource": "addressHierarchy", "action": "restore" },
+        { "resource": "station", "action": "create" },
+        { "resource": "station", "action": "update" },
+        { "resource": "station", "action": "delete" },
+        { "resource": "station", "action": "restore" },
+        { "resource": "templates", "action": "create" },
+        { "resource": "templates", "action": "update" },
+        { "resource": "templates", "action": "delete" },
+        { "resource": "templates", "action": "restore" },
+        { "resource": "transitionReason", "action": "create" },
+        { "resource": "transitionReason", "action": "update" },
+        { "resource": "transitionReason", "action": "delete" },
+        { "resource": "transitionReason", "action": "restore" }
+      ]
+    },
+    {
+      "slug": "notification-admin",
+      "name": "Notification Admin",
+      "description": "Manages and tests the notification system.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "notification", "action": "list-any" },
+        { "resource": "notification", "action": "view-any" },
+        { "resource": "notification", "action": "manage-any" },
+        { "resource": "notification", "action": "delete" },
+        { "resource": "notification", "action": "test" }
+      ]
+    },
+    {
+      "slug": "extraction-debugger",
+      "name": "Extraction Debugger",
+      "description": "Debugs AI extraction pipeline interactions.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "extraction", "action": "debug" }
+      ]
+    },
+    {
+      "slug": "station-manager",
+      "name": "Station Manager",
+      "description": "Manages station operations, operation types, and handovers.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "staffOperationScope", "action": "view" },
+        { "resource": "staffOperationScope", "action": "manage" },
+        { "resource": "documentOperation", "action": "manage" },
+        { "resource": "documentOperation", "action": "approve" },
+        { "resource": "documentOperation", "action": "reject" },
+        { "resource": "documentOperationType", "action": "manage" },
+        { "resource": "stationOperationType", "action": "manage" },
+        { "resource": "handover", "action": "manage-any" },
+        { "resource": "pushToken", "action": "list-any" }
+      ]
+    },
+    {
+      "slug": "operation-approver",
+      "name": "Operation Approver",
+      "description": "Approves and rejects document operations.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "documentOperation", "action": "manage" },
+        { "resource": "documentOperation", "action": "approve" },
+        { "resource": "documentOperation", "action": "reject" }
+      ]
+    },
+    {
+      "slug": "finance-officer",
+      "name": "Finance Officer",
+      "description": "Views wallets, transactions, disbursements, and invoices.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "wallet", "action": "view-any" },
+        { "resource": "transaction", "action": "list-any" },
+        { "resource": "disbursement", "action": "list-any" },
+        { "resource": "disbursement", "action": "view-any" },
+        { "resource": "invoice", "action": "list-any" }
+      ]
+    },
+    {
+      "slug": "system-admin",
+      "name": "System Admin",
+      "description": "Manages system settings and views audit trails.",
+      "canDelete": true,
+      "canEditPermissions": true,
+      "permissions": [
+        { "resource": "setting", "action": "view-any" },
+        { "resource": "setting", "action": "manage-system" },
+        { "resource": "address", "action": "view-any" },
+        { "resource": "statusTransition", "action": "view" }
+      ]
+    }
+  ]
+}

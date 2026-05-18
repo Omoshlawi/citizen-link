@@ -34,7 +34,8 @@ if npx ts-node scripts/seed-address-hierarchy.ts \
   && npx ts-node scripts/seed-transition-statuses.ts \
   && npx ts-node scripts/seed-templates.ts \
   && npx ts-node scripts/seed-system-settings.ts \
-  && npx ts-node scripts/seed-document-types.ts; then
+  && npx ts-node scripts/seed-document-types.ts \
+  && npx ts-node scripts/seed-roles.ts; then
   echo "✅ Seed scripts completed successfully"
 else
   echo "⚠️ Seed scripts failed. Continuing to start the app..."

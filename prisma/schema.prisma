@@ -1741,3 +1741,78 @@ model DocumentOperationItem {
   @@index([foundCaseId])
   @@map("document_operation_items")
 }
+
+// ─── Roles & Resources ───────────────────────────────────────────────────────
+
+model Resource {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String?
+  isBuiltIn   Boolean @default(false)
+  voided      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  actions         ResourceAction[]
+  rolePermissions RolePermission[]
+
+  @@index([voided])
+  @@map("resources")
+}
+
+model ResourceAction {
+  id          String   @id @default(uuid())
+  resourceId  String
+  resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  isBuiltIn   Boolean  @default(false)
+  voided      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+
+  @@unique([resourceId, slug])
+  @@index([resourceId, voided])
+  @@map("resource_actions")
+}
+
+model Role {
+  id                 String  @id @default(uuid())
+  name               String
+  slug               String  @unique
+  description        String?
+  canDelete          Boolean @default(true)
+  canEditPermissions Boolean @default(true)
+  voided             Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  permissions RolePermission[]
+
+  @@index([voided])
+  @@map("roles")
+}
+
+model RolePermission {
+  id               String         @id @default(uuid())
+  roleId           String
+  role             Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  resourceId       String
+  resource         Resource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  resourceActionId String
+  resourceAction   ResourceAction @relation(fields: [resourceActionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, resourceActionId])
+  @@index([roleId])
+  @@index([resourceId])
+  @@map("role_permissions")
+}

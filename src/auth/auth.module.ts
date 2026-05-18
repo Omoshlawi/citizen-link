@@ -27,12 +27,14 @@ import { NotificationPriority } from '../notifications/notification.interfaces';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
-import { adminConfig } from './auth.contants';
 import { AuthExtendedController } from './auth.controller';
+
 import { AuthHook } from './auth.hooks';
 import { TemplatesModule, TemplatesService } from '../common/templates';
 import { EmailChannelService } from '../notifications/channels/email/email.channel.service';
 import { AppConfig } from 'src/app.config';
+import { RolesModule } from '../roles/roles.module';
+import { RolesService } from '../roles/roles.service';
 
 const HOOKS = [
   { metadataKey: BEFORE_HOOK_KEY, hookType: 'before' as const },
@@ -45,7 +47,7 @@ export class AuthModule {
     return {
       module: AuthModule,
       global: true,
-      imports: [authModule, PrismaModule],
+      imports: [authModule, RolesModule],
       exports: [authModule],
       controllers: [AuthExtendedController],
       providers: [AuthHook],
@@ -54,8 +56,8 @@ export class AuthModule {
 
   private static getAuthModule() {
     return AuthenticationModule.forRootAsync({
-      imports: [PrismaModule, TemplatesModule],
-      useFactory(
+      imports: [TemplatesModule, RolesModule],
+      useFactory: async (
         prisma: PrismaService,
         discover: DiscoveryService,
         reflector: Reflector,
@@ -64,7 +66,8 @@ export class AuthModule {
         templateService: TemplatesService,
         emailChannelService: EmailChannelService,
         appConfig: AppConfig,
-      ) {
+        rolesService: RolesService,
+      ) => {
         const providers = discover
           .getProviders()
           .filter(
@@ -94,6 +97,7 @@ export class AuthModule {
             }
           }
         }
+        const adminConfig = await rolesService.loadForStartup();
         return {
           auth: betterAuth({
             database: prismaAdapter(prisma, {
@@ -265,6 +269,7 @@ export class AuthModule {
         TemplatesService,
         EmailChannelService,
         AppConfig,
+        RolesService,
       ],
     });
   }

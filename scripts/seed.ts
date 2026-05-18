@@ -16,6 +16,7 @@ const scripts = [
   'seed-admin-user.ts',
   'seed-templates.ts',
   'seed-system-settings.ts',
+  'seed-roles.ts',
 ];
 
 async function runScript(scriptName: string): Promise<void> {

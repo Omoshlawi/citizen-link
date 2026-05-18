@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Body,
@@ -25,14 +26,15 @@ import {
   SessionResponseDto,
   UpdateSessionDto,
 } from './auth.dto';
-import { adminPluginRoles } from './auth.acl';
 import { RequireSystemPermission } from './auth.decorators';
+import { RolesService } from '../roles/roles.service';
 
 @Controller('/extended/auth')
 export class AuthExtendedController {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly authService: AuthService<BetterAuthWithPlugins>,
+    private readonly rolesService: RolesService,
   ) {}
 
   // Users
@@ -69,7 +71,6 @@ export class AuthExtendedController {
     }
 
     const { user } = await this.authService.api.createUser({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       body: { ...dto, role: dto.role as any },
     });
 
@@ -119,37 +120,19 @@ export class AuthExtendedController {
   @AllowAnonymous()
   @ApiOperation({ summary: 'List all system roles and their permissions' })
   @ApiOkResponse({ type: GetRolesResponseDto })
-  getRoles(): GetRolesResponseDto {
-    const results = Object.entries(adminPluginRoles).map(
-      ([role, definition]) => {
-        const roleDefinition = definition as {
-          statements?: Record<string, string[]>;
-        };
-        const permissions = Object.entries(
-          roleDefinition.statements ?? {},
-        ).flatMap(([resource, actions]) =>
-          actions.map((action) => ({
-            resource,
-            resourceName: this.toLabel(resource),
-            action,
-            actionName: this.toLabel(action),
-          })),
-        );
-        return { role, name: this.toLabel(role), permissions };
-      },
-    );
-
-    return { results, totalCount: results.length };
-  }
-
-  // Helpers
-
-  private toLabel(value: string): string {
-    return value
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-      .split(/[-_\s]+/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(' ');
+  async getRoles() {
+    const { results } = await this.rolesService.listRoles({
+      includeVoided: false,
+    });
+    const mapped = results.map((roleRecord) => {
+      const permissions = roleRecord.permissions.map((perm) => ({
+        resource: perm.resource.slug,
+        resourceName: perm.resource.name,
+        action: perm.resourceAction.slug,
+        actionName: perm.resourceAction.name,
+      }));
+      return { role: roleRecord.slug, name: roleRecord.name, permissions };
+    });
+    return { results: mapped, totalCount: mapped.length };
   }
 }

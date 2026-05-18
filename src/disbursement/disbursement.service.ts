@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { BetterAuthWithPlugins, UserSession } from '../auth/auth.types';
 import { AuthService } from '@thallesp/nestjs-better-auth';
