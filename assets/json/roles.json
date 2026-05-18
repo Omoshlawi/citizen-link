@@ -1,32 +1,4 @@
 {
-  "resources": {
-    "user": ["create", "list", "set-role", "ban", "impersonate", "delete", "set-password", "get", "update"],
-    "session": ["list", "revoke", "delete"],
-    "documentType": ["create", "update", "delete", "restore"],
-    "addressLocale": ["create", "update", "delete", "restore"],
-    "addressHierarchy": ["create", "update", "delete", "restore"],
-    "station": ["create", "update", "delete", "restore"],
-    "documentCase": ["list-any", "view-any", "verify", "reject", "update", "delete", "collect"],
-    "match": ["list-any", "create", "update", "delete", "restore", "verify", "query-case-matches"],
-    "claim": ["list-any", "verify", "reject", "delete", "review-dispute"],
-    "extraction": ["debug"],
-    "templates": ["create", "update", "delete", "restore"],
-    "notification": ["list-any", "view-any", "manage-any", "delete", "test"],
-    "transitionReason": ["create", "update", "delete", "restore"],
-    "statusTransition": ["view"],
-    "documentOperation": ["manage", "approve", "reject"],
-    "documentOperationType": ["manage"],
-    "stationOperationType": ["manage"],
-    "staffOperationScope": ["view", "manage"],
-    "wallet": ["view-any"],
-    "address": ["view-any"],
-    "transaction": ["list-any"],
-    "disbursement": ["list-any", "view-any"],
-    "invoice": ["list-any"],
-    "setting": ["view-any", "manage-system"],
-    "pushToken": ["list-any"],
-    "handover": ["manage-any"]
-  },
   "roles": [
     {
       "slug": "admin",

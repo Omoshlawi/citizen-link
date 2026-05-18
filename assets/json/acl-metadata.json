@@ -1,0 +1,144 @@
+{
+  "resources": {
+    "user": { "name": "User", "description": "Platform user accounts" },
+    "session": { "name": "Session", "description": "Active user sessions" },
+    "documentType": {
+      "name": "Document Type",
+      "description": "Document category and field configuration"
+    },
+    "addressLocale": {
+      "name": "Address Locale",
+      "description": "Locale-specific address format definitions"
+    },
+    "addressHierarchy": {
+      "name": "Address Hierarchy",
+      "description": "Administrative address level labels"
+    },
+    "station": {
+      "name": "Station",
+      "description": "Document custody pickup stations"
+    },
+    "documentCase": {
+      "name": "Document Case",
+      "description": "Lost and found document case records"
+    },
+    "match": {
+      "name": "Match",
+      "description": "Case match records and verification"
+    },
+    "claim": {
+      "name": "Claim",
+      "description": "Ownership claims on matched cases"
+    },
+    "extraction": {
+      "name": "Extraction",
+      "description": "AI document extraction pipeline"
+    },
+    "templates": {
+      "name": "Templates",
+      "description": "Notification and document templates"
+    },
+    "notification": {
+      "name": "Notification",
+      "description": "User notification records"
+    },
+    "transitionReason": {
+      "name": "Transition Reason",
+      "description": "Reasons for case status transitions"
+    },
+    "statusTransition": {
+      "name": "Status Transition",
+      "description": "Case status change audit trail"
+    },
+    "documentOperation": {
+      "name": "Document Operation",
+      "description": "Custody operation workflows"
+    },
+    "documentOperationType": {
+      "name": "Document Operation Type",
+      "description": "Types of custody operations"
+    },
+    "stationOperationType": {
+      "name": "Station Operation Type",
+      "description": "Station-level operation type definitions"
+    },
+    "staffOperationScope": {
+      "name": "Staff Operation Scope",
+      "description": "Per-staff station operation permissions"
+    },
+    "wallet": {
+      "name": "Wallet",
+      "description": "User wallet balances and ledger"
+    },
+    "address": {
+      "name": "Address",
+      "description": "User and entity address records"
+    },
+    "transaction": {
+      "name": "Transaction",
+      "description": "Payment transaction records"
+    },
+    "disbursement": {
+      "name": "Disbursement",
+      "description": "Finder reward disbursements"
+    },
+    "invoice": { "name": "Invoice", "description": "Claim payment invoices" },
+    "setting": {
+      "name": "Setting",
+      "description": "System configuration settings"
+    },
+    "pushToken": {
+      "name": "Push Token",
+      "description": "User device push notification tokens"
+    },
+    "handover": {
+      "name": "Handover",
+      "description": "Document handover operations"
+    }
+  },
+  "actions": {
+    "create": { "name": "Create" },
+    "list": { "name": "List" },
+    "list-any": {
+      "name": "List Any",
+      "description": "List all records regardless of ownership"
+    },
+    "get": { "name": "Get" },
+    "view": { "name": "View" },
+    "view-any": {
+      "name": "View Any",
+      "description": "View any record regardless of ownership"
+    },
+    "update": { "name": "Update" },
+    "update-any": { "name": "Update Any" },
+    "delete": { "name": "Delete" },
+    "delete-any": { "name": "Delete Any" },
+    "restore": { "name": "Restore" },
+    "restore-any": { "name": "Restore Any" },
+    "set-role": { "name": "Set Role" },
+    "set-password": { "name": "Set Password" },
+    "ban": { "name": "Ban" },
+    "impersonate": { "name": "Impersonate" },
+    "revoke": { "name": "Revoke" },
+    "verify": { "name": "Verify" },
+    "reject": { "name": "Reject" },
+    "collect": {
+      "name": "Collect",
+      "description": "Issue and confirm collection codes"
+    },
+    "query-case-matches": { "name": "Query Case Matches" },
+    "review-dispute": { "name": "Review Dispute" },
+    "debug": { "name": "Debug" },
+    "manage": { "name": "Manage" },
+    "manage-any": {
+      "name": "Manage Any",
+      "description": "Manage all records regardless of ownership"
+    },
+    "manage-system": {
+      "name": "Manage System",
+      "description": "System configuration and settings management"
+    },
+    "approve": { "name": "Approve" },
+    "test": { "name": "Test" }
+  }
+}

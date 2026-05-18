@@ -1,9 +1,20 @@
 import fs from 'fs';
 import path from 'path';
 import 'dotenv/config';
+import { adminPluginAcl } from '../src/auth/auth.acl';
 import prisma from './prisma-instance';
 
 declare const __dirname: string;
+
+interface AclMetaEntry {
+  name: string;
+  description?: string;
+}
+
+interface AclMetadata {
+  resources: Record<string, AclMetaEntry>;
+  actions: Record<string, AclMetaEntry>;
+}
 
 interface RoleSeed {
   slug: string;
@@ -16,7 +27,6 @@ interface RoleSeed {
 }
 
 interface RolesSeedFile {
-  resources: Record<string, string[]>;
   roles: RoleSeed[];
 }
 
@@ -30,42 +40,75 @@ function toLabel(slug: string): string {
 }
 
 async function seedRoles(): Promise<void> {
-  const filePath = path.resolve(
+  const rolesPath = path.resolve(
     __dirname,
     '..',
     'assets',
     'json',
     'roles.json',
   );
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const { resources, roles } = JSON.parse(raw) as RolesSeedFile;
+  const metaPath = path.resolve(
+    __dirname,
+    '..',
+    'assets',
+    'json',
+    'acl-metadata.json',
+  );
+
+  const { roles } = JSON.parse(
+    fs.readFileSync(rolesPath, 'utf-8'),
+  ) as RolesSeedFile;
+  const metadata = JSON.parse(
+    fs.readFileSync(metaPath, 'utf-8'),
+  ) as AclMetadata;
+
+  function getResourceMeta(slug: string): AclMetaEntry {
+    return metadata.resources[slug] ?? { name: toLabel(slug) };
+  }
+
+  function getActionMeta(slug: string): AclMetaEntry {
+    return metadata.actions[slug] ?? { name: toLabel(slug) };
+  }
 
   await prisma.$connect();
   console.log('✅ Database connection established');
 
-  // 1. Upsert all resources and their actions
+  // 1. Seed resources and actions derived from auth.acl.ts (single source of truth for slugs)
   console.log('Seeding resources and actions...');
-  for (const [resourceSlug, actions] of Object.entries(resources)) {
+  const statements = adminPluginAcl.statements as unknown as Record<
+    string,
+    string[]
+  >;
+  for (const [resourceSlug, actions] of Object.entries(statements)) {
+    const { name, description } = getResourceMeta(resourceSlug);
     const resource = await prisma.resource.upsert({
       where: { slug: resourceSlug },
-      update: { name: toLabel(resourceSlug), isBuiltIn: true },
+      update: { name, description: description ?? null, isBuiltIn: true },
       create: {
-        name: toLabel(resourceSlug),
+        name,
         slug: resourceSlug,
+        description: description ?? null,
         isBuiltIn: true,
       },
     });
 
     for (const actionSlug of actions) {
+      const { name: actionName, description: actionDesc } =
+        getActionMeta(actionSlug);
       await prisma.resourceAction.upsert({
         where: {
           resourceId_slug: { resourceId: resource.id, slug: actionSlug },
         },
-        update: { name: toLabel(actionSlug), isBuiltIn: true },
+        update: {
+          name: actionName,
+          description: actionDesc ?? null,
+          isBuiltIn: true,
+        },
         create: {
           resourceId: resource.id,
-          name: toLabel(actionSlug),
+          name: actionName,
           slug: actionSlug,
+          description: actionDesc ?? null,
           isBuiltIn: true,
         },
       });
@@ -99,7 +142,6 @@ async function seedRoles(): Promise<void> {
     });
 
     if (roleDef.allPermissions) {
-      // Grant every active resource action
       const allActions = await prisma.resourceAction.findMany({
         where: { voided: false },
         include: { resource: true },
