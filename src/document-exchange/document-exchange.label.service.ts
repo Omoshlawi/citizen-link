@@ -97,23 +97,27 @@ export class DocumentExchangeLabelService {
           .join(', ')
       : '';
 
-    const html = await this.templates.renderFile('print', 'delivery-label', {
-      exchangeNumber: dto.exchangeNumber,
-      recipientName,
-      addressLines,
-      landmark: addressSnap?.landmark ? `Near: ${addressSnap.landmark}` : '',
-      recipientPhone: addressSnap?.phoneNumber
-        ? `Tel: ${addressSnap.phoneNumber}`
-        : '',
-      docTypeName,
-      stationName,
-      stationAddress,
-      qrDataUri,
-      code,
-      confirmBaseUrl,
-      deepLink,
-      expiresAt: verification.expiresAt.toLocaleString(),
-    });
+    const { rendered: html } = await this.templates.renderSlot(
+      'document.print.delivery_label',
+      'content',
+      {
+        exchangeNumber: dto.exchangeNumber,
+        recipientName,
+        addressLines,
+        landmark: addressSnap?.landmark ? `Near: ${addressSnap.landmark}` : '',
+        recipientPhone: addressSnap?.phoneNumber
+          ? `Tel: ${addressSnap.phoneNumber}`
+          : '',
+        docTypeName,
+        stationName,
+        stationAddress,
+        qrDataUri,
+        code,
+        confirmBaseUrl,
+        deepLink,
+        expiresAt: verification.expiresAt.toLocaleString(),
+      },
+    );
 
     return this.pdfService.generatePdf(html, {
       width: '148mm',

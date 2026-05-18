@@ -1298,5 +1298,49 @@
         "push": true
       }
     }
+  },
+  {
+    "key": "document.print.delivery_label",
+    "type": "print",
+    "name": "Courier Delivery Label",
+    "description": "Printable A5 landscape delivery label with QR code and confirmation code. Generated as PDF for courier shipments.",
+    "engine": "handlebars",
+    "slots": {
+      "content": {
+        "source": "file",
+        "path": "print/delivery-label.hbs"
+      }
+    },
+    "schema": {
+      "required": ["content"],
+      "optional": []
+    },
+    "metadata": {
+      "format": "pdf",
+      "pageSize": "A5",
+      "orientation": "landscape"
+    }
+  },
+  {
+    "key": "document.print.invoice",
+    "type": "print",
+    "name": "Claim Invoice",
+    "description": "Printable A4 portrait tax invoice for a verified document recovery claim. Generated as PDF for the claim owner.",
+    "engine": "handlebars",
+    "slots": {
+      "content": {
+        "source": "file",
+        "path": "print/invoice.hbs"
+      }
+    },
+    "schema": {
+      "required": ["content"],
+      "optional": []
+    },
+    "metadata": {
+      "format": "pdf",
+      "pageSize": "A4",
+      "orientation": "portrait"
+    }
   }
 ]

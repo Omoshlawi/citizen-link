@@ -27,6 +27,7 @@ export enum TemplateType {
   REPORT = 'report',
   DOCUMENT = 'document',
   INVOICE = 'invoice',
+  PRINT = 'print',
 }
 
 //   Notification

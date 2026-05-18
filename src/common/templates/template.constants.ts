@@ -74,6 +74,18 @@ export const INVOICE_SLOTS = {
   INVOICE_TEMPLATE: 'invoice_template',
 } as const;
 
+// Printable documents (labels, manifests, invoices, etc.)
+
+export const PRINT_CONTRACT: SlotContract<
+  (typeof PRINT_SLOTS)[keyof typeof PRINT_SLOTS]
+> = {
+  required: ['content'],
+};
+
+export const PRINT_SLOTS = {
+  CONTENT: 'content',
+} as const;
+
 // Registry — maps type string → contract
 // Add new type here and TemplateService picks it up automatically.
 
@@ -83,4 +95,5 @@ export const CONTRACT_REGISTRY: Record<TemplateType, SlotContract<string>> = {
   report: REPORT_CONTRACT,
   document: REPORT_CONTRACT, // documents reuse the report contract
   invoice: INVOICE_CONTRACT,
+  print: PRINT_CONTRACT,
 };

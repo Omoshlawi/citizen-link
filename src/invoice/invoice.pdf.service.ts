@@ -76,7 +76,11 @@ export class InvoicePdfService {
       balanceDue: invoice.balanceDue.toNumber(),
     };
 
-    const html = await this.templates.renderFile('print', 'invoice', data);
+    const { rendered: html } = await this.templates.renderSlot(
+      'document.print.invoice',
+      'content',
+      data,
+    );
     const buffer = await this.pdfService.generatePdf(html, {
       format: 'A4',
       printBackground: true,
