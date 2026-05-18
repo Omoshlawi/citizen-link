@@ -24,6 +24,10 @@ export enum PaymentProviders {
   MPESA = 'MPESA',
 }
 
+export enum WithdrawalDestination {
+  BANK = 'BANK',
+}
+
 export const WebHookSchema = z.object({
   event: z.enum(WebHookEvents),
   api_version: z.string(),
@@ -52,8 +56,18 @@ export const WebHookSchema = z.object({
   }),
 });
 
+export const WithdrawSchema = z.object({
+  amount: z.number().nonnegative(),
+  destination: z.object({
+    method: z.enum(WithdrawalDestination),
+    account_number: z.string(),
+    bank_code: z.string(),
+  }),
+});
+
 export class PaymentintentDto extends createZodDto(PaymentIntentSchema) {}
 export class WebHookDto extends createZodDto(WebHookSchema) {}
+export class WithdrawDto extends createZodDto(WithdrawSchema) {}
 
 enum PaymentIntentStatus {
   CREATED = 'CREATED',

@@ -19,6 +19,7 @@ import {
   GetWalletBalanceDto,
   PaymentintentDto,
   PaymentIntentResponseDto,
+  WithdrawDto,
 } from './mauzo.dto';
 
 @Injectable()
@@ -89,6 +90,20 @@ export class MauzoService implements OnModuleInit {
       }
 
       throw new InternalServerErrorException();
+    }
+  }
+
+  async initiateWithraw(dot: WithdrawDto) {
+    try {
+      const res = await lastValueFrom(
+        this.httpService.post<Record<string, any>>('/withdrawals', {
+          ...dot,
+          public_key: this.config.publicKey,
+        }),
+      );
+      return res.data;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
     }
   }
 
