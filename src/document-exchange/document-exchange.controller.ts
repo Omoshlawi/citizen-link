@@ -2,12 +2,12 @@ import {
   Body,
   Controller,
   Get,
-  Header,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiCreatedResponse,
@@ -176,18 +176,26 @@ export class DocumentExchangeController {
   }
 
   @Get('delivery-label')
-  @Header('Content-Type', 'text/html; charset=utf-8')
-  @ApiOperation({ summary: 'Get printable delivery label HTML (staff only)' })
-  @ApiOkResponse({ description: 'Printable HTML label' })
+  @ApiOperation({
+    summary: 'Download printable delivery label as PDF (staff only)',
+  })
+  @ApiOkResponse({
+    description: 'Delivery label PDF',
+    content: { 'application/pdf': {} },
+  })
   @ApiErrorsResponse()
   @RequireSystemPermission({ documentCase: ['collect'] })
   @RequireActiveStation(ActiveStationMode.REQUIRED)
-  getDeliveryLabel(
+  async getDeliveryLabel(
     @Query() query: GetDeliveryLabelQueryDto,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Session() _: UserSession,
-  ) {
-    return this.exchanges.getDeliveryLabel(query);
+  ): Promise<StreamableFile> {
+    const buffer = await this.exchanges.getDeliveryLabel(query);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="label-${query.exchangeNumber}.pdf"`,
+    });
   }
 
   @Get('delivery-policy')

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invoice {{invoiceNumber}} — Citizen Link</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #ffffff;
+      color: #1a1a1a;
+      font-size: 10pt;
+      line-height: 1.5;
+    }
+
+    /* ── Page wrapper ── */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 16mm 16mm 12mm;
+      display: flex;
+      flex-direction: column;
+      gap: 8mm;
+    }
+
+    /* ── Header band ── */
+    .header {
+      background: #003b5a;
+      border-radius: 6px;
+      padding: 10mm 12mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .brand-name {
+      font-size: 20pt;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.4px;
+    }
+
+    .brand-tagline {
+      font-size: 8pt;
+      color: #93c5d4;
+      margin-top: 2px;
+    }
+
+    .invoice-meta {
+      text-align: right;
+    }
+
+    .invoice-type {
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: #e8b84b;
+      color: #003b5a;
+      padding: 3px 10px;
+      border-radius: 3px;
+      display: inline-block;
+      margin-bottom: 5px;
+    }
+
+    .invoice-number {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #ffffff;
+      display: block;
+    }
+
+    .invoice-date {
+      font-size: 8pt;
+      color: #93c5d4;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* ── Status pill ── */
+    .status-pill {
+      display: inline-block;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-PENDING       { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+    .status-PARTIALLY_PAID { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .status-PAID          { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .status-OVERDUE       { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .status-CANCELLED     { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+    /* ── Two-column party block ── */
+    .parties {
+      display: flex;
+      gap: 8mm;
+    }
+
+    .party {
+      flex: 1;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6mm;
+    }
+
+    .party-label {
+      font-size: 6.5pt;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 3mm;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 2mm;
+    }
+
+    .party-name {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #003b5a;
+      margin-bottom: 1.5mm;
+    }
+
+    .party-detail {
+      font-size: 8.5pt;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    /* ── Reference row ── */
+    .reference-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 4mm 6mm;
+      display: flex;
+      gap: 8mm;
+      align-items: center;
+    }
+
+    .ref-item {
+      flex: 1;
+    }
+
+    .ref-label {
+      font-size: 6pt;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 1mm;
+    }
+
+    .ref-value {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #003b5a;
+    }
+
+    /* ── Line items table ── */
+    .items-section-label {
+      font-size: 7pt;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 2mm;
+    }
+
+    table.items {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+
+    table.items thead tr {
+      background: #003b5a;
+    }
+
+    table.items thead th {
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #ffffff;
+      padding: 4mm 5mm;
+      text-align: left;
+      letter-spacing: 0.3px;
+    }
+
+    table.items thead th:last-child {
+      text-align: right;
+    }
+
+    table.items tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    table.items tbody td {
+      padding: 3.5mm 5mm;
+      font-size: 9pt;
+      color: #334155;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+    }
+
+    table.items tbody td:last-child {
+      text-align: right;
+      font-weight: 600;
+      color: #003b5a;
+      white-space: nowrap;
+    }
+
+    .item-description {
+      font-size: 7.5pt;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+
+    table.items tfoot td {
+      padding: 3mm 5mm;
+      font-size: 9pt;
+    }
+
+    .totals-spacer {
+      border-top: 2px solid #003b5a;
+    }
+
+    .total-row td {
+      font-weight: 700;
+      font-size: 10.5pt;
+      color: #003b5a;
+    }
+
+    /* ── Summary card ── */
+    .summary {
+      display: flex;
+      gap: 5mm;
+    }
+
+    .summary-card {
+      flex: 1;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 4.5mm 5mm;
+      text-align: center;
+    }
+
+    .summary-card-label {
+      font-size: 6.5pt;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 2mm;
+    }
+
+    .summary-card-value {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #003b5a;
+    }
+
+    .summary-card.paid .summary-card-value   { color: #166534; }
+    .summary-card.due  .summary-card-value   { color: #003b5a; }
+    .summary-card.balance .summary-card-value{ color: #991b1b; }
+
+    /* ── Payment instructions ── */
+    .payment-box {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-left: 4px solid #006397;
+      border-radius: 0 6px 6px 0;
+      padding: 4mm 5mm;
+    }
+
+    .payment-box-title {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #0369a1;
+      margin-bottom: 2mm;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .payment-box p {
+      font-size: 8.5pt;
+      color: #334155;
+      line-height: 1.6;
+    }
+
+    {{#if dueDate}}
+    .due-notice {
+      margin-top: 2mm;
+      font-size: 8pt;
+      color: #92400e;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 4px;
+      padding: 2mm 3mm;
+      display: inline-block;
+    }
+    {{/if}}
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: auto;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 4mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-brand {
+      font-size: 8pt;
+      color: #64748b;
+    }
+
+    .footer-brand strong {
+      color: #003b5a;
+    }
+
+    .footer-ref {
+      font-size: 7.5pt;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <div class="brand-name">Citizen Link</div>
+        <div class="brand-tagline">Civic Document Recovery Platform</div>
+      </div>
+      <div class="invoice-meta">
+        <span class="invoice-type">Tax Invoice</span>
+        <span class="invoice-number">{{invoiceNumber}}</span>
+        <span class="invoice-date">Issued: {{issuedAt}}</span>
+        {{#if dueDate}}
+        <span class="invoice-date">Due: {{dueDate}}</span>
+        {{/if}}
+      </div>
+    </div>
+
+    <!-- Status + parties -->
+    <div style="display:flex; align-items:center; gap:4mm; margin-bottom:-2mm;">
+      <span class="status-pill status-{{status}}">{{status}}</span>
+    </div>
+
+    <div class="parties">
+      <div class="party">
+        <div class="party-label">Billed to</div>
+        <div class="party-name">{{recipientName}}</div>
+        <div class="party-detail">{{recipientEmail}}</div>
+      </div>
+      <div class="party">
+        <div class="party-label">Issued by</div>
+        <div class="party-name">Citizen Link Platform</div>
+        <div class="party-detail">
+          Government Civic Services<br />
+          support@citizenlink.app
+        </div>
+      </div>
+    </div>
+
+    <!-- Reference -->
+    <div class="reference-box">
+      <div class="ref-item">
+        <div class="ref-label">Claim Number</div>
+        <div class="ref-value">{{claimNumber}}</div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-label">Document Type</div>
+        <div class="ref-value">{{docTypeName}}</div>
+      </div>
+    </div>
+
+    <!-- Line items -->
+    <div>
+      <div class="items-section-label">Invoice items</div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width:55%;">Description</th>
+            <th style="width:20%;">Type</th>
+            <th style="width:25%;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each items}}
+          <tr>
+            <td>
+              {{this.label}}
+              {{#if this.description}}
+              <div class="item-description">{{this.description}}</div>
+              {{/if}}
+            </td>
+            <td style="font-size:7.5pt; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">{{this.type}}</td>
+            <td>{{currency this.amount}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+        <tfoot>
+          <tr class="totals-spacer">
+            <td colspan="2" style="font-size:8.5pt; color:#64748b;">Subtotal</td>
+            <td style="text-align:right; font-weight:600; color:#003b5a;">{{currency totalAmount}}</td>
+          </tr>
+          {{#ifEqual status "PARTIALLY_PAID"}}
+          <tr>
+            <td colspan="2" style="font-size:8.5pt; color:#64748b;">Amount paid</td>
+            <td style="text-align:right; font-weight:600; color:#166534;">{{currency amountPaid}}</td>
+          </tr>
+          {{/ifEqual}}
+          {{#ifEqual status "PAID"}}
+          <tr>
+            <td colspan="2" style="font-size:8.5pt; color:#166534; font-weight:600;">Fully paid</td>
+            <td style="text-align:right; font-weight:600; color:#166534;">{{currency amountPaid}}</td>
+          </tr>
+          {{/ifEqual}}
+          <tr class="total-row">
+            <td colspan="2">Balance due</td>
+            <td style="text-align:right; font-size:12pt;">{{currency balanceDue}}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="summary">
+      <div class="summary-card">
+        <div class="summary-card-label">Total</div>
+        <div class="summary-card-value">{{currency totalAmount}}</div>
+      </div>
+      <div class="summary-card paid">
+        <div class="summary-card-label">Paid</div>
+        <div class="summary-card-value">{{currency amountPaid}}</div>
+      </div>
+      <div class="summary-card balance">
+        <div class="summary-card-label">Balance due</div>
+        <div class="summary-card-value">{{currency balanceDue}}</div>
+      </div>
+    </div>
+
+    <!-- Payment instructions -->
+    {{#ifEqual status "PAID"}}
+    <div class="payment-box" style="background:#f0fdf4; border-color:#86efac; border-left-color:#22c55e;">
+      <div class="payment-box-title" style="color:#166534;">Payment received</div>
+      <p>This invoice has been paid in full. Thank you for using Citizen Link.</p>
+    </div>
+    {{/ifEqual}}
+    {{#ifEqual status "PENDING"}}
+    <div class="payment-box">
+      <div class="payment-box-title">Payment instructions</div>
+      <p>
+        To pay this invoice, open the Citizen Link mobile app and navigate to
+        <strong>My Claims → {{claimNumber}} → Pay Now</strong>.
+        Payments are processed securely via M-Pesa.
+      </p>
+      {{#if dueDate}}
+      <div class="due-notice">Payment due by {{dueDate}}</div>
+      {{/if}}
+    </div>
+    {{/ifEqual}}
+    {{#ifEqual status "PARTIALLY_PAID"}}
+    <div class="payment-box">
+      <div class="payment-box-title">Partial payment recorded</div>
+      <p>
+        A partial payment has been received. The remaining balance of
+        <strong>{{currency balanceDue}}</strong> is still outstanding.
+        Open the Citizen Link app to complete payment.
+      </p>
+    </div>
+    {{/ifEqual}}
+    {{#ifEqual status "OVERDUE"}}
+    <div class="payment-box" style="background:#fff5f5; border-color:#fca5a5; border-left-color:#ef4444;">
+      <div class="payment-box-title" style="color:#991b1b;">Payment overdue</div>
+      <p>This invoice is overdue. Please pay immediately via the Citizen Link app to avoid service disruption.</p>
+    </div>
+    {{/ifEqual}}
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-brand">
+        <strong>Citizen Link</strong> — Civic Document Recovery Platform<br />
+        This is a computer-generated document and does not require a signature.
+      </div>
+      <div class="footer-ref">Ref: {{invoiceNumber}}</div>
+    </div>
+
+  </div>
+</body>
+</html>

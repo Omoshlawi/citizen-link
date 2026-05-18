@@ -37,7 +37,7 @@ export class TemplatesRenderService {
   }
 
   async renderFile(
-    category: 'mail' | 'sms' | 'prompts',
+    category: 'mail' | 'sms' | 'prompts' | 'print',
     templateName: string,
     data: Record<string, any>,
   ): Promise<string> {

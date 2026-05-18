@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Delivery Label — {{exchangeNumber}}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @page {
+      size: 148mm 105mm landscape;
+      margin: 0;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #ffffff;
+      color: #1a1a1a;
+      width: 148mm;
+      height: 105mm;
+      overflow: hidden;
+    }
+
+    .label {
+      width: 148mm;
+      height: 105mm;
+      border: 2px solid #003b5a;
+      padding: 7mm 8mm;
+      display: flex;
+      flex-direction: column;
+      gap: 4mm;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #003b5a;
+      padding-bottom: 3.5mm;
+    }
+    .brand {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #003b5a;
+      letter-spacing: -0.3px;
+    }
+    .badge {
+      font-size: 6.5pt;
+      font-weight: 700;
+      background: #006397;
+      color: #ffffff;
+      padding: 2px 7px;
+      border-radius: 3px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    /* ── Body ── */
+    .body {
+      display: flex;
+      gap: 5mm;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5mm;
+      overflow: hidden;
+    }
+
+    .right {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2mm;
+      flex-shrink: 0;
+    }
+
+    /* ── Labels / metadata ── */
+    .section-label {
+      font-size: 5.5pt;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 0.8mm;
+    }
+
+    .recipient-name {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #003b5a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .address {
+      font-size: 7.5pt;
+      color: #334155;
+      line-height: 1.4;
+    }
+
+    .doc-type {
+      display: inline-block;
+      font-size: 7pt;
+      font-weight: 600;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .exchange-ref {
+      font-size: 6.5pt;
+      color: #94a3b8;
+      margin-top: auto;
+    }
+
+    /* ── QR + code ── */
+    .qr img {
+      width: 42mm;
+      height: 42mm;
+      display: block;
+    }
+
+    .code-block {
+      text-align: center;
+      background: #f8fafc;
+      border: 1.5px solid #003b5a;
+      border-radius: 4px;
+      padding: 1.5mm 3mm;
+      width: 42mm;
+    }
+
+    .code-label {
+      font-size: 5.5pt;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 1mm;
+    }
+
+    .code {
+      font-size: 16pt;
+      font-weight: 700;
+      color: #003b5a;
+      letter-spacing: 5px;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* ── Instructions ── */
+    .instructions {
+      font-size: 6.5pt;
+      color: #475569;
+      background: #fffbeb;
+      border-left: 3px solid #e8b84b;
+      padding: 1.5mm 2.5mm;
+      line-height: 1.45;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 2mm;
+      font-size: 6pt;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <div class="label">
+
+    <div class="header">
+      <span class="brand">Citizen Link</span>
+      <span class="badge">Courier Delivery</span>
+    </div>
+
+    <div class="body">
+      <div class="left">
+        <div>
+          <div class="section-label">Deliver to</div>
+          <div class="recipient-name">{{recipientName}}</div>
+          <div class="address">{{addressLines}}</div>
+          {{#if landmark}}
+          <div class="address" style="margin-top:0.8mm;">{{landmark}}</div>
+          {{/if}}
+          {{#if recipientPhone}}
+          <div class="address" style="margin-top:0.8mm;">{{recipientPhone}}</div>
+          {{/if}}
+        </div>
+
+        <div>
+          <div class="section-label">Document type</div>
+          <span class="doc-type">{{docTypeName}}</span>
+        </div>
+
+        <div>
+          <div class="section-label">Dispatched from</div>
+          <div class="address" style="font-weight:600;">{{stationName}}</div>
+          {{#if stationAddress}}
+          <div class="address">{{stationAddress}}</div>
+          {{/if}}
+        </div>
+
+        <div class="exchange-ref">Exchange: {{exchangeNumber}}</div>
+      </div>
+
+      <div class="right">
+        <div class="qr">
+          <img src="{{qrDataUri}}" alt="Scan to confirm delivery" />
+        </div>
+        <div class="code-block">
+          <div class="code-label">Confirmation Code</div>
+          <div class="code">{{code}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="instructions">
+      <strong>For the recipient:</strong> Scan the QR code or visit
+      <strong>{{confirmBaseUrl}}</strong> and enter the code above to confirm receipt.
+      You may also enter the code in the Citizen Link mobile app.
+    </div>
+
+    <div class="footer">
+      <span>{{deepLink}}</span>
+      <span>Expires: {{expiresAt}}</span>
+    </div>
+
+  </div>
+</body>
+</html>

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { InvoiceModule } from '../invoice/invoice.module';
+import { PdfModule } from '../common/pdf/pdf.module';
+import { TemplatesModule } from '../common/templates/templates.module';
 import { DocumentExchangeCodeCancelService } from './document-exchange.code-cancel.service';
 import { DocumentExchangeCodeIssueService } from './document-exchange.code-issue.service';
 import { DocumentExchangeCodeVerifyService } from './document-exchange.code-verify.service';
@@ -14,7 +16,7 @@ import { DocumentExchangeService } from './document-exchange.service';
 import { DocumentExchangeWithdrawService } from './document-exchange.withdraw.service';
 
 @Module({
-  imports: [InvoiceModule],
+  imports: [InvoiceModule, TemplatesModule, PdfModule],
   controllers: [DocumentExchangeController],
   providers: [
     // Facade — the only service controllers and external code should touch
