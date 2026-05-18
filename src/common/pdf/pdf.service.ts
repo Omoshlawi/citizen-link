@@ -15,6 +15,7 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     this.browser = await puppeteer.launch({
       headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',

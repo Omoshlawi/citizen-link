@@ -9,7 +9,8 @@ WORKDIR /app
 # Copy manifest and pnpm-lock (this fixes your current error)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install dependencies using pnpm
+# Skip Puppeteer Chrome download — system Chromium is used in production
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application code
@@ -24,8 +25,11 @@ RUN pnpm db generate && pnpm run build
 # --- STAGE 2: Runtime ---
 FROM node:22-alpine
 
-# Install openssl in the runtime image too
-RUN apk add --no-cache openssl
+# Install openssl + Chromium for Puppeteer PDF generation
+RUN apk add --no-cache openssl chromium
+
+# Tell Puppeteer to use the system Chromium instead of downloading its own
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 
