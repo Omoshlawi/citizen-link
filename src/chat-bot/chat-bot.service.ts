@@ -1,28 +1,59 @@
-import { Injectable } from '@nestjs/common';
-import { AiService } from '../ai/ai.service';
-import { ChatDto } from './chat-bot.dto';
-import { PromptsService } from '../prompts/prompts.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { HttpService } from '@nestjs/axios';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
+import { AxiosError } from 'axios';
+import { lastValueFrom } from 'rxjs';
+import { ChatBotConfig } from './chat-bot.config';
+import { ChatDto, ChatResponseDto } from './chat-bot.dto';
 
 @Injectable()
 export class ChatBotService {
+  private readonly logger = new Logger(ChatBotService.name);
+
   constructor(
-    private readonly aiService: AiService,
-    private readonly promptsService: PromptsService,
-    private readonly prismaService: PrismaService,
+    private readonly httpService: HttpService,
+    private readonly config: ChatBotConfig,
   ) {}
 
-  async getChatResponse(chatDto: ChatDto) {
-    const documentTypes = await this.prismaService.documentType.findMany({
-      select: { name: true },
-    });
-    const prompt = await this.promptsService.getChatPromptMessage(
-      chatDto.query,
-      documentTypes.map((dt) => dt.name),
-    );
-    const content = await this.aiService.generateContent([{ text: prompt }], {
-      temperature: 0.3,
-    });
-    return { response: content.text ?? '' };
+  async getChatResponse(
+    chatDto: ChatDto,
+    userId: string,
+  ): Promise<ChatResponseDto> {
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post<{ response: string; session_id: string }>(
+          `/v1/chat/message`,
+          {
+            message: chatDto.query,
+            session_id: chatDto.sessionId ?? null,
+          },
+          {
+            headers: {
+              'X-User-Id': userId,
+              'X-Internal-Secret': this.config.internalSecrete,
+            },
+          },
+        ),
+      );
+
+      return {
+        response: response.data.response,
+        sessionId: response.data.session_id,
+      };
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: { message?: string } }>;
+      const detail = axiosErr.response?.data?.error?.message;
+      this.logger.error('AI service request failed', {
+        status: axiosErr.response?.status,
+        detail,
+        message: (err as Error).message,
+      });
+      throw new InternalServerErrorException(
+        detail ?? 'AI service unavailable. Please try again.',
+      );
+    }
   }
 }

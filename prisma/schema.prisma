@@ -65,6 +65,7 @@ model User {
   grantedStaffOperations StaffStationOperation[] @relation("OperationGranter")
   createdOperations      DocumentOperation[]     @relation("OpCreator")
   responsibleOperations  DocumentOperation[]     @relation("OpResponsible")
+  chatSessions           ChatSession[]
 
   @@unique([email])
   @@unique([username])
@@ -1815,4 +1816,73 @@ model RolePermission {
   @@index([roleId])
   @@index([resourceId])
   @@map("role_permissions")
+}
+
+// ─── Agentic Chatbot ──────────────────────────────────────────────────────────
+
+// One conversation thread per user. Think of it like a WhatsApp chat session —
+// every back-and-forth between the user and the AI is grouped under one session.
+// Sessions expire after 90 days (a cleanup job deletes expired ones).
+model ChatSession {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?       // First user message (truncated) — shown in session list on UI
+  expiresAt DateTime      // Set to createdAt + 90 days; a cleanup job removes expired sessions
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  voided    Boolean       @default(false)
+
+  messages  ChatMessage[]
+
+  @@index([userId])
+  @@index([expiresAt]) // for the cleanup query: WHERE expires_at < NOW()
+  @@map("chat_sessions")
+}
+
+// Every message in a conversation — both sides (USER and ASSISTANT).
+// The agentic loop loads the last N of these to rebuild conversation context for the LLM.
+// toolCalls stores a JSON summary of any tool calls the AI made when producing this reply
+// (useful for debugging: "why did the AI say that? → it called get_my_cases and got X").
+model ChatMessage {
+  id        String          @id @default(uuid())
+  sessionId String
+  session   ChatSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      ChatMessageRole
+  content   String          @db.Text
+  toolCalls Json?           // [{ tool: "get_my_cases", input: {...}, output: {...} }]
+  createdAt DateTime        @default(now())
+
+  @@index([sessionId, createdAt]) // we always query "all messages for a session, ordered by time"
+  @@map("chat_messages")
+}
+
+enum ChatMessageRole {
+  USER
+  ASSISTANT
+}
+
+// The platform knowledge base — platform guides split into small chunks and converted to
+// vector embeddings so the AI can find the right section for any question.
+// Uses 768 dimensions because nomic-embed-text (Ollama) outputs 768-dim vectors.
+// (The documents table uses the same dimension for its embeddings.)
+// Run: python -m app.rag.indexer   ← after editing any knowledge/*.md file
+//
+// Two embedding columns — mirrors the Document model pattern:
+//   embedding_768  → nomic-embed-text (Ollama local, dev)
+//   embedding_1536 → text-embedding-3-small (OpenAI, production)
+// The indexer writes to the appropriate column based on EMBEDDING_IS_OPENAI.
+// The retriever queries the appropriate column based on EMBEDDING_IS_OPENAI.
+model KnowledgeChunk {
+  id           String                       @id @default(uuid())
+  sourceFile   String                       // e.g. "01-platform-overview.md"
+  sectionPath  String                       // e.g. "How Matching Works > Step 2"
+  content      String                       @db.Text
+  embedding_768  Unsupported("vector(768)")?  // nomic-embed-text
+  embedding_1536 Unsupported("vector(1536)")? // text-embedding-3-small
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+
+  @@index([sourceFile])
+  @@map("knowledge_chunks")
 }
