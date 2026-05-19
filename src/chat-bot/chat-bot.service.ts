@@ -7,14 +7,18 @@ import {
 } from '@nestjs/common';
 import { AxiosError } from 'axios';
 import { lastValueFrom } from 'rxjs';
-import { PaginationService } from '../common/query-builder';
+import {
+  CustomRepresentationService,
+  PaginationService,
+  SortService,
+} from '../common/query-builder';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatBotConfig } from './chat-bot.config';
 import {
   ChatDto,
   ChatResponseDto,
   ChatSessionDetailDto,
-  ChatSessionSummaryDto,
+  GetSessionQueryDto,
   ListSessionsQueryDto,
 } from './chat-bot.dto';
 
@@ -27,6 +31,8 @@ export class ChatBotService {
     private readonly config: ChatBotConfig,
     private readonly prismaService: PrismaService,
     private readonly paginationService: PaginationService,
+    private readonly representationService: CustomRepresentationService,
+    private readonly sortService: SortService,
   ) {}
 
   async getChatResponse(
@@ -73,30 +79,21 @@ export class ChatBotService {
     query: ListSessionsQueryDto,
     originalUrl: string,
   ) {
+    const defaultRep =
+      'custom:select(id,title,createdAt,updatedAt,_count:select(messages))';
+
     const totalCount = await this.prismaService.chatSession.count({
       where: { userId, voided: false },
     });
 
-    const sessions = await this.prismaService.chatSession.findMany({
+    const results = await this.prismaService.chatSession.findMany({
       where: { userId, voided: false },
       ...this.paginationService.buildSafePaginationQuery(query, totalCount),
-      orderBy: { updatedAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { messages: true } },
-      },
+      ...this.representationService.buildCustomRepresentationQuery(
+        query?.v ?? defaultRep,
+      ),
+      ...this.sortService.buildSortQuery(query?.orderBy),
     });
-
-    const results: ChatSessionSummaryDto[] = sessions.map((s) => ({
-      id: s.id,
-      title: s.title,
-      messageCount: s._count.messages,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-    }));
 
     return {
       results,
@@ -120,29 +117,19 @@ export class ChatBotService {
   async getSession(
     sessionId: string,
     userId: string,
+    query: GetSessionQueryDto,
   ): Promise<ChatSessionDetailDto> {
+    const defaultRep =
+      'custom:select(id,title,createdAt,updatedAt,messages:select(id,sessionId,role,content,createdAt))';
     const session = await this.prismaService.chatSession.findFirst({
       where: { id: sessionId, userId, voided: false },
-      select: {
-        id: true,
-        title: true,
-        createdAt: true,
-        updatedAt: true,
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            sessionId: true,
-            role: true,
-            content: true,
-            createdAt: true,
-          },
-        },
-      },
+      ...this.representationService.buildCustomRepresentationQuery(
+        query?.v ?? defaultRep,
+      ),
     });
 
     if (!session) throw new NotFoundException('Chat session not found');
 
-    return session as ChatSessionDetailDto;
+    return session as unknown as ChatSessionDetailDto;
   }
 }

@@ -2,7 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
 import { PaginatedListBase } from '../common/query-builder/pagination.dto';
-import { QueryBuilderSchema } from '../common/query-builder';
+import {
+  CustomRepresentationQuerySchema,
+  QueryBuilderSchema,
+} from '../common/query-builder';
 
 export const ChatSchema = z.object({
   query: z.string().min(1, 'Message cannot be empty'),
@@ -19,8 +22,14 @@ export class ChatResponseDto {
 export const ListSessionsQuerySchema = z.object({
   ...QueryBuilderSchema.shape,
 });
+export class ListSessionsQueryDto extends createZodDto(
+  ListSessionsQuerySchema,
+) {}
 
-export class ListSessionsQueryDto extends createZodDto(ListSessionsQuerySchema) {}
+export const GetSessionQuerySchema = z.object({
+  ...CustomRepresentationQuerySchema.shape,
+});
+export class GetSessionQueryDto extends createZodDto(GetSessionQuerySchema) {}
 
 export class ChatMessageResponseDto {
   @ApiProperty()

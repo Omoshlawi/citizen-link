@@ -19,6 +19,7 @@ import {
   ChatDto,
   ChatResponseDto,
   ChatSessionDetailDto,
+  GetSessionQueryDto,
   ListSessionsQueryDto,
   ListSessionsResponseDto,
 } from './chat-bot.dto';
@@ -47,7 +48,7 @@ export class ChatBotController {
     @Query() query: ListSessionsQueryDto,
     @Session() { user }: UserSession,
     @OriginalUrl() originalUrl: string,
-  ): Promise<ListSessionsResponseDto> {
+  ) {
     return this.chatBotService.listSessions(user.id, query, originalUrl);
   }
 
@@ -57,9 +58,10 @@ export class ChatBotController {
   @ApiErrorsResponse({ unauthorized: true })
   getSession(
     @Param('id') id: string,
+    @Query() query: GetSessionQueryDto,
     @Session() { user }: UserSession,
   ): Promise<ChatSessionDetailDto> {
-    return this.chatBotService.getSession(id, user.id);
+    return this.chatBotService.getSession(id, user.id, query);
   }
 
   @Delete('sessions/:id')
