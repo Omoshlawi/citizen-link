@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Query,
@@ -57,5 +60,16 @@ export class ChatBotController {
     @Session() { user }: UserSession,
   ): Promise<ChatSessionDetailDto> {
     return this.chatBotService.getSession(id, user.id);
+  }
+
+  @Delete('sessions/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Soft-delete a chat session' })
+  @ApiErrorsResponse({ unauthorized: true })
+  deleteSession(
+    @Param('id') id: string,
+    @Session() { user }: UserSession,
+  ): Promise<void> {
+    return this.chatBotService.deleteSession(id, user.id);
   }
 }

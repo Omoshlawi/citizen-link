@@ -108,6 +108,15 @@ export class ChatBotService {
     };
   }
 
+  async deleteSession(sessionId: string, userId: string): Promise<void> {
+    const result = await this.prismaService.chatSession.updateMany({
+      where: { id: sessionId, userId, voided: false },
+      data: { voided: true },
+    });
+    if (result.count === 0)
+      throw new NotFoundException('Chat session not found');
+  }
+
   async getSession(
     sessionId: string,
     userId: string,
