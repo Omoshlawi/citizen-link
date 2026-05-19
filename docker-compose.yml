@@ -149,6 +149,9 @@ services:
       - TEXT_EXTRACTION_AI_BASE_URL=${TEXT_EXTRACTION_AI_BASE_URL}
       - TEXT_EXTRACTION_AI_MODEL=${TEXT_EXTRACTION_AI_MODEL}
       - TEXT_EXTRACTION_AI_API_KEY=${TEXT_EXTRACTION_AI_API_KEY}
+      # CitizenLink AI Service (deployed independently on its own server)
+      - AI_SERVICE_URL=${AI_SERVICE_URL}
+      - AI_SERVICE_INTERNAL_SECRET=${AI_SERVICE_INTERNAL_SECRET}
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:2000/api || exit 1']
       interval: 20s
