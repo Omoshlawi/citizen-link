@@ -1,15 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
-import {
-  ExtractionStatus,
-  ExtractionStep,
-} from '../../generated/prisma/enums';
+import { ExtractionStatus } from '../../generated/prisma/enums';
+import { ExtractionStep } from './extraction-step.constants';
 import { parseDate } from '../app.utils';
 import { NotificationPriority } from '../notifications/notification.interfaces';
 import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
-import { DocaiCompletedResult, DocaiExtractedFields, DocaiFailedResult } from './docai.dto';
+import {
+  DocaiExtractionSuccessResult,
+  DocaiExtractedFields,
+  DocaiStageFailed,
+} from './docai.dto';
+import { DocaiEvent } from './docai-webhook.schema';
 
 function clamp(v: number | null | undefined): number | null {
   if (v == null) return null;
@@ -26,17 +29,27 @@ export class DocaiWebhookService {
     private readonly s3: S3Service,
   ) {}
 
-  async handleVision(jobId: string): Promise<void> {
+  /** extraction.vision.success — OCR done, structure stage now running. */
+  async handleVisionSuccess(jobId: string): Promise<void> {
     await this.prisma.aIExtraction.update({
       where: { docaiJobId: jobId },
       data: {
         extractionStatus: ExtractionStatus.IN_PROGRESS,
-        currentStep: ExtractionStep.VISION,
+        currentStep: ExtractionStep.STRUCTURE,
       },
     });
   }
 
-  async handleCompleted(jobId: string, result: DocaiCompletedResult): Promise<void> {
+  /** extraction.structure.success — structure done, extraction.success fires next. */
+  async handleStructureSuccess(jobId: string): Promise<void> {
+    // Structure completed — extraction.success (with the combined result) fires
+    // immediately after. No DB write needed here; handleExtractionSuccess will
+    // mark COMPLETED. Just log for observability.
+    this.logger.debug(`Docai job ${jobId} — structure complete, awaiting extraction.success`);
+  }
+
+  /** extraction.success — terminal happy path; apply fields and notify user. */
+  async handleExtractionSuccess(jobId: string, result: DocaiExtractionSuccessResult): Promise<void> {
     const extraction = await this.prisma.aIExtraction.findUnique({
       where: { docaiJobId: jobId },
       include: {
@@ -60,7 +73,7 @@ export class DocaiWebhookService {
     });
 
     if (!extraction) {
-      this.logger.warn(`No extraction found for docai job ${jobId} — skipping COMPLETED`);
+      this.logger.warn(`No extraction found for docai job ${jobId} — skipping extraction.success`);
       return;
     }
 
@@ -68,7 +81,13 @@ export class DocaiWebhookService {
     const document = documentCase.document;
     const userId = documentCase.userId;
     const caseType = documentCase.lostDocumentCase ? 'LOST' : 'FOUND';
-    const fields = result.fields;
+
+    // extraction.success carries { vision: VisionResult, structure: ExtractedFields }
+    const fields = result.structure as DocaiExtractedFields;
+    const ocrConfidence = (result.vision as { averageConfidence?: number | null })
+      .averageConfidence ?? null;
+    const extractionConfidence = fields.quality?.extractionConfidence ?? null;
+    const warnings = (fields.quality?.warnings ?? []) as string[];
 
     if (document) {
       await this.applyFieldsToDocument(document.id, fields);
@@ -85,14 +104,13 @@ export class DocaiWebhookService {
       );
     }
 
-    const warnings = (fields.quality?.warnings ?? []) as string[];
     await this.prisma.aIExtraction.update({
       where: { docaiJobId: jobId },
       data: {
         extractionStatus: ExtractionStatus.COMPLETED,
         currentStep: null,
-        ocrConfidence: clamp(result.ocrConfidence),
-        extractionConfidence: clamp(result.extractionConfidence),
+        ocrConfidence: clamp(ocrConfidence),
+        extractionConfidence: clamp(extractionConfidence),
         documentTypeCode: fields.documentType?.code ?? null,
         warnings,
       },
@@ -133,10 +151,11 @@ export class DocaiWebhookService {
       }
     }
 
-    this.logger.log(`Docai job ${jobId} COMPLETED — case ${documentCase.caseNumber}`);
+    this.logger.log(`Docai job ${jobId} extraction.success — case ${documentCase.caseNumber}`);
   }
 
-  async handleFailed(jobId: string, result: DocaiFailedResult): Promise<void> {
+  /** extraction.vision.failed / extraction.structure.failed — terminal stage failure. */
+  async handleStageFailed(jobId: string, event: DocaiEvent, result: DocaiStageFailed): Promise<void> {
     const extraction = await this.prisma.aIExtraction.findUnique({
       where: { docaiJobId: jobId },
       include: {
@@ -154,7 +173,7 @@ export class DocaiWebhookService {
     });
 
     if (!extraction) {
-      this.logger.warn(`No extraction found for docai job ${jobId} — skipping FAILED`);
+      this.logger.warn(`No extraction found for docai job ${jobId} — skipping ${event}`);
       return;
     }
 
@@ -198,13 +217,13 @@ export class DocaiWebhookService {
                 },
               },
               user: { name: user.name },
-              isImageError: result.failedAt === 'VISION',
+              isImageError: event === DocaiEvent.EXTRACTION_VISION_FAILED,
             },
             userId,
             priority: NotificationPriority.NORMAL,
             eventTitle: 'Document Scan Unsuccessful',
             eventBody: `We were unable to scan your ${documentCase.document?.type?.name ?? 'document'} images for case #${documentCase.caseNumber}. Please open your case to review and try again.`,
-            eventDescription: `Docai job ${jobId} FAILED at ${result.failedAt} for ${caseType} case ${documentCase.caseNumber}: ${result.reason}`,
+            eventDescription: `Docai job ${jobId} FAILED (${event}) for ${caseType} case ${documentCase.caseNumber}: ${result.reason}`,
           })
           .catch((e: unknown) =>
             this.logger.error(
@@ -215,7 +234,7 @@ export class DocaiWebhookService {
       }
     }
 
-    this.logger.error(`Docai job ${jobId} FAILED at ${result.failedAt}: ${result.reason}`);
+    this.logger.error(`Docai job ${jobId} failed — event=${event}: ${result.reason}`);
   }
 
   private async applyFieldsToDocument(

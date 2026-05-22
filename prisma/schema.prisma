@@ -549,7 +549,7 @@ model AIExtraction {
 
   // ─── Pipeline status ───────────────────────────────
   extractionStatus ExtractionStatus @default(PENDING)
-  currentStep      ExtractionStep? // null when COMPLETED or not yet started
+  currentStep      String? // null when COMPLETED or not yet started;
 
   createdAt DateTime @default(now())
 
@@ -562,10 +562,6 @@ enum ExtractionStatus {
   IN_PROGRESS
   COMPLETED
   FAILED
-}
-
-enum ExtractionStep {
-  VISION
 }
 
 model DocumentCase {

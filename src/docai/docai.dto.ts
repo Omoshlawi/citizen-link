@@ -19,20 +19,59 @@ export interface DocaiProcessResponse {
 /** docai POSTs this to webhook_url on every stage transition */
 export interface DocaiWebhookPayload {
   jobId: string;
-  stage: 'VISION' | 'COMPLETED' | 'FAILED';
-  status: 'in_progress' | 'completed' | 'failed';
-  result: DocaiCompletedResult | DocaiFailedResult | null;
+  /** Dot-notation event — encodes pipeline, stage, and outcome in one field. */
+  event: import('./docai-webhook.schema').DocaiEvent;
+  result: Record<string, unknown> | null;
   timestamp: string;
 }
 
-export interface DocaiCompletedResult {
-  fields: DocaiExtractedFields;
-  ocrConfidence: number | null;
-  extractionConfidence: number | null;
+// ── Per-stage success result types ────────────────────────────────────────────
+
+/**
+ * Carried by extraction.vision.success — raw VisionAgent output.
+ * Consumers interested in OCR quality or raw text read this event.
+ */
+export interface DocaiVisionSuccessResult {
+  fullText?: string | null;
+  averageConfidence?: number | null;
 }
 
-export interface DocaiFailedResult {
-  failedAt: 'VISION' | 'STRUCTURE';
+/**
+ * Carried by extraction.structure.success — raw StructureAgent output.
+ * Same shape as DocaiExtractedFields — every field is optional.
+ * Consumers interested in the extracted fields before the final rollup read this event.
+ */
+export type DocaiStructureSuccessResult = DocaiExtractedFields;
+
+// ── Terminal success result type ───────────────────────────────────────────────
+
+/**
+ * Carried by extraction.success — nested combined result.
+ * Consumers pick what they need: vision data, structure data, or both.
+ */
+export interface DocaiExtractionSuccessResult {
+  vision: DocaiVisionSuccessResult;
+  structure: DocaiExtractedFields;
+}
+
+// ── Failure result types ───────────────────────────────────────────────────────
+
+/**
+ * Carried by stage-specific failure events
+ * (extraction.vision.failed, extraction.structure.failed).
+ * The event field already encodes which stage failed — only the reason is needed here.
+ */
+export interface DocaiStageFailed {
+  reason: string;
+}
+
+/**
+ * Carried by extraction.failed — flat rollup that fires alongside the stage event.
+ * Consumers who want a single failure listener use this event.
+ */
+export interface DocaiRollupFailed {
+  /** Lower-cased stage name where the failure occurred (e.g. "vision", "structure"). */
+  failedAt: string;
   reason: string;
 }
 

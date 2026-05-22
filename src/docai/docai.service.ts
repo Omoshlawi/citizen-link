@@ -13,7 +13,7 @@ export interface SubmitExtractionParams {
   caseNumber: string;
   /** Pre-signed download URLs for the document images, in page order */
   imageUrls: string[];
-  /** URL docai will POST stage callbacks to */
+  /** URL docai will POST event-based webhooks to (extraction.*.success / *.failed) */
   webhookUrl: string;
   /** 1 (highest) – 10 (lowest). Omit to use the default (5). */
   priority?: number;

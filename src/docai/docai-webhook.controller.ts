@@ -7,8 +7,11 @@ import {
   Post,
 } from '@nestjs/common';
 import { DocaiConfig } from './docai.config';
-import { DocaiCompletedResult, DocaiFailedResult } from './docai.dto';
-import { DocaiWebhookDto } from './docai-webhook.schema';
+import {
+  DocaiExtractionSuccessResult,
+  DocaiStageFailed,
+} from './docai.dto';
+import { DocaiEvent, DocaiWebhookDto } from './docai-webhook.schema';
 import { DocaiWebhookService } from './docai-webhook.service';
 
 @Controller('webhooks/docai')
@@ -29,15 +32,38 @@ export class DocaiWebhookController {
       throw new ForbiddenException('Invalid callback secret');
     }
 
-    const { jobId, stage } = payload;
-    this.logger.log(`Docai webhook received: stage=${stage} job=${jobId}`);
+    const { jobId, event } = payload;
+    this.logger.log(`Docai webhook: event=${event} job=${jobId}`);
 
-    if (stage === 'VISION') {
-      await this.webhookService.handleVision(jobId);
-    } else if (stage === 'COMPLETED') {
-      await this.webhookService.handleCompleted(jobId, payload.result as DocaiCompletedResult);
-    } else if (stage === 'FAILED') {
-      await this.webhookService.handleFailed(jobId, payload.result as DocaiFailedResult);
+    switch (event) {
+      case DocaiEvent.EXTRACTION_VISION_SUCCESS:
+        await this.webhookService.handleVisionSuccess(jobId);
+        break;
+
+      case DocaiEvent.EXTRACTION_STRUCTURE_SUCCESS:
+        await this.webhookService.handleStructureSuccess(jobId);
+        break;
+
+      case DocaiEvent.EXTRACTION_SUCCESS:
+        await this.webhookService.handleExtractionSuccess(
+          jobId,
+          payload.result as unknown as DocaiExtractionSuccessResult,
+        );
+        break;
+
+      case DocaiEvent.EXTRACTION_VISION_FAILED:
+      case DocaiEvent.EXTRACTION_STRUCTURE_FAILED:
+        await this.webhookService.handleStageFailed(
+          jobId,
+          event,
+          payload.result as unknown as DocaiStageFailed,
+        );
+        break;
+
+      case DocaiEvent.EXTRACTION_FAILED:
+        // Rollup event — NestJS already acted on the stage-specific event above.
+        // No further action needed; acknowledged so ARQ does not retry.
+        break;
     }
 
     return { ok: true };

@@ -69,8 +69,9 @@ export class DocumentCasesCreateService {
   }
 
   // runVisionStep and runTextStep removed — docai owns all AI extraction steps.
-  // Docai submits jobs to citizen-link-docai and receives VISION/COMPLETED/FAILED
-  // webhooks via DocaiWebhookService.
+  // citizen-link-docai fires event-based webhooks (extraction.vision.success,
+  // extraction.structure.success, extraction.success, extraction.*.failed)
+  // which are handled by DocaiWebhookService.
 
   findOne(
     id: string,
