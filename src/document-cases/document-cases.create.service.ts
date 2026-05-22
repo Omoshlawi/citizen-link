@@ -1,26 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { UnrecoverableError } from 'bullmq';
 import dayjs from 'dayjs';
-import { AIInteraction } from '../../generated/prisma/client';
-import {
-  AIExtractionInteractionType,
-  ExtractionStatus,
-  ExtractionStep,
-} from '../../generated/prisma/enums';
 import { parseDate } from '../app.utils';
 import { UserSession } from '../auth/auth.types';
 import { CustomRepresentationQueryDto } from '../common/query-builder';
 import { TextExtractionOutputDto } from '../extraction/extraction.dto';
-import {
-  AsyncError,
-  TextExtractionOutput,
-  VisionExtractionOutput,
-} from '../extraction/extraction.interface';
-import { ExtractionService } from '../extraction/extraction.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
-import { VisionExtractionOutputDto } from '../vision/vision.dto';
-import { VisionService } from '../vision/vision.service';
 import { DocumentCasesQueryService } from './document-cases.query.service';
 
 @Injectable()
@@ -30,9 +15,7 @@ export class DocumentCasesCreateService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly s3Service: S3Service,
-    private readonly extractionService: ExtractionService,
     private readonly documentCasesQueryService: DocumentCasesQueryService,
-    private readonly visionService: VisionService,
   ) {}
 
   async filesExists(images: string[], onFailed?: () => void): Promise<void> {
@@ -85,137 +68,9 @@ export class DocumentCasesCreateService {
     );
   }
 
-  /**
-   * Runs only the vision (OCR) step for an extraction.
-   * Creates the AIExtractionInteraction record and updates AIExtraction status.
-   * Throws UnrecoverableError if images are missing from S3 (no retry possible).
-   * Throws a regular Error on vision API failure (will retry).
-   */
-  async runVisionStep(
-    extractionId: string,
-    images: string[],
-  ): Promise<
-    AIInteraction & { parsedResponse: VisionExtractionOutput | null }
-  > {
-    // Mark as in-progress at the vision step
-    await this.prismaService.aIExtraction.update({
-      where: { id: extractionId },
-      data: {
-        extractionStatus: ExtractionStatus.IN_PROGRESS,
-        currentStep: ExtractionStep.VISION,
-      },
-    });
-
-    // Guard against missing images — permanent failure, no retry
-    await this.filesExists(images, () => {
-      throw new UnrecoverableError(
-        'One or more document images could not be found. Please re-upload and try again.',
-      );
-    });
-
-    // Download images from S3
-    const inputImages = await Promise.all(
-      images.map(async (image) => {
-        const buffer = await this.s3Service.downloadFile(image, 'tmp');
-        const metadata = await this.s3Service.getFileMetadata(image, 'tmp');
-        const mimeType =
-          metadata?.ContentType ?? `image/${image.split('.').pop()}`;
-        return { buffer, mimeType };
-      }),
-    );
-
-    // Run vision extraction
-    const visionInteraction =
-      await this.visionService.extractTextFromImage(inputImages);
-
-    const hasError = !!(
-      visionInteraction.parseError || visionInteraction.callError
-    );
-
-    const errorPayload: AsyncError | null = hasError
-      ? ((visionInteraction.parseError as unknown as AsyncError) ?? {
-          message: visionInteraction.callError,
-        })
-      : null;
-
-    // Create junction record regardless of success/failure
-    await this.prismaService.aIExtractionInteraction.create({
-      data: {
-        extractionType: AIExtractionInteractionType.VISION_EXTRACTION,
-        aiInteractionId: visionInteraction.id,
-        aiExtractionId: extractionId,
-        success: !hasError,
-        errorMessage: hasError ? JSON.stringify(errorPayload) : undefined,
-      },
-    });
-
-    if (hasError) {
-      this.logger.error(
-        `Vision step failed for extraction ${extractionId}`,
-        JSON.stringify(errorPayload),
-      );
-      throw new Error(JSON.stringify(errorPayload));
-    }
-
-    return visionInteraction as AIInteraction & {
-      parsedResponse: VisionExtractionOutput | null;
-    };
-  }
-
-  /**
-   * Runs only the text (structured extraction) step.
-   * Expects the vision OCR output from the previous step.
-   * Creates the AIExtractionInteraction record.
-   */
-  async runTextStep(
-    extractionId: string,
-    visionOutput: VisionExtractionOutputDto,
-    user: UserSession['user'],
-  ): Promise<AIInteraction & { parsedResponse: TextExtractionOutput | null }> {
-    // Mark current step
-    await this.prismaService.aIExtraction.update({
-      where: { id: extractionId },
-      data: { currentStep: ExtractionStep.TEXT },
-    });
-
-    const textInteraction = await this.extractionService.extractDocumentData(
-      visionOutput,
-      user,
-    );
-
-    const hasError = !!(
-      textInteraction.parseError || textInteraction.callError
-    );
-
-    const errorPayload: AsyncError | null = hasError
-      ? ((textInteraction.parseError as unknown as AsyncError) ?? {
-          message: textInteraction.callError,
-        })
-      : null;
-
-    // Create junction record
-    await this.prismaService.aIExtractionInteraction.create({
-      data: {
-        extractionType: AIExtractionInteractionType.TEXT_EXTRACTION,
-        aiInteractionId: textInteraction.id,
-        aiExtractionId: extractionId,
-        success: !hasError,
-        errorMessage: hasError ? JSON.stringify(errorPayload) : undefined,
-      },
-    });
-
-    if (hasError) {
-      this.logger.error(
-        `Text step failed for extraction ${extractionId}`,
-        JSON.stringify(errorPayload),
-      );
-      throw new Error(JSON.stringify(errorPayload));
-    }
-
-    return textInteraction as AIInteraction & {
-      parsedResponse: TextExtractionOutput | null;
-    };
-  }
+  // runVisionStep and runTextStep removed — docai owns all AI extraction steps.
+  // Docai submits jobs to citizen-link-docai and receives VISION/COMPLETED/FAILED
+  // webhooks via DocaiWebhookService.
 
   findOne(
     id: string,

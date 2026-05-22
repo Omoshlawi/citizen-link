@@ -1,90 +1,42 @@
-import { HttpService } from '@nestjs/axios';
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { catchError, lastValueFrom, map, Observable } from 'rxjs';
+import { Injectable, Logger } from '@nestjs/common';
+import { from, map, Observable } from 'rxjs';
 import {
   Document,
   DocumentCase,
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
+import { DocaiService } from '../docai/docai.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { EMBEDDING_OPTIONS_TOKEN } from './embedding.constants';
-import {
-  EmbeddingOptions,
-  OpenAIEmbeddingRequest,
-  OpenAIEmbeddingResponse,
-} from './embedding.interfaces';
+
 @Injectable()
 export class EmbeddingService {
   private readonly logger = new Logger(EmbeddingService.name);
 
   constructor(
-    private readonly httpService: HttpService,
     private readonly prismaService: PrismaService,
-    @Inject(EMBEDDING_OPTIONS_TOKEN)
-    private readonly embeddingOptions: EmbeddingOptions,
+    private readonly docaiService: DocaiService,
   ) {}
 
   /**
-   *  The embedding is a 1536-dimension array of floats
-   * @param text
-   * @returns
+   * Generate an embedding vector via docai.
+   *
+   * Returns an Observable<number[]> for backward compatibility with any callers
+   * that consume it as a stream (e.g. matching service search queries).
    */
-  private openaiGenerate(text: string): Observable<Array<number>> {
-    const payload: OpenAIEmbeddingRequest = {
-      model: this.embeddingOptions.model,
-      input: text,
-    };
-    return this.httpService
-      .post<OpenAIEmbeddingResponse>('/v1/embeddings', payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.embeddingOptions.apiKey}`,
-        },
-      })
-      .pipe(
-        map((res) => res.data.data[0].embedding),
-        catchError((error) => {
-          this.logger.error('Error generating embedding', error);
-          throw error;
-        }),
-      );
-  }
-
-  /**
-   * The embedding is a 768-dimension array of floats
-   * @param text
-   * @returns
-   */
-  private nomicGenerate(text: string): Observable<Array<number>> {
-    return this.httpService
-      .post<{ embedding: Array<number> }>(`/api/embeddings`, {
-        model: this.embeddingOptions.model,
-        prompt: text,
-      })
-      .pipe(
-        // tap(() => this.logger.log('Embedding generated succefully')),
-        map((res) => res.data.embedding),
-        catchError((error) => {
-          this.logger.error('Error generating embedding', error);
-          throw error;
-        }),
-      );
-  }
-
   generateEmbedding(
     text: string,
     useCase: 'search' | 'document' = 'document',
-  ): Observable<Array<number>> {
-    const prefix =
-      useCase === 'search' ? 'search_query: ' : 'search_document: ';
-    this.logger.log(
-      `[${this.embeddingOptions.model}]: Generating ${useCase} embeddings for ${text}`,
+  ): Observable<number[]> {
+    return from(this.docaiService.embed(text, useCase)).pipe(
+      map((r) => r.embedding),
     );
-    if (this.embeddingOptions.isOpenAi) return this.openaiGenerate(text);
-    else return this.nomicGenerate(prefix + text);
   }
 
+  /**
+   * Build a single searchable text string from all document fields.
+   * This is the canonical document representation used for embedding.
+   */
   createDocumentText(
     document: Document & {
       additionalFields: Array<DocumentField>;
@@ -161,6 +113,12 @@ export class EmbeddingService {
     return parts.filter(Boolean).join('. ') + '.';
   }
 
+  /**
+   * Generate and persist an embedding for a single document.
+   *
+   * Delegates to docai POST /v1/embed — dims in the response determines
+   * which pgvector column is updated (embedding_768 or embedding_1536).
+   */
   async embeddDocument(documentId: string): Promise<void> {
     try {
       const document = await this.prismaService.document.findUnique({
@@ -173,35 +131,41 @@ export class EmbeddingService {
       const searchText = this.createDocumentText(document);
       this.logger.debug(`Indexing document ${documentId}: ${searchText}`);
 
-      const embedding = await lastValueFrom(
-        this.generateEmbedding(searchText, 'document'),
+      const { embedding, dims } = await this.docaiService.embed(
+        searchText,
+        'document',
       );
 
       const vectorString = `[${embedding.join(',')}]`;
 
       await this.prismaService.$executeRawUnsafe(
-        `UPDATE "documents" SET embedding_${embedding.length} = $1::vector WHERE id = $2`,
+        `UPDATE "documents" SET embedding_${dims} = $1::vector WHERE id = $2`,
         vectorString,
         documentId,
       );
 
-      this.logger.log(`Successfully indexed document ${documentId}`);
+      this.logger.log(
+        `Successfully indexed document ${documentId} (${dims}-dim vector)`,
+      );
     } catch (error) {
       this.logger.error(`Failed to index document ${documentId}`, error);
       throw error;
     }
   }
 
+  /**
+   * Embed multiple documents in parallel batches.
+   * Default concurrency of 5 is safe for a single docai instance.
+   */
   async batchIndexDocuments(
     documentIds: string[],
-    concurrency = 5, // process 5 at a time — safe for Ollama local instance
+    concurrency = 5,
   ): Promise<{ succeeded: string[]; failed: string[] }> {
     this.logger.log(`Batch indexing ${documentIds.length} documents`);
 
     const succeeded: string[] = [];
     const failed: string[] = [];
 
-    // Process in chunks instead of one-by-one
     for (let i = 0; i < documentIds.length; i += concurrency) {
       const chunk = documentIds.slice(i, i + concurrency);
 

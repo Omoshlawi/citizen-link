@@ -256,7 +256,7 @@ export class DocumentCasesWorkflowService {
               },
             },
             user: true,
-            extraction: true,
+            extractions: { take: 1, orderBy: { createdAt: 'desc' } },
           },
         },
       },
@@ -265,7 +265,7 @@ export class DocumentCasesWorkflowService {
       throw new BadRequestException(`Can only verify submitted cases`);
 
     // Block verification if extraction is still pending or has failed
-    const extraction = canVerify.case?.extraction;
+    const extraction = canVerify.case?.extractions?.[0];
     if (
       extraction &&
       extraction.extractionStatus !== ExtractionStatus.COMPLETED

@@ -34,10 +34,9 @@ import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
 import { HumanIdService } from '../human-id/human-id.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-import { CASE_VISION_EXTRACTION_QUEUE } from './document-cases.constants';
-import { CaseExtractionJob } from './document-cases.interface';
+import { S3Service } from '../s3/s3.service';
+import { DocaiService } from '../docai/docai.service';
+import { DocaiConfig } from '../docai/docai.config';
 import { DocumentCasesTimelineService } from './document-cases.timeline.service';
 
 @Injectable()
@@ -51,8 +50,9 @@ export class DocumentCasesService {
     private readonly documentCasesCreateService: DocumentCasesCreateService,
     private readonly humanIdService: HumanIdService,
     private readonly documentCaseTimelineService: DocumentCasesTimelineService,
-    @InjectQueue(CASE_VISION_EXTRACTION_QUEUE)
-    private readonly caseVisionExtractionQueue: Queue<CaseExtractionJob>,
+    private readonly s3Service: S3Service,
+    private readonly docaiService: DocaiService,
+    private readonly docaiConfig: DocaiConfig,
   ) {}
 
   findAll(
@@ -214,30 +214,38 @@ export class DocumentCasesService {
               : undefined,
           },
         },
-        extraction: { create: {} },
+        extractions: { create: {} },
       },
-      include: { document: true, extraction: true },
+      include: {
+        document: true,
+        extractions: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
     });
 
-    // Queue the extraction pipeline
-    this.caseVisionExtractionQueue
-      .add('extract-vision', {
-        caseId: documentCase.id,
-        documentId: documentCase.document!.id,
-        extractionId: documentCase.extraction!.id,
-        images,
-        userId: user.id,
-        caseType: 'FOUND',
-        caseNumber,
-      })
-      .then((job) => {
-        this.logger.debug(
-          `Queued vision job ${job.id} for found case ${caseNumber}`,
-        );
-      })
+    const extractionId = documentCase.extractions[0]!.id;
+
+    // Submit to docai — save the returned jobId so webhook callbacks can look up this extraction
+    void Promise.all(
+      images.map((key) =>
+        this.s3Service.generateDownloadSignedUrl(key, 3600, 'tmp'),
+      ),
+    )
+      .then((imageUrls) =>
+        this.docaiService.submitJob({
+          caseNumber,
+          imageUrls,
+          webhookUrl: this.docaiConfig.webhookUrl,
+        }),
+      )
+      .then((docaiJobId) =>
+        this.prismaService.aIExtraction.update({
+          where: { id: extractionId },
+          data: { docaiJobId },
+        }),
+      )
       .catch((e) => {
         this.logger.error(
-          `Failed to queue vision job for found case ${caseNumber}`,
+          `Failed to submit found case ${caseNumber} to docai`,
           e,
         );
       });
@@ -362,32 +370,38 @@ export class DocumentCasesService {
               : undefined,
           },
         },
-        extraction: { create: {} },
+        extractions: { create: {} },
       },
-      include: { document: true, extraction: true },
+      include: {
+        document: true,
+        extractions: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
     });
-    // Create extraction record linked to this case, then queue the pipeline
 
-    this.caseVisionExtractionQueue
-      .add('extract-vision', {
-        caseId: documentCase.id,
+    const extractionId = documentCase.extractions[0]!.id;
 
-        documentId: documentCase.document!.id,
-
-        extractionId: documentCase.extraction!.id,
-        images,
-        userId: user.id,
-        caseType: 'LOST',
-        caseNumber,
-      })
-      .then((job) => {
-        this.logger.debug(
-          `Queued vision job ${job.id} for lost scan case ${caseNumber}`,
-        );
-      })
+    // Submit to docai — save the returned jobId so webhook callbacks can look up this extraction
+    void Promise.all(
+      images.map((key) =>
+        this.s3Service.generateDownloadSignedUrl(key, 3600, 'tmp'),
+      ),
+    )
+      .then((imageUrls) =>
+        this.docaiService.submitJob({
+          caseNumber,
+          imageUrls,
+          webhookUrl: this.docaiConfig.webhookUrl,
+        }),
+      )
+      .then((docaiJobId) =>
+        this.prismaService.aIExtraction.update({
+          where: { id: extractionId },
+          data: { docaiJobId },
+        }),
+      )
       .catch((e) => {
         this.logger.error(
-          `Failed to queue vision job for lost scan case ${caseNumber}`,
+          `Failed to submit lost scan case ${caseNumber} to docai`,
           e,
         );
       });

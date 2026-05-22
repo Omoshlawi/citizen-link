@@ -35,8 +35,10 @@ export class DocumentCasesTimelineService {
       select: {
         eventDate: true,
         createdAt: true,
-        extraction: {
+        extractions: {
           select: { extractionStatus: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
         },
         lostDocumentCase: {
           select: {
@@ -193,14 +195,15 @@ export class DocumentCasesTimelineService {
     });
 
     // 3. AI extraction (found always; lost only when auto=true)
+    const latestExtraction = docCase.extractions?.[0] ?? null;
     const needsExtraction = !isLost || docCase.lostDocumentCase!.auto;
-    if (needsExtraction && docCase.extraction) {
-      const extStatus = docCase.extraction.extractionStatus;
+    if (needsExtraction && latestExtraction) {
+      const extStatus = latestExtraction.extractionStatus;
       events.push({
         key: 'ai_extraction',
         timestamp:
           extStatus === 'COMPLETED'
-            ? docCase.extraction.createdAt.toISOString()
+            ? latestExtraction.createdAt.toISOString()
             : null,
         status:
           extStatus === 'COMPLETED'

@@ -1,31 +1,20 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { DocaiModule } from '../docai/docai.module';
+import { EmbeddingConfig } from '../embedding/embedding.config';
+import { EmbeddingModule } from '../embedding/embedding.module';
+import { MatchingModule } from '../matching/matching.module';
+import { MatchingConfig } from '../matching/matching.config';
+import { DOCUMENT_EMBEDDING_QUEUE } from './document-cases.constants';
 import { DocumentCasesController } from './document-cases.controller';
 import { DocumentCasesService } from './document-cases.service';
-import { ExtractionModule } from '../extraction/extraction.module';
-import { DocumentCaseGateway } from './document-case.gateway';
-import { MatchingModule } from '../matching/matching.module';
 import { DocumentCasesCreateService } from './document-cases.create.service';
 import { DocumentCasesQueryService } from './document-cases.query.service';
 import { DocumentCasesWorkflowService } from './documnt-cases.workflow.service';
-import { AiModule } from '../ai/ai.module';
-import { AiConfig } from '../ai/ai.config';
-import { VisionModule } from '../vision/vision.module';
-import { MatchingConfig } from '../matching/matching.config';
-import { EmbeddingModule } from '../embedding/embedding.module';
-import { EmbeddingConfig } from '../embedding/embedding.config';
-import { BullModule } from '@nestjs/bullmq';
-import {
-  CASE_POST_PROCESSING_QUEUE,
-  CASE_TEXT_EXTRACTION_QUEUE,
-  CASE_VISION_EXTRACTION_QUEUE,
-  DOCUMENT_EMBEDDING_QUEUE,
-} from './document-cases.constants';
-import { BullBoardModule } from '@bull-board/nestjs';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { DocumentEmbeddingProcessor } from './document.processor';
-import { CaseVisionExtractionProcessor } from './case-vision-extraction.processor';
-import { CaseTextExtractionProcessor } from './case-text-extraction.processor';
-import { CasePostProcessingProcessor } from './case-post-processing.processor';
+import { DocumentCaseGateway } from './document-case.gateway';
 import { DocumentCasesTimelineService } from './document-cases.timeline.service';
 
 @Module({
@@ -35,90 +24,25 @@ import { DocumentCasesTimelineService } from './document-cases.timeline.service'
       defaultJobOptions: {
         priority: 5,
         attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 5_000, // 5s → 10s → 20s
-        },
-        removeOnComplete: { age: 60 * 60 * 24 }, // keep 24h
-        removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
-      },
-    }),
-    BullModule.registerQueue({
-      name: CASE_VISION_EXTRACTION_QUEUE,
-      defaultJobOptions: {
-        priority: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 10_000, // 10s → 20s → 40s
-        },
-        removeOnComplete: { age: 60 * 60 * 24 }, // keep 24h
-        removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
-      },
-    }),
-    BullModule.registerQueue({
-      name: CASE_TEXT_EXTRACTION_QUEUE,
-      defaultJobOptions: {
-        priority: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 10_000, // 10s → 20s → 40s
-        },
-        removeOnComplete: { age: 60 * 60 * 24 }, // keep 24h
-        removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
-      },
-    }),
-    BullModule.registerQueue({
-      name: CASE_POST_PROCESSING_QUEUE,
-      defaultJobOptions: {
-        priority: 3,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 5_000, // 5s → 10s → 20s
-        },
-        removeOnComplete: { age: 60 * 60 * 24 }, // keep 24h
-        removeOnFail: { age: 60 * 60 * 24 * 7 }, // keep 7d
+        backoff: { type: 'exponential', delay: 5_000 },
+        removeOnComplete: { age: 60 * 60 * 24 },
+        removeOnFail: { age: 60 * 60 * 24 * 7 },
       },
     }),
     BullBoardModule.forFeature({
       name: DOCUMENT_EMBEDDING_QUEUE,
       adapter: BullMQAdapter,
     }),
-    BullBoardModule.forFeature({
-      name: CASE_VISION_EXTRACTION_QUEUE,
-      adapter: BullMQAdapter,
-    }),
-    BullBoardModule.forFeature({
-      name: CASE_TEXT_EXTRACTION_QUEUE,
-      adapter: BullMQAdapter,
-    }),
-    BullBoardModule.forFeature({
-      name: CASE_POST_PROCESSING_QUEUE,
-      adapter: BullMQAdapter,
-    }),
+    DocaiModule,
     EmbeddingModule.registerAsync({
-      useFactory: (config: EmbeddingConfig) => {
-        return {
-          model: config.model,
-          baseUrl: config.baseUrl,
-          apiKey: config.apiKey,
-          isOpenAi: config.isOpenAi,
-        };
-      },
+      useFactory: (config: EmbeddingConfig) => ({
+        model: config.model,
+        baseUrl: config.baseUrl,
+        apiKey: config.apiKey,
+        isOpenAi: config.isOpenAi,
+      }),
       inject: [EmbeddingConfig],
     }),
-    AiModule.registerAsync({
-      useFactory: (config: AiConfig) => {
-        return {
-          apiKey: config.openaiApiKey,
-          baseURL: config.aiBaseUrl,
-          model: config.aiModel || 'gpt-4o',
-        };
-      },
-      inject: [AiConfig],
-    }),
-    VisionModule,
-    ExtractionModule,
     MatchingModule.registerAsync({
       useFactory: (config: MatchingConfig) => {
         const sum = config.weightVector + config.weightExact + config.weightAi;
@@ -146,9 +70,6 @@ import { DocumentCasesTimelineService } from './document-cases.timeline.service'
   controllers: [DocumentCasesController],
   providers: [
     DocumentEmbeddingProcessor,
-    CaseVisionExtractionProcessor,
-    CaseTextExtractionProcessor,
-    CasePostProcessingProcessor,
     DocumentCasesService,
     DocumentCasesCreateService,
     DocumentCasesQueryService,

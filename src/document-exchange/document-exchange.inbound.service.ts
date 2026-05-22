@@ -40,7 +40,7 @@ export class DocumentExchangeInboundService {
           include: {
             document: { include: { type: true } },
             user: true,
-            extraction: true,
+            extractions: { take: 1, orderBy: { createdAt: 'desc' } },
           },
         },
       },
@@ -52,7 +52,7 @@ export class DocumentExchangeInboundService {
       );
     }
     if (
-      foundCase.case.extraction?.extractionStatus !== ExtractionStatus.COMPLETED
+      foundCase.case.extractions?.[0]?.extractionStatus !== ExtractionStatus.COMPLETED
     ) {
       throw new BadRequestException(
         'AI processing must be completed before scheduling an exchange',

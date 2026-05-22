@@ -501,8 +501,7 @@ model AIInteraction {
   callError   String? @db.Text // network / API / timeout error
   retryCount  Int     @default(0)
 
-  createdAt              DateTime                  @default(now())
-  extractionInteractions AIExtractionInteraction[]
+  createdAt DateTime @default(now())
   // aiverification         ClaimVerification?
   // matchVerification      Match?                    @relation("MatchAiInteraction")
   // matchSecurityQuestions Match?                    @relation("MatchSecurityQuestionsAiInteraction")
@@ -532,18 +531,21 @@ model AIExtraction {
   id String @id @default(uuid())
 
   // ─── Case link ─────────────────────────────────────
-  // Extraction is always owned by a case (case is created first)
-  caseId String       @unique
+  // Not unique — a case can have multiple extraction attempts (retries).
+  // The active/latest extraction is the one with the most recent createdAt.
+  caseId String
   case   DocumentCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
+  // ─── Docai job reference ───────────────────────────
+  // Saved after POST /v1/process returns — used to look up this record
+  // when docai's webhook arrives (webhook payload carries jobId, not NestJS IDs)
+  docaiJobId String? @unique
+
   // ─── Extraction-level quality summary ──────────────
-  // Rolled up from both vision + text interactions
-  // Avoids joining through AIExtractionInteraction → AIInteraction to get these
   ocrConfidence        Float?
   extractionConfidence Float?
-  documentTypeCode     String? // what was identified
-  warnings             Json? // merged warnings from both steps
-  fallbackTriggered    Boolean @default(false) // was multimodal rescue invoked?
+  documentTypeCode     String?
+  warnings             Json?
 
   // ─── Pipeline status ───────────────────────────────
   extractionStatus ExtractionStatus @default(PENDING)
@@ -551,41 +553,8 @@ model AIExtraction {
 
   createdAt DateTime @default(now())
 
-  aiextractionInteractions AIExtractionInteraction[]
-
+  @@index([caseId])
   @@map("ai_extractions")
-}
-
-model AIExtractionInteraction {
-  id              String                      @id @default(uuid())
-  extractionType  AIExtractionInteractionType
-  // Related ai Interaction
-  aiInteractionId String
-  aiInteraction   AIInteraction               @relation(fields: [aiInteractionId], references: [id], onDelete: Cascade)
-
-  // Related ai extraction
-  aiExtractionId String
-  aiExtraction   AIExtraction @relation(fields: [aiExtractionId], references: [id], onDelete: Cascade)
-
-  // ─── Step-level result ─────────────────────────────
-  // Captures pass/fail per step independently e.g while json passing or validating response json
-  // Vision can succeed while text extraction fails — this tracks that granularly
-  success      Boolean @default(true)
-  errorMessage String? @db.Text
-
-  // ─── Step-level quality ────────────────────────────
-  // Vision step → ocrConfidence
-  // Text step   → extractionConfidence
-  confidence Float?
-
-  createdAt DateTime @default(now())
-
-  @@map("ai_extraction_interactions")
-}
-
-enum AIExtractionInteractionType {
-  VISION_EXTRACTION
-  TEXT_EXTRACTION
 }
 
 enum ExtractionStatus {
@@ -597,8 +566,6 @@ enum ExtractionStatus {
 
 enum ExtractionStep {
   VISION
-  TEXT
-  POST_PROCESSING
 }
 
 model DocumentCase {
@@ -612,7 +579,7 @@ model DocumentCase {
   address    Address  @relation(fields: [addressId], references: [id], onDelete: Cascade)
 
   // Extraction is linked from the AIExtraction side (AIExtraction.caseId → DocumentCase)
-  extraction AIExtraction?
+  extractions AIExtraction[]
 
   tags        Json    @default("[]") // array of key words
   description String?

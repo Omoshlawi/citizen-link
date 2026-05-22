@@ -56,6 +56,7 @@ import { StationOperationTypesModule } from './station-operation-types/station-o
 import { StaffOperationScopeModule } from './staff-operation-scope/staff-operation-scope.module';
 import { MauzoModule } from './mauzo/mauzo.module';
 import { DarajaModule } from './daraja/daraja.module';
+import { DocaiModule } from './docai/docai.module';
 
 @Module({
   imports: [
@@ -146,6 +147,7 @@ import { DarajaModule } from './daraja/daraja.module';
     StaffOperationScopeModule,
     MauzoModule,
     DarajaModule,
+    DocaiModule,
   ],
   controllers: [AppController],
   providers: [

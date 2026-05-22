@@ -174,8 +174,8 @@ export class DocumentCasesQueryService {
               }
             : undefined,
           caseNumber: query.caseNumber,
-          extraction: query.extractionStatus
-            ? { extractionStatus: query.extractionStatus as ExtractionStatus }
+          extractions: query.extractionStatus
+            ? { some: { extractionStatus: query.extractionStatus as ExtractionStatus } }
             : undefined,
         },
         {

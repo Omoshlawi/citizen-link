@@ -1,6 +1,5 @@
-import { HttpModule } from '@nestjs/axios';
 import { DynamicModule, Module, Provider } from '@nestjs/common';
-import { EmbeddingConfig } from './embedding.config';
+import { DocaiModule } from '../docai/docai.module';
 import { EMBEDDING_OPTIONS_TOKEN } from './embedding.constants';
 import { EmbeddingController } from './embedding.controller';
 import { EmbeddingModuleAsyncOptions } from './embedding.interfaces';
@@ -20,12 +19,7 @@ export class EmbeddingModule {
       controllers: [EmbeddingController],
       imports: [
         ...(options.imports ?? []),
-        HttpModule.registerAsync({
-          useFactory: (embeddingConfig: EmbeddingConfig) => ({
-            baseURL: embeddingConfig.baseUrl,
-          }),
-          inject: [EmbeddingConfig],
-        }),
+        DocaiModule, // provides DocaiService — EmbeddingService delegates embedding calls here
       ],
       exports: [EmbeddingService],
     };

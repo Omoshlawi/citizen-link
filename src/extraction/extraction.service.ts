@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DocumentTypeCode } from '../document-types/document-type.dto';
 import z from 'zod';
-import { AIExtractionInteractionType } from '../../generated/prisma/enums';
+import { AIInteractionType } from '../../generated/prisma/enums';
 import { AiService } from '../ai/ai.service';
 import { safeParseJson } from '../app.utils';
 import { UserSession } from '../auth/auth.types';
@@ -82,7 +82,7 @@ export class ExtractionService {
           return response;
         },
       },
-      AIExtractionInteractionType.TEXT_EXTRACTION,
+      AIInteractionType.TEXT_EXTRACTION,
       'Extraction',
       user?.id,
     );
