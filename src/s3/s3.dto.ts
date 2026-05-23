@@ -44,6 +44,13 @@ export const StreamDocumentSchema = z.object({
 
 export class StreamDocumentDto extends createZodDto(StreamDocumentSchema) {}
 
+export const InternalStreamSchema = z.object({
+  key: z.string().nonempty().describe('S3 object key'),
+  bucket: z.enum(['tmp', 'cases']).describe('S3 bucket name'),
+});
+
+export class InternalStreamDto extends createZodDto(InternalStreamSchema) {}
+
 export class UploadFileResponseDto {
   @ApiProperty({ description: 'The key of the uploaded file' })
   key!: string;

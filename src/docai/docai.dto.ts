@@ -445,14 +445,10 @@ export class DocaiExtractionRequest {
   @ApiProperty({
     isArray: true,
     type: String,
-    example: [
-      'https://bucket.s3.region.amazonaws.com/tmp/front.jpg?X-Amz-...',
-      'https://bucket.s3.region.amazonaws.com/tmp/back.jpg?X-Amz-...',
-    ],
-    description:
-      'Pre-signed S3 download URLs for the document images in page order',
+    example: ['tmp/front.jpg', 'tmp/back.jpg'],
+    description: 'S3 object keys for the document images in page order',
   })
-  image_urls: string[];
+  image_keys: string[];
 
   @ApiProperty({
     example: 'https://api.citizenlink.example/api/webhooks/docai/progress',
@@ -527,11 +523,10 @@ export class SubmitExtractionParams {
   @ApiProperty({
     isArray: true,
     type: String,
-    example: ['https://bucket.s3.region.amazonaws.com/tmp/front.jpg?X-Amz-...'],
-    description:
-      'Pre-signed S3 download URLs for the document images in page order',
+    example: ['tmp/front.jpg'],
+    description: 'S3 object keys for the document images in page order',
   })
-  imageUrls: string[];
+  imageKeys: string[];
 
   @ApiProperty({
     example: 'https://api.citizenlink.example/api/webhooks/docai/progress',

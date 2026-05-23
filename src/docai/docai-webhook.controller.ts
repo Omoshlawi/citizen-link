@@ -10,7 +10,9 @@ import { DocaiConfig } from './docai.config';
 import { DocaiExtractionSuccessResult, DocaiStageFailed } from './docai.dto';
 import { DocaiEvent, DocaiWebhookDto } from './docai-webhook.schema';
 import { DocaiWebhookService } from './docai-webhook.service';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 
+@AllowAnonymous()
 @Controller('webhooks/docai')
 export class DocaiWebhookController {
   private readonly logger = new Logger(DocaiWebhookController.name);

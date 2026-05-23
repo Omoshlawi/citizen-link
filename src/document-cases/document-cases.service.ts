@@ -225,21 +225,15 @@ export class DocumentCasesService {
     // Submit to docai — stamp the existing extraction record with the returned jobId
     // so webhook callbacks can look it up. Must update (not create) to keep a single
     // AIExtraction per case and avoid a race with early-arriving webhooks.
-    void Promise.all(
-      images.map((key) =>
-        this.s3Service.generateDownloadSignedUrl(key, 3600, 'tmp'),
-      ),
-    )
-      .then((imageUrls) => {
-        return this.docaiService.submitJob(
-          {
-            caseNumber,
-            imageUrls,
-            webhookUrl: this.docaiService.webhookUrl,
-          },
-          user,
-        );
-      })
+    void this.docaiService
+      .submitJob(
+        {
+          caseNumber,
+          imageKeys: images,
+          webhookUrl: this.docaiService.webhookUrl,
+        },
+        user,
+      )
       .then((docaiJobId) =>
         this.prismaService.aIExtraction.update({
           where: { id: extractionId },
@@ -387,20 +381,14 @@ export class DocumentCasesService {
     // Submit to docai — stamp the existing extraction record with the returned jobId
     // so webhook callbacks can look it up. Must update (not create) to keep a single
     // AIExtraction per case and avoid a race with early-arriving webhooks.
-    void Promise.all(
-      images.map((key) =>
-        this.s3Service.generateDownloadSignedUrl(key, 3600, 'tmp'),
-      ),
-    )
-      .then((imageUrls) =>
-        this.docaiService.submitJob(
-          {
-            caseNumber,
-            imageUrls,
-            webhookUrl: this.docaiService.webhookUrl,
-          },
-          user,
-        ),
+    void this.docaiService
+      .submitJob(
+        {
+          caseNumber,
+          imageKeys: images,
+          webhookUrl: this.docaiService.webhookUrl,
+        },
+        user,
       )
       .then((docaiJobId) =>
         this.prismaService.aIExtraction.update({

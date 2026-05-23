@@ -1,9 +1,11 @@
 import {
   Controller,
   Get,
+  Headers,
   Query,
   Res,
   Post,
+  UnauthorizedException,
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
@@ -22,12 +24,14 @@ import {
   GetDownloadUrlResponseDto,
   GetUploadUrlDto,
   GetUploadUrlResponseDto,
+  InternalStreamDto,
   StreamDocumentDto,
   UploadFileResponseDto,
   UploadFilesResponseDto,
 } from './s3.dto';
 import dayjs from 'dayjs';
 import { S3Config } from './s3.config';
+import { DocaiConfig } from '../docai/docai.config';
 import { Response } from 'express';
 
 @Controller('files')
@@ -35,6 +39,7 @@ export class S3Controller {
   constructor(
     private readonly s3Service: S3Service,
     private readonly config: S3Config,
+    private readonly docaiConfig: DocaiConfig,
   ) {}
 
   @Get('upload-url')
@@ -100,6 +105,47 @@ export class S3Controller {
     stream.pipe(res);
     stream.on('error', (error) => {
       console.error('S3 stream error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error streaming document' });
+      }
+    });
+  }
+
+  @Get('internal-stream')
+  @ApiOperation({
+    summary: 'Stream a file from S3 (service-to-service)',
+    description:
+      'Authenticated via X-Internal-Secret. Used by citizen-link micro services to download document images',
+  })
+  @ApiOkResponse({ description: 'Streams the file content inline' })
+  @ApiErrorsResponse({ badRequest: true })
+  async internalStreamFile(
+    @Headers('x-internal-secret') secret: string,
+    @Query() query: InternalStreamDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (secret !== this.docaiConfig.serviceInternalSecret) {
+      throw new UnauthorizedException();
+    }
+
+    const { stream, contentType, contentLength } =
+      await this.s3Service.streamFile(query.key, query.bucket);
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, private',
+    );
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Content-Disposition', 'inline');
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength.toString());
+    }
+
+    stream.pipe(res);
+    stream.on('error', (error) => {
+      console.error('S3 internal stream error:', error);
       if (!res.headersSent) {
         res.status(500).json({ message: 'Error streaming document' });
       }

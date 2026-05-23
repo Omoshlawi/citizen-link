@@ -46,12 +46,9 @@ export class DocaiService {
     params: SubmitExtractionParams,
     user: UserSession['user'],
   ): Promise<string> {
-    const imageUrls = params.imageUrls.map((url) =>
-      url.replaceAll('localhost', 'host.docker.internal'),
-    );
     const body: DocaiExtractionRequest = {
       case_number: params.caseNumber,
-      image_urls: imageUrls,
+      image_keys: params.imageKeys,
       webhook_url: params.webhookUrl,
     };
 
