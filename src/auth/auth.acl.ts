@@ -48,6 +48,7 @@ export const adminPluginAcl = createAccessControl({
   setting: ['view-any', 'manage-system'],
   pushToken: ['list-any'],
   handover: ['manage-any'],
+  docai: ['view-jobs', 'view-stages', 'view-conversations'],
 });
 
 const adminRole = adminPluginAcl.newRole({
@@ -91,6 +92,7 @@ const adminRole = adminPluginAcl.newRole({
   setting: ['view-any', 'manage-system'],
   pushToken: ['list-any'],
   handover: ['manage-any'],
+  docai: ['view-jobs', 'view-stages', 'view-conversations'],
   ...adminAc.statements,
 });
 

@@ -1,5 +1,6 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
+import { DocaiAdminController } from './docai-admin.controller';
 import { DocaiWebhookController } from './docai-webhook.controller';
 import { DocaiWebhookService } from './docai-webhook.service';
 import { DocaiConfig } from './docai.config';
@@ -20,6 +21,6 @@ import { DocaiService } from './docai.service';
   ],
   providers: [DocaiService, DocaiWebhookService],
   exports: [DocaiService],
-  controllers: [DocaiWebhookController],
+  controllers: [DocaiWebhookController, DocaiAdminController],
 })
 export class DocaiModule {}

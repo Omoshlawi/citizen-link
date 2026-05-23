@@ -9,6 +9,19 @@ import {
   DocaiProcessResponse,
   SubmitExtractionParams,
 } from './docai.dto';
+import {
+  DocaiConversationListDto,
+  DocaiJobListDto,
+  DocaiJobStagesDto,
+  DocaiJobStatusDto,
+  DocaiStageDetailDto,
+  DocaiStageListDto,
+  GetDocaiJobStagesDto,
+  GetDocaiStageDto,
+  ListDocaiConversationsDto,
+  ListDocaiJobsDto,
+  ListDocaiStagesDto,
+} from './docai-admin.dto';
 import { UserSession } from '../auth/auth.types';
 
 @Injectable()
@@ -78,5 +91,94 @@ export class DocaiService {
 
   get webhookUrl() {
     return this.config.webhookUrl;
+  }
+
+  async listJobs(
+    dto: ListDocaiJobsDto,
+    userId: string,
+  ): Promise<DocaiJobListDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiJobListDto>('/v1/jobs', {
+        params: dto,
+        headers: { 'X-User-Id': userId },
+      }),
+    );
+    return response.data;
+  }
+
+  async getJob(id: string, userId: string): Promise<DocaiJobStatusDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiJobStatusDto>(`/v1/jobs/${id}`, {
+        headers: { 'X-User-Id': userId },
+      }),
+    );
+    return response.data;
+  }
+
+  async listStages(
+    dto: ListDocaiStagesDto,
+    userId: string,
+  ): Promise<DocaiStageListDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiStageListDto>('/v1/stages', {
+        params: dto,
+        headers: { 'X-User-Id': userId },
+      }),
+    );
+    return response.data;
+  }
+
+  async getStage(
+    id: string,
+    dto: GetDocaiStageDto,
+    userId: string,
+  ): Promise<DocaiStageDetailDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiStageDetailDto>(`/v1/stages/${id}`, {
+        params: dto as Record<string, unknown>,
+        headers: { 'X-User-Id': userId },
+      }),
+    );
+    return response.data;
+  }
+
+  async getJobStages(
+    jobId: string,
+    dto: GetDocaiJobStagesDto,
+    userId: string,
+  ): Promise<DocaiJobStagesDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiJobStagesDto>(`/v1/jobs/${jobId}/stages`, {
+        params: dto as Record<string, unknown>,
+        headers: { 'X-User-Id': userId },
+      }),
+    );
+    return response.data;
+  }
+
+  async listConversations(
+    dto: ListDocaiConversationsDto,
+    userId: string,
+  ): Promise<DocaiConversationListDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiConversationListDto>('/v1/conversations', {
+        params: dto,
+        headers: { 'X-User-Id': userId },
+      }),
+    );
+    return response.data;
+  }
+
+  async listStageConversations(
+    stageId: string,
+    userId: string,
+  ): Promise<DocaiConversationListDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiConversationListDto>(
+        `/v1/stages/${stageId}/conversations`,
+        { headers: { 'X-User-Id': userId } },
+      ),
+    );
+    return response.data;
   }
 }

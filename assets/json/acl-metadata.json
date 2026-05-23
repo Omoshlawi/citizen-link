@@ -94,6 +94,10 @@
     "handover": {
       "name": "Handover",
       "description": "Document handover operations"
+    },
+    "docai": {
+      "name": "DocAI",
+      "description": "DocAI microservice jobs, stages, and conversations"
     }
   },
   "actions": {
@@ -139,6 +143,9 @@
       "description": "System configuration and settings management"
     },
     "approve": { "name": "Approve" },
-    "test": { "name": "Test" }
+    "test": { "name": "Test" },
+    "view-jobs": { "name": "View Jobs" },
+    "view-stages": { "name": "View Stages" },
+    "view-conversations": { "name": "View Conversations" }
   }
 }
