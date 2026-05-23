@@ -82,6 +82,16 @@ export class DocaiJobStatusDto {
   @ApiProperty() job_type: string;
   @ApiProperty() status: string;
   @ApiPropertyOptional({ nullable: true }) current_stage: string | null;
+  @ApiProperty({
+    description: 'Webhook URL the caller provided at job submission',
+  })
+  webhook_url: string;
+  @ApiPropertyOptional({
+    nullable: true,
+    type: Object,
+    description: 'Pipeline-specific input payload provided at job submission',
+  })
+  input: Record<string, unknown> | null;
   @ApiProperty() created_at: string;
   @ApiProperty() updated_at: string;
 }
