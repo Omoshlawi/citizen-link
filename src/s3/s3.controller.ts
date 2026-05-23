@@ -33,6 +33,7 @@ import dayjs from 'dayjs';
 import { S3Config } from './s3.config';
 import { DocaiConfig } from '../docai/docai.config';
 import { Response } from 'express';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 
 @Controller('files')
 export class S3Controller {
@@ -111,6 +112,7 @@ export class S3Controller {
     });
   }
 
+  @AllowAnonymous()
   @Get('internal-stream')
   @ApiOperation({
     summary: 'Stream a file from S3 (service-to-service)',
