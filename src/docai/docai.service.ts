@@ -9,6 +9,7 @@ import {
   DocaiProcessResponse,
   SubmitExtractionParams,
 } from './docai.dto';
+import { UserSession } from '../auth/auth.types';
 
 @Injectable()
 export class DocaiService {
@@ -25,16 +26,28 @@ export class DocaiService {
    * Returns the docai job_id — caller saves this on AIExtraction.docaiJobId
    * so incoming webhooks (which carry only jobId) can be looked up.
    */
-  async submitJob(params: SubmitExtractionParams): Promise<string> {
+  async submitJob(
+    params: SubmitExtractionParams,
+    user: UserSession['user'],
+  ): Promise<string> {
+    const imageUrls = params.imageUrls.map((url) =>
+      url.replaceAll('localhost', 'host.docker.internal'),
+    );
     const body: DocaiExtractionRequest = {
       case_number: params.caseNumber,
-      image_urls: params.imageUrls,
+      image_urls: imageUrls,
       webhook_url: params.webhookUrl,
       ...(params.priority !== undefined && { priority: params.priority }),
     };
 
+    this.logger.debug(
+      `Submitting docai job for case ${params.caseNumber} with request body: ${JSON.stringify(body)}`,
+    );
+
     const response = await firstValueFrom(
-      this.http.post<DocaiProcessResponse>('/v1/jobs/extraction', body),
+      this.http.post<DocaiProcessResponse>('/v1/jobs/extraction', body, {
+        headers: { 'X-User-Id': user.id }, // Pass user ID for auditing/logging in docai service
+      }),
     );
 
     this.logger.debug(

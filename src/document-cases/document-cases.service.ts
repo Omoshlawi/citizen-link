@@ -225,22 +225,26 @@ export class DocumentCasesService {
         this.s3Service.generateDownloadSignedUrl(key, 3600, 'tmp'),
       ),
     )
-      .then((imageUrls) =>
-        this.docaiService.submitJob({
-          caseNumber,
-          imageUrls,
-          webhookUrl: this.docaiService.webhookUrl,
-        }),
-      )
+      .then((imageUrls) => {
+        return this.docaiService.submitJob(
+          {
+            caseNumber,
+            imageUrls,
+            webhookUrl: this.docaiService.webhookUrl,
+          },
+          user,
+        );
+      })
       .then((docaiJobId) =>
         this.prismaService.aIExtraction.create({
           data: { docaiJobId, caseId: documentCase.id },
         }),
       )
-      .catch((e) => {
+      .catch((e: any) => {
         this.logger.error(
           `Failed to submit found case ${caseNumber} to docai`,
-          e,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          e?.response?.data ?? e.message,
         );
       });
 
@@ -378,21 +382,25 @@ export class DocumentCasesService {
       ),
     )
       .then((imageUrls) =>
-        this.docaiService.submitJob({
-          caseNumber,
-          imageUrls,
-          webhookUrl: this.docaiService.webhookUrl,
-        }),
+        this.docaiService.submitJob(
+          {
+            caseNumber,
+            imageUrls,
+            webhookUrl: this.docaiService.webhookUrl,
+          },
+          user,
+        ),
       )
       .then((docaiJobId) =>
         this.prismaService.aIExtraction.create({
           data: { docaiJobId, caseId: documentCase.id },
         }),
       )
-      .catch((e) => {
+      .catch((e: any) => {
         this.logger.error(
           `Failed to submit lost scan case ${caseNumber} to docai`,
-          e,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          e?.response?.data ?? e.message,
         );
       });
 
@@ -460,6 +468,7 @@ export class DocumentCasesService {
             note: createLostDocumentCaseDto.note,
             addressRaw: createLostDocumentCaseDto.addressRaw,
             addressCountry: createLostDocumentCaseDto.addressCountry,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             addressComponents: createLostDocumentCaseDto.addressComponents,
             additionalFields: createLostDocumentCaseDto.additionalFields?.length
               ? {

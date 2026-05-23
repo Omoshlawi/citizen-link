@@ -45,11 +45,17 @@ export class DocaiWebhookService {
     // Structure completed — extraction.success (with the combined result) fires
     // immediately after. No DB write needed here; handleExtractionSuccess will
     // mark COMPLETED. Just log for observability.
-    this.logger.debug(`Docai job ${jobId} — structure complete, awaiting extraction.success`);
+    this.logger.debug(
+      `Docai job ${jobId} — structure complete, awaiting extraction.success`,
+    );
+    await Promise.resolve(); // Yield to ensure log appears before extraction.success handling starts
   }
 
   /** extraction.success — terminal happy path; apply fields and notify user. */
-  async handleExtractionSuccess(jobId: string, result: DocaiExtractionSuccessResult): Promise<void> {
+  async handleExtractionSuccess(
+    jobId: string,
+    result: DocaiExtractionSuccessResult,
+  ): Promise<void> {
     const extraction = await this.prisma.aIExtraction.findUnique({
       where: { docaiJobId: jobId },
       include: {
@@ -73,7 +79,9 @@ export class DocaiWebhookService {
     });
 
     if (!extraction) {
-      this.logger.warn(`No extraction found for docai job ${jobId} — skipping extraction.success`);
+      this.logger.warn(
+        `No extraction found for docai job ${jobId} — skipping extraction.success`,
+      );
       return;
     }
 
@@ -83,11 +91,12 @@ export class DocaiWebhookService {
     const caseType = documentCase.lostDocumentCase ? 'LOST' : 'FOUND';
 
     // extraction.success carries { vision: VisionResult, structure: ExtractedFields }
-    const fields = result.structure as DocaiExtractedFields;
-    const ocrConfidence = (result.vision as { averageConfidence?: number | null })
-      .averageConfidence ?? null;
+    const fields = result.structure;
+    const ocrConfidence =
+      (result.vision as { averageConfidence?: number | null })
+        .averageConfidence ?? null;
     const extractionConfidence = fields.quality?.extractionConfidence ?? null;
-    const warnings = (fields.quality?.warnings ?? []) as string[];
+    const warnings = fields.quality?.warnings ?? [];
 
     if (document) {
       await this.applyFieldsToDocument(document.id, fields);
@@ -151,11 +160,17 @@ export class DocaiWebhookService {
       }
     }
 
-    this.logger.log(`Docai job ${jobId} extraction.success — case ${documentCase.caseNumber}`);
+    this.logger.log(
+      `Docai job ${jobId} extraction.success — case ${documentCase.caseNumber}`,
+    );
   }
 
   /** extraction.vision.failed / extraction.structure.failed — terminal stage failure. */
-  async handleStageFailed(jobId: string, event: DocaiEvent, result: DocaiStageFailed): Promise<void> {
+  async handleStageFailed(
+    jobId: string,
+    event: DocaiEvent,
+    result: DocaiStageFailed,
+  ): Promise<void> {
     const extraction = await this.prisma.aIExtraction.findUnique({
       where: { docaiJobId: jobId },
       include: {
@@ -173,7 +188,9 @@ export class DocaiWebhookService {
     });
 
     if (!extraction) {
-      this.logger.warn(`No extraction found for docai job ${jobId} — skipping ${event}`);
+      this.logger.warn(
+        `No extraction found for docai job ${jobId} — skipping ${event}`,
+      );
       return;
     }
 
@@ -213,7 +230,9 @@ export class DocaiWebhookService {
                 id: documentCase.id,
                 caseNumber: documentCase.caseNumber,
                 document: {
-                  type: { name: documentCase.document?.type?.name ?? 'document' },
+                  type: {
+                    name: documentCase.document?.type?.name ?? 'document',
+                  },
                 },
               },
               user: { name: user.name },
@@ -234,7 +253,9 @@ export class DocaiWebhookService {
       }
     }
 
-    this.logger.error(`Docai job ${jobId} failed — event=${event}: ${result.reason}`);
+    this.logger.error(
+      `Docai job ${jobId} failed — event=${event}: ${result.reason}`,
+    );
   }
 
   private async applyFieldsToDocument(

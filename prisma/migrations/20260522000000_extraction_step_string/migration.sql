@@ -5,8 +5,8 @@
 
 -- 1. Cast the existing enum column to text
 ALTER TABLE "ai_extractions"
-  ALTER COLUMN "current_step" TYPE TEXT
-  USING "current_step"::TEXT;
+  ALTER COLUMN "currentStep" TYPE TEXT
+  USING "currentStep"::TEXT;
 
 -- 2. Drop the now-unused enum type
 DROP TYPE IF EXISTS "ExtractionStep";

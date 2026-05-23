@@ -7,10 +7,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { DocaiConfig } from './docai.config';
-import {
-  DocaiExtractionSuccessResult,
-  DocaiStageFailed,
-} from './docai.dto';
+import { DocaiExtractionSuccessResult, DocaiStageFailed } from './docai.dto';
 import { DocaiEvent, DocaiWebhookDto } from './docai-webhook.schema';
 import { DocaiWebhookService } from './docai-webhook.service';
 
@@ -61,6 +58,10 @@ export class DocaiWebhookController {
         break;
 
       case DocaiEvent.EXTRACTION_FAILED:
+        this.logger.log(
+          'Received terminal extraction failure event - Doing nothing as stage-specific failure event already handled it',
+          payload,
+        );
         // Rollup event — NestJS already acted on the stage-specific event above.
         // No further action needed; acknowledged so ARQ does not retry.
         break;
