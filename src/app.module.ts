@@ -29,7 +29,6 @@ import { TemplatesModule } from './common/templates';
 import { DocumentCasesModule } from './document-cases/document-cases.module';
 import { DocumentImagesModule } from './document-images/document-images.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
-import { ExtractionModule } from './extraction/extraction.module';
 import { HumanIdConfig } from './human-id/human-id.config';
 import { HumanIdModule } from './human-id/human-id.module';
 import { InvoiceModule } from './invoice/invoice.module';
@@ -49,7 +48,6 @@ import { PushTokenModule } from './push-token/push-token.module';
 import { QueueModule } from './queue/queue.module';
 import { S3Module } from './s3/s3.module';
 import { StatusTransitionsModule } from './status-transitions/status-transitions.module';
-import { VisionModule } from './vision/vision.module';
 import { RegionModule } from './region/region.module';
 import { DocumentOperationTypesModule } from './document-operation-types/document-operation-types.module';
 import { StationOperationTypesModule } from './station-operation-types/station-operation-types.module';
@@ -57,6 +55,7 @@ import { StaffOperationScopeModule } from './staff-operation-scope/staff-operati
 import { MauzoModule } from './mauzo/mauzo.module';
 import { DarajaModule } from './daraja/daraja.module';
 import { DocaiModule } from './docai/docai.module';
+import { ExtractionModule } from './extraction/extraction.module';
 
 @Module({
   imports: [
@@ -136,8 +135,6 @@ import { DocaiModule } from './docai/docai.module';
     PaymentModule,
     DisbursementModule,
     WalletModule,
-    VisionModule,
-
     SettingsModule,
     TemplatesModule,
     PushTokenModule,

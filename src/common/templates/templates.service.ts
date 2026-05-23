@@ -401,7 +401,7 @@ export class TemplatesService implements OnModuleInit {
     );
     Handlebars.registerHelper(
       'ifEqual',
-      function (a: unknown, b: unknown, opts: Handlebars.HelperOptions) {
+      (a: unknown, b: unknown, opts: Handlebars.HelperOptions) => {
         return a === b ? opts.fn(this) : opts.inverse(this);
       },
     );

@@ -1,90 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { DocumentTypeCode } from '../document-types/document-type.dto';
-import z from 'zod';
-import { AIInteractionType } from '../../generated/prisma/enums';
-import { AiService } from '../ai/ai.service';
-import { safeParseJson } from '../app.utils';
-import { UserSession } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
-import { PromptsService } from '../prompts/prompts.service';
-import { VisionExtractionOutputDto } from '../vision/vision.dto';
-import { TextExtractionOutputSchema } from './extraction.dto';
 @Injectable()
 export class ExtractionService {
-  private readonly MAX_TOKEN = 4096;
-  private readonly TEMPERATURE = 0.2;
-  private readonly TOP_T = 0.2;
   private readonly logger = new Logger(ExtractionService.name);
   constructor(
-    private readonly aiService: AiService,
     @Inject(PrismaService)
     private readonly prismaService: PrismaService,
-    private readonly promptsService: PromptsService,
   ) {}
-
-  async testExtraction(visionOutputDto: VisionExtractionOutputDto) {
-    const documentTypes = await this.prismaService.documentType.findMany({
-      where: {},
-      select: { id: true, name: true, category: true, code: true },
-    });
-    const prompt = await this.promptsService.getTextExtractionPrompt(
-      visionOutputDto,
-      documentTypes,
-    );
-    const content = await this.aiService.generateContent([{ text: prompt }], {
-      temperature: this.TEMPERATURE,
-      max_completion_tokens: this.MAX_TOKEN,
-      top_p: this.TOP_T,
-      systemPrompt: 'You are a helpful assistant.',
-    });
-    return {
-      raw: safeParseJson(
-        this.aiService.cleanResponseText(content.text ?? JSON.stringify({})),
-      ),
-      content: await this.aiService.parseAndValidate(
-        content.text ?? '',
-        TextExtractionOutputSchema,
-        (error) => {
-          this.logger.error(error);
-          return null;
-        },
-      ),
-      usage: content.usageMetadata,
-      model: content.modelVersion,
-    };
-  }
-
-  async extractDocumentData(
-    visionOutputDto: VisionExtractionOutputDto,
-    user: UserSession['user'],
-  ) {
-    const documentTypes = await this.prismaService.documentType.findMany({
-      where: {},
-      select: { id: true, name: true, category: true, code: true },
-    });
-    const prompt = await this.promptsService.getTextExtractionPrompt(
-      visionOutputDto,
-      documentTypes,
-    );
-    return await this.aiService.callAIAndStoreParsed(
-      prompt,
-      undefined,
-      {
-        temperature: this.TEMPERATURE,
-        max_completion_tokens: this.MAX_TOKEN,
-        top_p: this.TOP_T,
-        schema: TextExtractionOutputSchema,
-        transformResponse: (response) => {
-          const typeCode = response.documentType.code;
-          if (!z.enum(DocumentTypeCode).safeParse(typeCode).success) {
-            response.documentType.code = DocumentTypeCode.UNKNOWN;
-          }
-          return response;
-        },
-      },
-      AIInteractionType.TEXT_EXTRACTION,
-      'Extraction',
-      user?.id,
-    );
-  }
 }

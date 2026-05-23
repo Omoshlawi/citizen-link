@@ -7,17 +7,8 @@ import {
   DocaiEmbedResponse,
   DocaiExtractionRequest,
   DocaiProcessResponse,
+  SubmitExtractionParams,
 } from './docai.dto';
-
-export interface SubmitExtractionParams {
-  caseNumber: string;
-  /** Pre-signed download URLs for the document images, in page order */
-  imageUrls: string[];
-  /** URL docai will POST event-based webhooks to (extraction.*.success / *.failed) */
-  webhookUrl: string;
-  /** 1 (highest) – 10 (lowest). Omit to use the default (5). */
-  priority?: number;
-}
 
 @Injectable()
 export class DocaiService {
@@ -70,5 +61,9 @@ export class DocaiService {
       `Embedding generated: dims=${response.data.dims} model=${response.data.model}`,
     );
     return response.data;
+  }
+
+  get webhookUrl() {
+    return this.config.webhookUrl;
   }
 }

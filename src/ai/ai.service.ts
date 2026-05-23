@@ -4,10 +4,6 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
-import {
-  AIInteraction,
-  AIInteractionType,
-} from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
 import {
@@ -19,7 +15,7 @@ import {
 } from './ai.types';
 import { safeParseJson } from '../app.utils';
 import { Results } from '../common/common.interfaces';
-import { AsyncError } from '../extraction/extraction.interface';
+import { AIInteractionType } from '../../generated/prisma/enums';
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -281,69 +277,6 @@ export class AiService implements OnModuleInit {
         },
       });
     }
-  }
-
-  async callAIAndStoreParsed<T extends Record<string, any>>(
-    prompt: string,
-    files: Array<{ buffer: Buffer; mimeType: string }> | undefined,
-    {
-      schema,
-      transformResponse,
-      ...config
-    }: GenerateContentConfig & {
-      streamed?: boolean;
-      schema: z.ZodType<T>;
-      transformResponse?: (response: T) => T;
-    },
-    interactionType: AIInteractionType,
-    entityType: string,
-    userId?: string,
-  ): Promise<
-    Omit<AIInteraction, 'parsedResponse' | 'parseError'> & {
-      parsedResponse: T | null;
-      parseError: AsyncError | null;
-    }
-  > {
-    const interaction = await this.callAIAndStore(
-      prompt,
-      files,
-      config,
-      interactionType,
-      entityType,
-      userId,
-    );
-    const parsedResults = await this.parseAndValidate(
-      interaction.response,
-      schema,
-      (error: Error) => error,
-      transformResponse,
-    );
-
-    if (!parsedResults.success) {
-      return (await this.prismaService.aIInteraction.update({
-        where: { id: interaction.id },
-        data: {
-          parseError: JSON.parse(
-            parsedResults.error?.message ?? JSON.stringify({}),
-          ),
-          parseSuccess: false,
-        },
-      })) as AIInteraction & {
-        parsedResponse: T | null;
-        parseError: AsyncError | null;
-      };
-    }
-
-    return (await this.prismaService.aIInteraction.update({
-      where: { id: interaction.id },
-      data: {
-        parsedResponse: parsedResults.data,
-        parseSuccess: true,
-      },
-    })) as AIInteraction & {
-      parsedResponse: T | null;
-      parseError: AsyncError | null;
-    };
   }
 
   /**

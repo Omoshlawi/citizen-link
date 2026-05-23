@@ -29,11 +29,26 @@ export enum DocaiEvent {
 }
 
 export const DocaiWebhookSchema = z.object({
-  jobId: z.string().uuid(),
-  event: z.nativeEnum(DocaiEvent),
+  jobId: z
+    .uuid()
+    .describe(
+      'Docai job UUID — matches the id returned by POST /v1/jobs/extraction',
+    ),
+  event: z
+    .enum(DocaiEvent)
+    .describe(
+      'Dot-notation pipeline event encoding pipeline, stage, and outcome (e.g. extraction.vision.success)',
+    ),
   /** Shape varies by event — handlers cast to the appropriate typed interface. */
-  result: z.record(z.string(), z.unknown()).nullable(),
-  timestamp: z.string(),
+  result: z
+    .record(z.string(), z.unknown())
+    .nullable()
+    .describe(
+      'Stage-specific payload; shape varies by event. Cast to the typed result class on each handler.',
+    ),
+  timestamp: z
+    .string()
+    .describe('ISO-8601 timestamp of when docai emitted this event'),
 });
 
 export class DocaiWebhookDto extends createZodDto(DocaiWebhookSchema) {}

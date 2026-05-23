@@ -562,28 +562,6 @@
     }
   },
   {
-    "key": "prompt.chatbot.guide",
-    "type": "prompt",
-    "name": "Chatbot Guide",
-    "description": "Guidance rules for the AI chatbot assistant.",
-    "engine": "handlebars",
-    "slots": {
-      "user": {
-        "source": "file",
-        "path": "prompts/chatbot-guide.hbs"
-      }
-    },
-    "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
-    },
-    "metadata": {}
-  },
-  {
     "key": "prompt.claim.verification",
     "type": "prompt",
     "name": "Claim Verification",
@@ -593,28 +571,6 @@
       "user": {
         "source": "file",
         "path": "prompts/claim-verification.hbs"
-      }
-    },
-    "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
-    },
-    "metadata": {}
-  },
-  {
-    "key": "prompt.document.data.extraction",
-    "type": "prompt",
-    "name": "Document Data Extraction",
-    "description": "Extract structured data from document raw text.",
-    "engine": "handlebars",
-    "slots": {
-      "user": {
-        "source": "file",
-        "path": "prompts/document-data-extraction.hbs"
       }
     },
     "schema": {
@@ -725,72 +681,6 @@
       "user": {
         "source": "file",
         "path": "prompts/security-questions.hbs"
-      }
-    },
-    "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
-    },
-    "metadata": {}
-  },
-  {
-    "key": "prompt.text.extraction",
-    "type": "prompt",
-    "name": "Text Extraction",
-    "description": "Extract text from OCR vision results.",
-    "engine": "handlebars",
-    "slots": {
-      "user": {
-        "source": "file",
-        "path": "prompts/text-extraction.hbs"
-      }
-    },
-    "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
-    },
-    "metadata": {}
-  },
-  {
-    "key": "prompt.vision.extraction.structured",
-    "type": "prompt",
-    "name": "Structured Vision Extraction",
-    "description": "Directly extract structured fields from images.",
-    "engine": "handlebars",
-    "slots": {
-      "user": {
-        "source": "file",
-        "path": "prompts/vision-extraction-structured.hbs"
-      }
-    },
-    "schema": {
-      "required": [
-        "user"
-      ],
-      "optional": [
-        "system"
-      ]
-    },
-    "metadata": {}
-  },
-  {
-    "key": "prompt.vision.extraction.unstructured",
-    "type": "prompt",
-    "name": "Unstructured Vision Extraction",
-    "description": "Extract unstructured text from images.",
-    "engine": "handlebars",
-    "slots": {
-      "user": {
-        "source": "file",
-        "path": "prompts/vision-extraction-unstructured.hbs"
       }
     },
     "schema": {

@@ -36,7 +36,6 @@ import { EntityPrefix } from '../human-id/human-id.constants';
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import { S3Service } from '../s3/s3.service';
 import { DocaiService } from '../docai/docai.service';
-import { DocaiConfig } from '../docai/docai.config';
 import { DocumentCasesTimelineService } from './document-cases.timeline.service';
 
 @Injectable()
@@ -52,7 +51,6 @@ export class DocumentCasesService {
     private readonly documentCaseTimelineService: DocumentCasesTimelineService,
     private readonly s3Service: S3Service,
     private readonly docaiService: DocaiService,
-    private readonly docaiConfig: DocaiConfig,
   ) {}
 
   findAll(
@@ -218,11 +216,8 @@ export class DocumentCasesService {
       },
       include: {
         document: true,
-        extractions: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
     });
-
-    const extractionId = documentCase.extractions[0]!.id;
 
     // Submit to docai — save the returned jobId so webhook callbacks can look up this extraction
     void Promise.all(
@@ -234,13 +229,12 @@ export class DocumentCasesService {
         this.docaiService.submitJob({
           caseNumber,
           imageUrls,
-          webhookUrl: this.docaiConfig.webhookUrl,
+          webhookUrl: this.docaiService.webhookUrl,
         }),
       )
       .then((docaiJobId) =>
-        this.prismaService.aIExtraction.update({
-          where: { id: extractionId },
-          data: { docaiJobId },
+        this.prismaService.aIExtraction.create({
+          data: { docaiJobId, caseId: documentCase.id },
         }),
       )
       .catch((e) => {
@@ -374,11 +368,8 @@ export class DocumentCasesService {
       },
       include: {
         document: true,
-        extractions: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
     });
-
-    const extractionId = documentCase.extractions[0]!.id;
 
     // Submit to docai — save the returned jobId so webhook callbacks can look up this extraction
     void Promise.all(
@@ -390,13 +381,12 @@ export class DocumentCasesService {
         this.docaiService.submitJob({
           caseNumber,
           imageUrls,
-          webhookUrl: this.docaiConfig.webhookUrl,
+          webhookUrl: this.docaiService.webhookUrl,
         }),
       )
       .then((docaiJobId) =>
-        this.prismaService.aIExtraction.update({
-          where: { id: extractionId },
-          data: { docaiJobId },
+        this.prismaService.aIExtraction.create({
+          data: { docaiJobId, caseId: documentCase.id },
         }),
       )
       .catch((e) => {

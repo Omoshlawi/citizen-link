@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PromptsService } from '../prompts/prompts.service';
 import {
@@ -16,9 +17,6 @@ import { MatchingOptions } from './matching.interface';
 @Injectable()
 export class MatchingSecurityQuestionsService {
   private readonly logger = new Logger(MatchingSecurityQuestionsService.name);
-  private readonly MAX_TOKEN = 4096;
-  private readonly TEMPERATURE = 0.2;
-  private readonly TOP_T = 0.2;
   constructor(
     private readonly promptsService: PromptsService,
     private readonly aiService: AiService,
@@ -46,38 +44,5 @@ export class MatchingSecurityQuestionsService {
       lostCase,
       this.matchOptions.maxSecurityQuestions,
     );
-
-    const interaction = await this.aiService.callAIAndStoreParsed(
-      prompt,
-      undefined,
-      {
-        max_completion_tokens: this.MAX_TOKEN,
-        temperature: this.TEMPERATURE,
-        top_p: this.TOP_T,
-        schema: SecurityQuestionsSchema,
-      },
-      AIInteractionType.SECURITY_QUESTIONS_GEN,
-      'Match',
-      user.id,
-    );
-
-    if (interaction.parseError || interaction.callError) {
-      this.logger.error('Failed to generate security questions', {
-        parseError: interaction.parseError,
-        callError: interaction.callError,
-      });
-      return {
-        securityQuestions: [],
-        interactionId: interaction.id,
-      };
-    }
-
-    this.logger.log(
-      `Generated security question ${interaction.parsedResponse?.length} for cases ${foundCase.caseNumber} and ${lostCase.caseNumber}`,
-    );
-    return {
-      securityQuestions: interaction.parsedResponse!,
-      interactionId: interaction.id,
-    };
   }
 }

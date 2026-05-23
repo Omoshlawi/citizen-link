@@ -6,8 +6,6 @@ import {
   Document,
   DocumentField,
 } from '../../generated/prisma/client';
-import z from 'zod';
-import { VisionExtractionOutputSchema } from '../vision/vision.dto';
 import { MatchedField } from '../matching/matching.interface';
 
 @Injectable()
@@ -107,47 +105,6 @@ export class PromptsService {
         foundTags,
         lostTags,
         maxSecurityQuestions,
-      },
-    );
-    return rendered;
-  }
-
-  async getChatPromptMessage(
-    userQuery: string,
-    supportedDocumentTypes: Array<string>,
-  ) {
-    const { rendered } = await this.templatesService.renderSlot(
-      'prompt.chatbot.guide',
-      'user',
-      {
-        userQuery,
-        supportedDocumentTypes,
-      },
-    );
-    return rendered;
-  }
-
-  async getVisionExtractionPrompt(
-    output: 'structured' | 'unstructured' = 'structured',
-  ) {
-    const { rendered } = await this.templatesService.renderSlot(
-      `prompt.vision.extraction.${output}`,
-      'user',
-      {},
-    );
-    return rendered;
-  }
-
-  async getTextExtractionPrompt(
-    visionOutput: z.infer<typeof VisionExtractionOutputSchema>,
-    documentTypes: Array<Pick<DocumentType, 'id' | 'name' | 'category'>>,
-  ) {
-    const { rendered } = await this.templatesService.renderSlot(
-      'prompt.text.extraction',
-      'user',
-      {
-        visionOutput: JSON.stringify(visionOutput, null, 2),
-        documentTypes,
       },
     );
     return rendered;
