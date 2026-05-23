@@ -2,44 +2,44 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
 
-// ── Query DTOs ────────────────────────────────────────────────────────────────
+// ── Query DTOs (camelCase — mapped to DocAI snake_case in service) ─────────────
 
 export const ListDocaiJobsSchema = z.object({
-  job_type: z.string().optional(),
+  jobType: z.string().optional(),
   status: z.string().optional(),
   page: z.coerce.number().int().min(1).optional(),
-  page_size: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 export class ListDocaiJobsDto extends createZodDto(ListDocaiJobsSchema) {}
 
 export const ListDocaiStagesSchema = z.object({
-  job_id: z.uuid().optional(),
-  job_type: z.string().optional(),
-  stage: z.string().optional(),
+  jobId: z.uuid().optional(),
+  jobType: z.string().optional(),
+  stageName: z.string().optional(),
   status: z.string().optional(),
-  include_result: z
+  includeResult: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
   page: z.coerce.number().int().min(1).optional(),
-  page_size: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 export class ListDocaiStagesDto extends createZodDto(ListDocaiStagesSchema) {}
 
 export const GetDocaiStageSchema = z.object({
-  include_result: z
+  includeResult: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
-  include_conversations: z
+  includeConversations: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
 });
 export class GetDocaiStageDto extends createZodDto(GetDocaiStageSchema) {}
 
 export const GetDocaiJobStagesSchema = z.object({
-  include_result: z
+  includeResult: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
-  include_conversations: z
+  includeConversations: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
 });
@@ -48,18 +48,31 @@ export class GetDocaiJobStagesDto extends createZodDto(
 ) {}
 
 export const ListDocaiConversationsSchema = z.object({
-  job_id: z.uuid().optional(),
-  stage_id: z.uuid().optional(),
-  stage: z.string().optional(),
+  jobId: z.uuid().optional(),
+  stageId: z.uuid().optional(),
+  stageName: z.string().optional(),
   success: z
     .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
     .optional(),
-  page_num: z.coerce.number().int().min(1).optional(),
+  pageNum: z.coerce.number().int().min(1).optional(),
   page: z.coerce.number().int().min(1).optional(),
-  page_size: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 export class ListDocaiConversationsDto extends createZodDto(
   ListDocaiConversationsSchema,
+) {}
+
+export const ListDocaiWebhooksSchema = z.object({
+  jobId: z.uuid().optional(),
+  event: z.string().optional(),
+  delivered: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+export class ListDocaiWebhooksDto extends createZodDto(
+  ListDocaiWebhooksSchema,
 ) {}
 
 // ── Response DTOs ─────────────────────────────────────────────────────────────
@@ -97,7 +110,7 @@ export class DocaiStageResponseDto {
     nullable: true,
     type: Object,
     description:
-      'Raw stage output JSONB — only populated when include_result=true',
+      'Raw stage output JSONB — only populated when includeResult=true',
   })
   result: Record<string, unknown> | null;
   @ApiProperty() job_type: string;
@@ -146,7 +159,7 @@ export class DocaiConversationResponseDto {
 export class DocaiStageDetailDto extends DocaiStageResponseDto {
   @ApiProperty({
     type: [DocaiConversationResponseDto],
-    description: 'Populated when include_conversations=true',
+    description: 'Populated when includeConversations=true',
   })
   conversations: DocaiConversationResponseDto[];
 }
@@ -165,19 +178,6 @@ export class DocaiConversationListDto {
   @ApiProperty() page: number;
   @ApiProperty() page_size: number;
 }
-
-export const ListDocaiWebhooksSchema = z.object({
-  job_id: z.uuid().optional(),
-  event: z.string().optional(),
-  delivered: z
-    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
-    .optional(),
-  page: z.coerce.number().int().min(1).optional(),
-  page_size: z.coerce.number().int().min(1).max(100).optional(),
-});
-export class ListDocaiWebhooksDto extends createZodDto(
-  ListDocaiWebhooksSchema,
-) {}
 
 export class DocaiWebhookDeliveryDto {
   @ApiProperty() delivery_id: string;

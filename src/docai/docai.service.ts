@@ -102,7 +102,12 @@ export class DocaiService {
   ): Promise<DocaiJobListDto> {
     const response = await firstValueFrom(
       this.http.get<DocaiJobListDto>('/v1/jobs', {
-        params: dto,
+        params: {
+          job_type: dto.jobType,
+          status: dto.status,
+          page: dto.page,
+          page_size: dto.limit,
+        },
         headers: { 'X-User-Id': userId },
       }),
     );
@@ -124,7 +129,15 @@ export class DocaiService {
   ): Promise<DocaiStageListDto> {
     const response = await firstValueFrom(
       this.http.get<DocaiStageListDto>('/v1/stages', {
-        params: dto,
+        params: {
+          job_id: dto.jobId,
+          job_type: dto.jobType,
+          stage: dto.stageName,
+          status: dto.status,
+          include_result: dto.includeResult,
+          page: dto.page,
+          page_size: dto.limit,
+        },
         headers: { 'X-User-Id': userId },
       }),
     );
@@ -138,7 +151,10 @@ export class DocaiService {
   ): Promise<DocaiStageDetailDto> {
     const response = await firstValueFrom(
       this.http.get<DocaiStageDetailDto>(`/v1/stages/${id}`, {
-        params: dto as Record<string, unknown>,
+        params: {
+          include_result: dto.includeResult,
+          include_conversations: dto.includeConversations,
+        },
         headers: { 'X-User-Id': userId },
       }),
     );
@@ -152,7 +168,10 @@ export class DocaiService {
   ): Promise<DocaiJobStagesDto> {
     const response = await firstValueFrom(
       this.http.get<DocaiJobStagesDto>(`/v1/jobs/${jobId}/stages`, {
-        params: dto as Record<string, unknown>,
+        params: {
+          include_result: dto.includeResult,
+          include_conversations: dto.includeConversations,
+        },
         headers: { 'X-User-Id': userId },
       }),
     );
@@ -165,7 +184,15 @@ export class DocaiService {
   ): Promise<DocaiConversationListDto> {
     const response = await firstValueFrom(
       this.http.get<DocaiConversationListDto>('/v1/conversations', {
-        params: dto,
+        params: {
+          job_id: dto.jobId,
+          stage_id: dto.stageId,
+          stage: dto.stageName,
+          success: dto.success,
+          page_num: dto.pageNum,
+          page: dto.page,
+          page_size: dto.limit,
+        },
         headers: { 'X-User-Id': userId },
       }),
     );
@@ -191,7 +218,13 @@ export class DocaiService {
   ): Promise<DocaiWebhookDeliveryListDto> {
     const response = await firstValueFrom(
       this.http.get<DocaiWebhookDeliveryListDto>('/v1/webhooks', {
-        params: dto as Record<string, unknown>,
+        params: {
+          job_id: dto.jobId,
+          event: dto.event,
+          delivered: dto.delivered,
+          page: dto.page,
+          page_size: dto.limit,
+        },
         headers: { 'X-User-Id': userId },
       }),
     );
