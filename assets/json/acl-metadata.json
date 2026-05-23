@@ -146,6 +146,7 @@
     "test": { "name": "Test" },
     "view-jobs": { "name": "View Jobs" },
     "view-stages": { "name": "View Stages" },
-    "view-conversations": { "name": "View Conversations" }
+    "view-conversations": { "name": "View Conversations" },
+    "view-webhooks": { "name": "View Webhooks" }
   }
 }

@@ -16,11 +16,14 @@ import {
   DocaiJobStatusDto,
   DocaiStageDetailDto,
   DocaiStageListDto,
+  DocaiWebhookDeliveryDto,
+  DocaiWebhookDeliveryListDto,
   GetDocaiJobStagesDto,
   GetDocaiStageDto,
   ListDocaiConversationsDto,
   ListDocaiJobsDto,
   ListDocaiStagesDto,
+  ListDocaiWebhooksDto,
 } from './docai-admin.dto';
 import { UserSession } from '../auth/auth.types';
 
@@ -178,6 +181,31 @@ export class DocaiService {
         `/v1/stages/${stageId}/conversations`,
         { headers: { 'X-User-Id': userId } },
       ),
+    );
+    return response.data;
+  }
+
+  async listWebhooks(
+    dto: ListDocaiWebhooksDto,
+    userId: string,
+  ): Promise<DocaiWebhookDeliveryListDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiWebhookDeliveryListDto>('/v1/webhooks', {
+        params: dto as Record<string, unknown>,
+        headers: { 'X-User-Id': userId },
+      }),
+    );
+    return response.data;
+  }
+
+  async getWebhook(
+    id: string,
+    userId: string,
+  ): Promise<DocaiWebhookDeliveryDto> {
+    const response = await firstValueFrom(
+      this.http.get<DocaiWebhookDeliveryDto>(`/v1/webhooks/${id}`, {
+        headers: { 'X-User-Id': userId },
+      }),
     );
     return response.data;
   }

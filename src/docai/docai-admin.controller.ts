@@ -9,6 +9,7 @@ import {
   ListDocaiConversationsDto,
   ListDocaiJobsDto,
   ListDocaiStagesDto,
+  ListDocaiWebhooksDto,
 } from './docai-admin.dto';
 import { DocaiService } from './docai.service';
 
@@ -90,5 +91,27 @@ export class DocaiAdminController {
     @Session() { user }: UserSession,
   ) {
     return this.docai.listConversations(dto, user.id);
+  }
+
+  // ── Webhook deliveries ────────────────────────────────────────────────────
+
+  @Get('webhooks')
+  @ApiOperation({ summary: 'List DocAI webhook delivery attempts' })
+  @RequireSystemPermission({ docai: ['view-webhooks'] })
+  listWebhooks(
+    @Query() dto: ListDocaiWebhooksDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.docai.listWebhooks(dto, user.id);
+  }
+
+  @Get('webhooks/:id')
+  @ApiOperation({ summary: 'Get a single DocAI webhook delivery by ID' })
+  @RequireSystemPermission({ docai: ['view-webhooks'] })
+  getWebhook(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Session() { user }: UserSession,
+  ) {
+    return this.docai.getWebhook(id, user.id);
   }
 }

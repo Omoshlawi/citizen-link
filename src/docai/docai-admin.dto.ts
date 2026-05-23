@@ -165,3 +165,52 @@ export class DocaiConversationListDto {
   @ApiProperty() page: number;
   @ApiProperty() page_size: number;
 }
+
+export const ListDocaiWebhooksSchema = z.object({
+  job_id: z.uuid().optional(),
+  event: z.string().optional(),
+  delivered: z
+    .stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] })
+    .optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  page_size: z.coerce.number().int().min(1).max(100).optional(),
+});
+export class ListDocaiWebhooksDto extends createZodDto(
+  ListDocaiWebhooksSchema,
+) {}
+
+export class DocaiWebhookDeliveryDto {
+  @ApiProperty() delivery_id: string;
+  @ApiProperty() job_id: string;
+  @ApiProperty({ description: 'e.g. extraction.vision.success' }) event: string;
+  @ApiProperty() callback_url: string;
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'HTTP status returned by the caller',
+  })
+  response_status: number | null;
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'First 2 000 chars of the response body',
+  })
+  response_body: string | null;
+  @ApiProperty() attempt_count: number;
+  @ApiProperty() delivered: boolean;
+  @ApiProperty() created_at: string;
+  @ApiPropertyOptional({
+    nullable: true,
+    type: Object,
+    description: 'Full payload — only populated on single-record fetch',
+  })
+  payload: Record<string, unknown> | null;
+  @ApiProperty() job_type: string;
+  @ApiProperty() job_status: string;
+}
+
+export class DocaiWebhookDeliveryListDto {
+  @ApiProperty({ type: [DocaiWebhookDeliveryDto] })
+  deliveries: DocaiWebhookDeliveryDto[];
+  @ApiProperty() total: number;
+  @ApiProperty() page: number;
+  @ApiProperty() page_size: number;
+}
