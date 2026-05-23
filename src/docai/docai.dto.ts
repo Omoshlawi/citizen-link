@@ -460,12 +460,6 @@ export class DocaiExtractionRequest {
   })
   webhook_url: string;
 
-  @ApiProperty({
-    required: false,
-    example: 5,
-    description: 'Job priority — 1 (highest) to 10 (lowest). Defaults to 5.',
-  })
-  priority?: number;
 }
 
 /** Response from POST /v1/jobs/extraction (202) */
@@ -545,11 +539,4 @@ export class SubmitExtractionParams {
   })
   webhookUrl: string;
 
-  @ApiProperty({
-    required: false,
-    example: 5,
-    description:
-      'Job priority — 1 (highest) to 10 (lowest). Omit to use the default (5).',
-  })
-  priority?: number;
 }

@@ -53,7 +53,6 @@ export class DocaiService {
       case_number: params.caseNumber,
       image_urls: imageUrls,
       webhook_url: params.webhookUrl,
-      ...(params.priority !== undefined && { priority: params.priority }),
     };
 
     this.logger.debug(

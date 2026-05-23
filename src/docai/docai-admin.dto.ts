@@ -80,7 +80,6 @@ export class ListDocaiWebhooksDto extends createZodDto(
 export class DocaiJobStatusDto {
   @ApiProperty() job_id: string;
   @ApiProperty() job_type: string;
-  @ApiProperty() priority: number;
   @ApiProperty() status: string;
   @ApiPropertyOptional({ nullable: true }) current_stage: string | null;
   @ApiProperty() created_at: string;
@@ -115,7 +114,6 @@ export class DocaiStageResponseDto {
   result: Record<string, unknown> | null;
   @ApiProperty() job_type: string;
   @ApiProperty() job_status: string;
-  @ApiProperty() job_priority: number;
 }
 
 export class DocaiStageListDto {

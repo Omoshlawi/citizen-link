@@ -216,10 +216,15 @@ export class DocumentCasesService {
       },
       include: {
         document: true,
+        extractions: { select: { id: true } },
       },
     });
 
-    // Submit to docai — save the returned jobId so webhook callbacks can look up this extraction
+    const extractionId = documentCase.extractions[0].id;
+
+    // Submit to docai — stamp the existing extraction record with the returned jobId
+    // so webhook callbacks can look it up. Must update (not create) to keep a single
+    // AIExtraction per case and avoid a race with early-arriving webhooks.
     void Promise.all(
       images.map((key) =>
         this.s3Service.generateDownloadSignedUrl(key, 3600, 'tmp'),
@@ -236,8 +241,9 @@ export class DocumentCasesService {
         );
       })
       .then((docaiJobId) =>
-        this.prismaService.aIExtraction.create({
-          data: { docaiJobId, caseId: documentCase.id },
+        this.prismaService.aIExtraction.update({
+          where: { id: extractionId },
+          data: { docaiJobId },
         }),
       )
       .catch((e: any) => {
@@ -372,10 +378,15 @@ export class DocumentCasesService {
       },
       include: {
         document: true,
+        extractions: { select: { id: true } },
       },
     });
 
-    // Submit to docai — save the returned jobId so webhook callbacks can look up this extraction
+    const extractionId = documentCase.extractions[0].id;
+
+    // Submit to docai — stamp the existing extraction record with the returned jobId
+    // so webhook callbacks can look it up. Must update (not create) to keep a single
+    // AIExtraction per case and avoid a race with early-arriving webhooks.
     void Promise.all(
       images.map((key) =>
         this.s3Service.generateDownloadSignedUrl(key, 3600, 'tmp'),
@@ -392,8 +403,9 @@ export class DocumentCasesService {
         ),
       )
       .then((docaiJobId) =>
-        this.prismaService.aIExtraction.create({
-          data: { docaiJobId, caseId: documentCase.id },
+        this.prismaService.aIExtraction.update({
+          where: { id: extractionId },
+          data: { docaiJobId },
         }),
       )
       .catch((e: any) => {
