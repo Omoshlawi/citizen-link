@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { applyDocaiErrorInterceptor } from './docai.interceptors';
 import { DocaiConfig } from './docai.config';
 import {
   DocaiEmbedRequest,
@@ -28,13 +29,17 @@ import {
 import { UserSession } from '../auth/auth.types';
 
 @Injectable()
-export class DocaiService {
+export class DocaiService implements OnModuleInit {
   private readonly logger = new Logger(DocaiService.name);
 
   constructor(
     private readonly http: HttpService,
     private readonly config: DocaiConfig,
   ) {}
+
+  onModuleInit() {
+    applyDocaiErrorInterceptor(this.http.axiosRef);
+  }
 
   /**
    * Submit a document extraction job to citizen-link-docai.
