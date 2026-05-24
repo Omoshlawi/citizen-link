@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
+import { Prisma } from '../../generated/prisma/client';
 import { ExtractionStatus } from '../../generated/prisma/enums';
 import { ExtractionStep } from './extraction-step.constants';
 import { parseDate } from '../app.utils';
@@ -122,6 +123,7 @@ export class DocaiWebhookService {
         extractionConfidence: clamp(extractionConfidence),
         documentTypeCode: fields.documentType?.code ?? null,
         warnings,
+        extractionResult: result as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -199,6 +201,7 @@ export class DocaiWebhookService {
       data: {
         extractionStatus: ExtractionStatus.FAILED,
         currentStep: null,
+        failureReason: result.reason,
       },
     });
 

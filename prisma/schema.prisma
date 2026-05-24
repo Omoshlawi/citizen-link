@@ -485,6 +485,10 @@ model AIExtraction {
   documentTypeCode     String?
   warnings             Json?
 
+  // ─── Outcome storage ───────────────────────────────
+  failureReason    String? // human-readable reason from docai when FAILED
+  extractionResult Json?   // raw { vision, structure } snapshot when COMPLETED
+
   // ─── Pipeline status ───────────────────────────────
   extractionStatus ExtractionStatus @default(PENDING)
   currentStep      String? // null when COMPLETED or not yet started;
