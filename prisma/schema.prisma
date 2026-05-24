@@ -39,7 +39,6 @@ model User {
   addresses             Address[]
   userActivities        UserActivity[]
   claims                Claim[]
-  aiinteractions        AIInteraction[]
   transactions          Transaction[]       @relation("TransactionPayer")
   initiatedTransactions Transaction[]       @relation("TransactionInitiator")
   disbursements         Disbursement[]
@@ -464,67 +463,6 @@ model DocumentImage {
   createdAt  DateTime  @default(now())
 
   @@map("document_images")
-}
-
-//  AI INTERACTION LOGS
-model AIInteraction {
-  id String @id @default(uuid())
-
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  // Interaction Type
-  interactionType AIInteractionType
-
-  // AI Model Info
-  aiModel      String
-  modelVersion String?
-
-  // Context - What entity triggered this AI call
-  entityType String? // "LostDocument", "Match", "Claim", etc.
-  entityId   String?
-
-  // Request/Response
-  prompt         String   @db.Text
-  response       String   @db.Text
-  parseSuccess   Boolean? //For structured output data - did response parse + validate correctly
-  parseError     Json? // validation / schema error detail
-  parsedResponse Json?
-
-  // Performance & Cost Tracking
-  tokenUsage     Json? // { "input": 1500, "output": 800, "total": 2300 }
-  processingTime Int? // milliseconds
-  estimatedCost  Float? // Cost in USD (calculated from token usage)
-
-  // Status
-  callSuccess Boolean @default(true) // did the LLM respond at all
-  callError   String? @db.Text // network / API / timeout error
-  retryCount  Int     @default(0)
-
-  createdAt DateTime @default(now())
-  // aiverification         ClaimVerification?
-  // matchVerification      Match?                    @relation("MatchAiInteraction")
-  // matchSecurityQuestions Match?                    @relation("MatchSecurityQuestionsAiInteraction")
-
-  // For analytics and cost tracking
-  // Quick filtering of failed requests
-  @@index([userId])
-  @@index([interactionType])
-  @@index([entityType, entityId])
-  @@index([createdAt])
-  @@index([callSuccess])
-  @@index([parseSuccess])
-  @@map("ai_interactions")
-}
-
-enum AIInteractionType {
-  VISION_EXTRACTION // Extracting text from images
-  TEXT_EXTRACTION // Extracting data from text
-  DOCUMENT_MATCHING // Finding matches between lost and found
-  CLAIM_VERIFICATION // Verifying user's security answers
-  SECURITY_QUESTIONS_GEN // Generating security questions
-  DISPUTE_ANALYSIS // Analyzing disputes
-  USER_QUERY_RESPONSE // Responding to user questions/chat
 }
 
 model AIExtraction {
@@ -1019,7 +957,7 @@ model Invoice {
   claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
   // Use Decimal for money!
-  totalAmount  Decimal @db.Decimal(10, 2)
+  totalAmount Decimal @db.Decimal(10, 2)
 
   // Installment tracking — ALWAYS update both fields atomically in a $transaction
   amountPaid Decimal @default(0.00) @db.Decimal(10, 2)
@@ -1163,14 +1101,14 @@ model Disbursement {
 
 // Generic wallet — usable for finder rewards, refunds, in-app credits, etc.
 model Wallet {
-  id          String               @id @default(uuid())
-  userId      String               @unique
-  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance     Decimal              @default(0.00) @db.Decimal(10, 2)
+  id          String             @id @default(uuid())
+  userId      String             @unique
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance     Decimal            @default(0.00) @db.Decimal(10, 2)
   currency    String
   ledger      WalletLedger[]
   withdrawals WalletWithdrawal[]
-  updatedAt   DateTime             @updatedAt
+  updatedAt   DateTime           @updatedAt
 
   @@map("wallets")
 }
@@ -1787,16 +1725,16 @@ model RolePermission {
 // every back-and-forth between the user and the AI is grouped under one session.
 // Sessions expire after 90 days (a cleanup job deletes expired ones).
 model ChatSession {
-  id        String        @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String?       // First user message (truncated) — shown in session list on UI
-  expiresAt DateTime      // Set to createdAt + 90 days; a cleanup job removes expired sessions
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  voided    Boolean       @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String? // First user message (truncated) — shown in session list on UI
+  expiresAt DateTime // Set to createdAt + 90 days; a cleanup job removes expired sessions
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  voided    Boolean  @default(false)
 
-  messages  ChatMessage[]
+  messages ChatMessage[]
 
   @@index([userId])
   @@index([expiresAt]) // for the cleanup query: WHERE expires_at < NOW()
@@ -1813,7 +1751,7 @@ model ChatMessage {
   session   ChatSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   role      ChatMessageRole
   content   String          @db.Text
-  toolCalls Json?           // [{ tool: "get_my_cases", input: {...}, output: {...} }]
+  toolCalls Json? // [{ tool: "get_my_cases", input: {...}, output: {...} }]
   createdAt DateTime        @default(now())
 
   @@index([sessionId, createdAt]) // we always query "all messages for a session, ordered by time"
@@ -1837,14 +1775,14 @@ enum ChatMessageRole {
 // The indexer writes to the appropriate column based on EMBEDDING_IS_OPENAI.
 // The retriever queries the appropriate column based on EMBEDDING_IS_OPENAI.
 model KnowledgeChunk {
-  id           String                       @id @default(uuid())
-  sourceFile   String                       // e.g. "01-platform-overview.md"
-  sectionPath  String                       // e.g. "How Matching Works > Step 2"
-  content      String                       @db.Text
-  embedding_768  Unsupported("vector(768)")?  // nomic-embed-text
+  id             String                       @id @default(uuid())
+  sourceFile     String // e.g. "01-platform-overview.md"
+  sectionPath    String // e.g. "How Matching Works > Step 2"
+  content        String                       @db.Text
+  embedding_768  Unsupported("vector(768)")? // nomic-embed-text
   embedding_1536 Unsupported("vector(1536)")? // text-embedding-3-small
-  createdAt    DateTime                     @default(now())
-  updatedAt    DateTime                     @updatedAt
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
 
   @@index([sourceFile])
   @@map("knowledge_chunks")

@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
+import { safeParseJson } from '../app.utils';
+import { Results } from '../common/common.interfaces';
 import { PrismaService } from '../prisma/prisma.service';
 import { AI_OPTIONS_TOKEN } from './ai.contants';
 import {
@@ -13,9 +13,6 @@ import {
   GenerateParsedContentResponse,
   Part,
 } from './ai.types';
-import { safeParseJson } from '../app.utils';
-import { Results } from '../common/common.interfaces';
-import { AIInteractionType } from '../../generated/prisma/enums';
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -216,67 +213,6 @@ export class AiService implements OnModuleInit {
 
   get options() {
     return this._options;
-  }
-
-  async callAIAndStore(
-    prompt: string,
-    files: Array<{ buffer: Buffer; mimeType: string }> | undefined,
-    { streamed, ...config }: GenerateContentConfig & { streamed?: boolean },
-    interactionType: AIInteractionType,
-    entityType: string,
-    userId?: string,
-  ) {
-    let responseText = '';
-    let aiResponse: GenerateContentResponse | null = null;
-
-    try {
-      const parts = [
-        { text: prompt },
-        ...(files
-          ? files.map((file) =>
-              this.fileToGenerativePart(file.buffer, file.mimeType),
-            )
-          : []),
-      ];
-
-      if (streamed) {
-        aiResponse = await this.generateContentFromStream(parts, config);
-      } else {
-        aiResponse = await this.generateContent(parts, config);
-      }
-      responseText = aiResponse.text?.trim() ?? '';
-      // this.logger.debug(`AI Response: ${responseText}`);
-
-      return await this.prismaService.aIInteraction.create({
-        data: {
-          prompt: prompt.substring(0, 10000), // Truncate for storage
-          response: responseText,
-          aiModel: config.model || this.options.model,
-          modelVersion: aiResponse?.modelVersion,
-          interactionType,
-          entityType,
-          tokenUsage: aiResponse?.usageMetadata as any,
-          callSuccess: true,
-          userId,
-        },
-      });
-    } catch (error: any) {
-      this.logger.warn(`Error in ${interactionType}:`, error);
-      return await this.prismaService.aIInteraction.create({
-        data: {
-          prompt: prompt.substring(0, 10000),
-          response: responseText,
-          aiModel: config.model || this.options.model,
-          modelVersion: aiResponse?.modelVersion,
-          interactionType,
-          entityType,
-          tokenUsage: aiResponse?.usageMetadata as any,
-          callError: error?.message ?? 'Unknown error',
-          callSuccess: false,
-          userId,
-        },
-      });
-    }
   }
 
   /**
