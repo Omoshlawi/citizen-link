@@ -130,6 +130,10 @@
       "name": "Collect",
       "description": "Issue and confirm collection codes"
     },
+    "resolveExtraction": {
+      "name": "Resolve Extraction Failure",
+      "description": "Review failed extractions and set a user-facing resolution message and type"
+    },
     "query-case-matches": { "name": "Query Case Matches" },
     "review-dispute": { "name": "Review Dispute" },
     "debug": { "name": "Debug" },

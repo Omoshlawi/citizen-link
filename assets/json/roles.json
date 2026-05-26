@@ -55,7 +55,8 @@
         { "resource": "documentCase", "action": "list-any" },
         { "resource": "documentCase", "action": "view-any" },
         { "resource": "documentCase", "action": "verify" },
-        { "resource": "documentCase", "action": "reject" }
+        { "resource": "documentCase", "action": "reject" },
+        { "resource": "documentCase", "action": "resolveExtraction" }
       ]
     },
     {

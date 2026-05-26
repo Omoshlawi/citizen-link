@@ -65,6 +65,7 @@ model User {
   createdOperations      DocumentOperation[]     @relation("OpCreator")
   responsibleOperations  DocumentOperation[]     @relation("OpResponsible")
   chatSessions           ChatSession[]
+  resolvedExtractions    AIExtraction[]         @relation("ExtractionResolver")
 
   @@unique([email])
   @@unique([username])
@@ -493,6 +494,14 @@ model AIExtraction {
   extractionStatus ExtractionStatus @default(PENDING)
   currentStep      String? // null when COMPLETED or not yet started;
 
+  // ─── Failure resolution ────────────────────────────
+  // Populated when extractionStatus = FAILED. Auto-set for VISION gate fails;
+  // staff-set for all other failure types.
+  resolutionType    ExtractionResolutionType?
+  resolutionMessage String? // user-facing explanation + next-step guidance
+  resolvedById      String?
+  resolvedBy        User?                     @relation("ExtractionResolver", fields: [resolvedById], references: [id])
+
   createdAt DateTime @default(now())
 
   @@index([caseId])
@@ -504,6 +513,12 @@ enum ExtractionStatus {
   IN_PROGRESS
   COMPLETED
   FAILED
+}
+
+enum ExtractionResolutionType {
+  RESUBMIT_IMAGE  // user uploads better images for the same case
+  SUBMIT_NEW_CASE // wrong document entirely; user starts a fresh case
+  STAFF_HANDLING  // staff are handling it; user waits
 }
 
 model DocumentCase {

@@ -18,6 +18,7 @@ import {
   CustodyStatus,
   DocumentCase,
   ExchangeMethod,
+  ExtractionResolutionType,
   ExtractionStatus,
   FoundDocumentCase,
   FoundDocumentCaseStatus,
@@ -356,3 +357,24 @@ export class CaseTimelineResponseDto {
   @ApiProperty({ isArray: true, type: TimelineEventDto })
   events!: TimelineEventDto[];
 }
+
+export const ResubmitExtractionSchema = z.object({
+  imageKeys: z
+    .array(z.string().min(1))
+    .min(1, 'At least one image is required')
+    .max(2, 'Maximum 2 images allowed'),
+});
+export class ResubmitExtractionDto extends createZodDto(
+  ResubmitExtractionSchema,
+) {}
+
+export const ResolveExtractionSchema = z.object({
+  resolutionType: z.enum(ExtractionResolutionType),
+  resolutionMessage: z
+    .string()
+    .min(10, 'Message must be at least 10 characters')
+    .max(500, 'Message must not exceed 500 characters'),
+});
+export class ResolveExtractionDto extends createZodDto(
+  ResolveExtractionSchema,
+) {}

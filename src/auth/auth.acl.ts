@@ -20,6 +20,7 @@ export const adminPluginAcl = createAccessControl({
     'update',
     'delete',
     'collect',
+    'resolveExtraction',
   ],
   match: [
     'list-any',
@@ -64,6 +65,7 @@ const adminRole = adminPluginAcl.newRole({
     'update',
     'delete',
     'collect',
+    'resolveExtraction',
   ],
   match: [
     'list-any',

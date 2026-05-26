@@ -28,6 +28,8 @@ import {
   QueryDocumentCaseDto,
   QueryDocumentCaseResponseDto,
   CreateLostDocumentCaseDto,
+  ResolveExtractionDto,
+  ResubmitExtractionDto,
   UpdateDocumentCaseDto,
   UpdateFoundCaseSubmissionDto,
 } from './document-cases.dto';
@@ -219,6 +221,29 @@ export class DocumentCasesController {
       query,
       user,
     );
+  }
+
+  @Post(':id/extractions/resubmit')
+  @ApiOperation({ summary: 'Resubmit document images for re-extraction' })
+  @ApiErrorsResponse({ badRequest: true, notFound: true })
+  resubmitExtraction(
+    @Param('id') id: string,
+    @Body() dto: ResubmitExtractionDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.resubmitExtraction(id, dto, user);
+  }
+
+  @Patch(':id/extractions/resolve')
+  @RequireSystemPermission({ documentCase: ['resolveExtraction'] })
+  @ApiOperation({ summary: 'Staff: resolve an extraction failure' })
+  @ApiErrorsResponse({ badRequest: true, notFound: true, conflict: true })
+  resolveExtractionFailure(
+    @Param('id') id: string,
+    @Body() dto: ResolveExtractionDto,
+    @Session() { user }: UserSession,
+  ) {
+    return this.documentCasesService.resolveExtractionFailure(id, dto, user);
   }
 
   @Post(':id/restore')

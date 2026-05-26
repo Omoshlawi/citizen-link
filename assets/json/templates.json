@@ -562,6 +562,98 @@
     }
   },
   {
+    "key": "notification.case.found.extraction.reviewed",
+    "type": "notification",
+    "name": "Found Case Extraction Reviewed",
+    "description": "Sent to the finder when staff resolves an extraction failure on a found case.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Update on Your Document Case #{{case.caseNumber}} — Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/case-extraction-reviewed.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Update on Case #{{case.caseNumber}}"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "{{resolution.message}}"
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
+    "key": "notification.case.lost.extraction.reviewed",
+    "type": "notification",
+    "name": "Lost Case Extraction Reviewed",
+    "description": "Sent to the owner when staff resolves an extraction failure on a lost case.",
+    "engine": "handlebars",
+    "slots": {
+      "email_subject": {
+        "source": "text",
+        "text": "Update on Your Document Case #{{case.caseNumber}} — Citizen Link"
+      },
+      "email_body": {
+        "source": "file",
+        "path": "mail/case-extraction-reviewed.hbs"
+      },
+      "push_title": {
+        "source": "text",
+        "text": "Update on Case #{{case.caseNumber}}"
+      },
+      "push_body": {
+        "source": "text",
+        "text": "{{resolution.message}}"
+      },
+      "push_data": {
+        "source": "text",
+        "text": "{\"screen\": \"document-case\", \"caseId\": \"{{case.id}}\"}"
+      }
+    },
+    "schema": {
+      "required": [],
+      "optional": [
+        "email_subject",
+        "email_body",
+        "push_title",
+        "push_body",
+        "push_data"
+      ]
+    },
+    "metadata": {
+      "channels": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    }
+  },
+  {
     "key": "prompt.claim.verification",
     "type": "prompt",
     "name": "Claim Verification",

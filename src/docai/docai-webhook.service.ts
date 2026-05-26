@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { Prisma } from '../../generated/prisma/client';
-import { ExtractionStatus } from '../../generated/prisma/enums';
+import {
+  ExtractionResolutionType,
+  ExtractionStatus,
+} from '../../generated/prisma/enums';
 import { ExtractionStep } from './extraction-step.constants';
 import { parseDate } from '../app.utils';
 import { NotificationPriority } from '../notifications/notification.interfaces';
@@ -196,16 +199,48 @@ export class DocaiWebhookService {
       return;
     }
 
+    const documentCase = extraction.case;
+
+    // For VISION gate failures, auto-resolve so the user knows what to do without
+    // waiting for staff. Count prior failures to cap self-service at 1 resubmit.
+    let resolutionType: ExtractionResolutionType | null = null;
+    let resolutionMessage: string | null = null;
+
+    if (event === DocaiEvent.EXTRACTION_VISION_FAILED) {
+      const priorFailedCount = await this.prisma.aIExtraction.count({
+        where: {
+          caseId: documentCase.id,
+          extractionStatus: ExtractionStatus.FAILED,
+        },
+      });
+
+      if (priorFailedCount === 0) {
+        resolutionType = ExtractionResolutionType.RESUBMIT_IMAGE;
+        resolutionMessage =
+          "We weren't able to read your document image clearly. " +
+          'This usually happens when the photo is blurry, too dark, or the document ' +
+          "isn't fully in frame. Please take a new photo in good lighting with the full " +
+          'document visible and tap "Resubmit Image" to try again.';
+      } else {
+        // User already resubmitted once and image quality is still too low.
+        resolutionType = ExtractionResolutionType.STAFF_HANDLING;
+        resolutionMessage =
+          'Our team is reviewing your document case and will contact you with next steps.';
+      }
+    }
+    // STRUCTURE failures: resolutionType stays null — staff must review and set it.
+
     await this.prisma.aIExtraction.update({
       where: { docaiJobId: jobId },
       data: {
         extractionStatus: ExtractionStatus.FAILED,
         currentStep: null,
         failureReason: result.reason,
+        resolutionType,
+        resolutionMessage,
       },
     });
 
-    const documentCase = extraction.case;
     const userId = documentCase.userId;
     const caseType = documentCase.lostDocumentCase ? 'LOST' : 'FOUND';
 

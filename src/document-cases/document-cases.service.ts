@@ -11,9 +11,13 @@ import {
   ExchangeDirection,
   ExchangeMethod,
   ExchangeStatus,
+  ExtractionResolutionType,
+  ExtractionStatus,
   FoundDocumentCaseStatus,
   LostDocumentCaseStatus,
 } from '../../generated/prisma/client';
+import { NotificationDispatchService } from '../notifications/notifications.dispatch.service';
+import { NotificationPriority } from '../notifications/notification.interfaces';
 import { UserSession } from '../auth/auth.types';
 import {
   CustomRepresentationQueryDto,
@@ -26,6 +30,8 @@ import {
   CreateFoundDocumentCaseDto,
   CreateLostDocumentCaseDto,
   QueryDocumentCaseDto,
+  ResolveExtractionDto,
+  ResubmitExtractionDto,
   UpdateDocumentCaseDto,
   UpdateFoundCaseSubmissionDto,
 } from './document-cases.dto';
@@ -51,6 +57,7 @@ export class DocumentCasesService {
     private readonly documentCaseTimelineService: DocumentCasesTimelineService,
     private readonly s3Service: S3Service,
     private readonly docaiService: DocaiService,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   findAll(
@@ -562,5 +569,125 @@ export class DocumentCasesService {
       ...this.representationService.buildCustomRepresentationQuery(query?.v),
     });
     return data;
+  }
+
+  async resubmitExtraction(
+    caseId: string,
+    dto: ResubmitExtractionDto,
+    user: UserSession['user'],
+  ) {
+    const documentCase = await this.prismaService.documentCase.findUnique({
+      where: { id: caseId, userId: user.id },
+      include: {
+        extractions: { orderBy: { createdAt: 'desc' }, take: 1 },
+        document: { include: { images: true } },
+      },
+    });
+
+    if (!documentCase) throw new NotFoundException('Case not found');
+
+    const latest = documentCase.extractions[0];
+
+    if (!latest || latest.extractionStatus !== ExtractionStatus.FAILED)
+      throw new BadRequestException('No failed extraction to resubmit');
+
+    if (latest.resolutionType !== ExtractionResolutionType.RESUBMIT_IMAGE)
+      throw new BadRequestException(
+        'Image resubmission is not available for this case',
+      );
+
+    await this.documentCasesCreateService.filesExists(dto.imageKeys);
+
+    const documentId = documentCase.document?.id;
+    if (!documentId) throw new NotFoundException('Document not found on case');
+
+    const newExtraction = await this.prismaService.$transaction(async (tx) => {
+      await tx.documentImage.deleteMany({ where: { documentId } });
+      await tx.documentImage.createMany({
+        data: dto.imageKeys.map((url) => ({ documentId, url })),
+      });
+      return tx.aIExtraction.create({
+        data: { caseId, extractionStatus: ExtractionStatus.PENDING },
+      });
+    });
+
+    void this.docaiService
+      .submitJob(
+        {
+          caseNumber: documentCase.caseNumber,
+          imageKeys: dto.imageKeys,
+          webhookUrl: this.docaiService.webhookUrl,
+        },
+        user,
+      )
+      .then((docaiJobId) =>
+        this.prismaService.aIExtraction.update({
+          where: { id: newExtraction.id },
+          data: { docaiJobId },
+        }),
+      )
+      .catch((e: unknown) =>
+        this.logger.error(
+          `Failed to submit resubmit docai job for case ${caseId}`,
+          e,
+        ),
+      );
+
+    return { message: 'Image resubmission received. Processing has started.' };
+  }
+
+  async resolveExtractionFailure(
+    caseId: string,
+    dto: ResolveExtractionDto,
+    staffUser: UserSession['user'],
+  ) {
+    const documentCase = await this.prismaService.documentCase.findUnique({
+      where: { id: caseId },
+      include: {
+        extractions: { orderBy: { createdAt: 'desc' }, take: 1 },
+        lostDocumentCase: { select: { id: true } },
+      },
+    });
+
+    if (!documentCase) throw new NotFoundException('Case not found');
+
+    const latest = documentCase.extractions[0];
+
+    if (!latest || latest.extractionStatus !== ExtractionStatus.FAILED)
+      throw new BadRequestException('No failed extraction to resolve');
+
+    if (latest.resolvedById && latest.resolutionType)
+      throw new ConflictException('This extraction has already been resolved');
+
+    await this.prismaService.aIExtraction.update({
+      where: { id: latest.id },
+      data: {
+        resolutionType: dto.resolutionType,
+        resolutionMessage: dto.resolutionMessage,
+        resolvedById: staffUser.id,
+      },
+    });
+
+    const caseType = documentCase.lostDocumentCase ? 'lost' : 'found';
+    const templateKey = `notification.case.${caseType}.extraction.reviewed`;
+
+    await this.notifications.sendFromTemplate({
+      templateKey,
+      data: {
+        case: { id: caseId, caseNumber: documentCase.caseNumber },
+        resolution: {
+          message: dto.resolutionMessage,
+          type: dto.resolutionType,
+        },
+      },
+      userId: documentCase.userId,
+      priority: NotificationPriority.HIGH,
+      force: true,
+      eventTitle: 'Update on Your Document Case',
+      eventBody: dto.resolutionMessage,
+      eventDescription: `Staff resolved extraction failure for case ${documentCase.caseNumber} — ${dto.resolutionType}`,
+    });
+
+    return { message: 'Extraction failure resolved and user notified.' };
   }
 }
