@@ -98,6 +98,15 @@ export interface AiVerificationResult extends ExactMatchResult {
   };
 }
 
+export interface PublicCandidateMatch {
+  documentId: string;
+  caseId: string;
+  fullName?: string | null;
+  documentNumber?: string | null;
+  similarity: number;
+  blurredImageKey?: string | null;
+}
+
 export interface VectorSearchParams {
   embeddingVector: number[];
   typeId: string;

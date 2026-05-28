@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CandidateMatch, VectorSearchParams } from './matching.interface';
+import {
+  CandidateMatch,
+  PublicCandidateMatch,
+  VectorSearchParams,
+} from './matching.interface';
 
 @Injectable()
 export class MatchingQueryService {
@@ -104,6 +108,57 @@ export class MatchingQueryService {
     );
 
     return this.parseRows(rows);
+  }
+
+  // Public search — no user/document exclusion, VERIFIED found cases only, includes blurredUrl
+  async findPublicSearchCandidates(params: {
+    embeddingVector: number[];
+    typeId: string;
+    similarityThreshold: number;
+    limit: number;
+  }): Promise<PublicCandidateMatch[]> {
+    const vectorString = `[${params.embeddingVector.join(',')}]`;
+    const dims = params.embeddingVector.length;
+
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<Omit<PublicCandidateMatch, 'similarity'> & { similarity: string }>
+    >(
+      `
+      SELECT
+        d.id                                              AS "documentId",
+        d."caseId",
+        d."fullName",
+        d."documentNumber",
+        1 - (d.embedding_${dims} <=> $1::vector)         AS similarity,
+        di."blurredUrl"                                  AS "blurredImageKey"
+      FROM "documents" d
+      INNER JOIN "document_cases" dc ON d."caseId" = dc.id
+      INNER JOIN "found_document_cases" fdc ON dc.id = fdc."caseId"
+      LEFT JOIN LATERAL (
+        SELECT "blurredUrl"
+        FROM "document_images"
+        WHERE "documentId" = d.id
+        ORDER BY "createdAt" ASC
+        LIMIT 1
+      ) di ON true
+      WHERE
+        d.embedding_${dims} IS NOT NULL
+        AND d."typeId" = $2
+        AND fdc.status IN ('VERIFIED')
+        AND 1 - (d.embedding_${dims} <=> $1::vector) > $3
+      ORDER BY d.embedding_${dims} <=> $1::vector
+      LIMIT $4
+      `,
+      vectorString,
+      params.typeId,
+      params.similarityThreshold,
+      params.limit,
+    );
+
+    return rows.map((r) => ({
+      ...r,
+      similarity: parseFloat(parseFloat(r.similarity).toFixed(4)),
+    }));
   }
 
   private parseRows(

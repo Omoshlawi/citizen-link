@@ -9,7 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { Session } from '@thallesp/nestjs-better-auth';
+import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth';
 import { ApiErrorsResponse } from '../app.decorators';
 import { RequireSystemPermission } from '../auth/auth.decorators';
 import { UserSession } from '../auth/auth.types';
@@ -22,16 +22,33 @@ import { QuerySimilarDocumentCaseResponsesDto } from '../document-cases/document
 import { StatusTransitionReasonsDto } from '../status-transitions/status-transitions.dto';
 import {
   GetMatchResponseDto,
+  PublicSearchDto,
+  PublicSearchResponseDto,
   QueryMatchesDto,
   QueryMatchesForFoundCaseDto,
   QueryMatchesForLostCaseDto,
   QueryMatchesResponseDto,
 } from './matching.dto';
 import { MatchingService } from './matching.service';
+import { PublicSearchService } from './public-search.service';
 
 @Controller('matching')
 export class MatchingController {
-  constructor(private readonly matchingService: MatchingService) {}
+  constructor(
+    private readonly matchingService: MatchingService,
+    private readonly publicSearchService: PublicSearchService,
+  ) {}
+  @Post('search/public')
+  @AllowAnonymous()
+  @ApiOperation({
+    summary: 'Public document search — no authentication required',
+  })
+  @ApiOkResponse({ type: PublicSearchResponseDto })
+  @ApiErrorsResponse()
+  publicSearch(@Body() dto: PublicSearchDto) {
+    return this.publicSearchService.search(dto);
+  }
+
   @Get('lost')
   @RequireSystemPermission({ match: ['query-case-matches'] })
   @ApiOperation({ summary: 'Query Matches for lost document case' })

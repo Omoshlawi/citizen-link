@@ -136,6 +136,33 @@ export const RejectMatchSchema = z.object({
   comment: z.string().optional(),
 });
 
+export const PublicSearchSchema = z
+  .object({
+    documentTypeId: z.string().uuid(),
+    fullName: z.string().min(2).optional(),
+    documentNumber: z.string().min(2).optional(),
+  })
+  .refine((d) => d.fullName || d.documentNumber, {
+    message: 'At least one of fullName or documentNumber must be provided',
+    path: ['fullName'],
+  });
+
+export class PublicSearchDto extends createZodDto(PublicSearchSchema) {}
+
+export class PublicSearchResultItemDto {
+  @ApiProperty()
+  maskedName: string;
+  @ApiProperty({ nullable: true })
+  blurredImageBase64: string | null;
+}
+
+export class PublicSearchResponseDto {
+  @ApiProperty()
+  found: boolean;
+  @ApiProperty({ isArray: true, type: PublicSearchResultItemDto })
+  results: PublicSearchResultItemDto[];
+}
+
 export class QueryMatchesDto extends createZodDto(QueryMatchesSchema) {}
 
 export class UpdateMatchStatusDto extends createZodDto(

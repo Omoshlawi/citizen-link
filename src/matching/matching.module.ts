@@ -22,6 +22,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { DocumentMatchingProcessor } from './matching.processor';
 import { EmbeddingModule } from '../embedding/embedding.module';
 import { EmbeddingConfig } from '../embedding/embedding.config';
+import { PublicSearchService } from './public-search.service';
 @Module({})
 export class MatchingModule {
   static registerAsync(
@@ -85,6 +86,7 @@ export class MatchingModule {
         AiVerificationLayer, // layer 3
         MatchingLayeredService,
         DocumentMatchingProcessor,
+        PublicSearchService,
       ],
       exports: [MatchingService, MatchingLayeredService],
       controllers: [MatchingController],
