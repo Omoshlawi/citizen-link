@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 import { distance as levenshtein } from 'fastest-levenshtein';
-import { EmbeddingService } from '../embedding/embedding.service';
+import { DocaiEmbeddingService } from '../docai/docai-embedding.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import {
@@ -38,7 +38,7 @@ export class PublicSearchService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly embeddingService: EmbeddingService,
+    private readonly embeddingService: DocaiEmbeddingService,
     private readonly matchingQueryService: MatchingQueryService,
     private readonly s3Service: S3Service,
     @Inject(MATCHING_OPTIONS_TOKEN)

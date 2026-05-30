@@ -3,8 +3,6 @@ import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { DocaiModule } from '../docai/docai.module';
-import { EmbeddingConfig } from '../embedding/embedding.config';
-import { EmbeddingModule } from '../embedding/embedding.module';
 import { MatchingModule } from '../matching/matching.module';
 import { MatchingConfig } from '../matching/matching.config';
 import { DOCUMENT_EMBEDDING_QUEUE } from './document-cases.constants';
@@ -34,15 +32,6 @@ import { DocumentCasesTimelineService } from './document-cases.timeline.service'
       adapter: BullMQAdapter,
     }),
     DocaiModule,
-    EmbeddingModule.registerAsync({
-      useFactory: (config: EmbeddingConfig) => ({
-        model: config.model,
-        baseUrl: config.baseUrl,
-        apiKey: config.apiKey,
-        isOpenAi: config.isOpenAi,
-      }),
-      inject: [EmbeddingConfig],
-    }),
     MatchingModule.registerAsync({
       useFactory: (config: MatchingConfig) => {
         const sum = config.weightVector + config.weightExact + config.weightAi;

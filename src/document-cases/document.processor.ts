@@ -3,14 +3,14 @@ import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { MatchingLayeredService } from '../matching/matching.layered.service';
 import { DOCUMENT_EMBEDDING_QUEUE } from './document-cases.constants';
-import { EmbeddingService } from '../embedding/embedding.service';
+import { DocaiEmbeddingService } from '../docai/docai-embedding.service';
 import { DocumentEmbeddingJob } from './document-cases.interface';
 
 @Processor(DOCUMENT_EMBEDDING_QUEUE, { concurrency: 5 })
 export class DocumentEmbeddingProcessor extends WorkerHost {
   private readonly logger = new Logger(DocumentEmbeddingProcessor.name);
   constructor(
-    private readonly embeddingService: EmbeddingService,
+    private readonly embeddingService: DocaiEmbeddingService,
     private readonly matchingLayeredService: MatchingLayeredService,
   ) {
     super();

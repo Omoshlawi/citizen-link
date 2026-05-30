@@ -8,7 +8,7 @@ import {
 import { lastValueFrom } from 'rxjs';
 import { Logger } from '@nestjs/common';
 import { CustomRepresentationService } from '../common/query-builder';
-import { EmbeddingService } from '../embedding/embedding.service';
+import { DocaiEmbeddingService } from '../docai/docai-embedding.service';
 
 @Injectable()
 export class MatchingVectorSearchService {
@@ -16,7 +16,7 @@ export class MatchingVectorSearchService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly matchingQueryService: MatchingQueryService,
-    private readonly embeddingService: EmbeddingService,
+    private readonly embeddingService: DocaiEmbeddingService,
     private readonly representationService: CustomRepresentationService,
   ) {}
 

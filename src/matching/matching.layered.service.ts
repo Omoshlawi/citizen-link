@@ -9,7 +9,7 @@ import {
   LostDocumentCase,
 } from '../../generated/prisma/client';
 import { MatchTrigger, MatchVerdict } from '../../generated/prisma/enums';
-import { EmbeddingService } from '../embedding/embedding.service';
+import { DocaiEmbeddingService } from '../docai/docai-embedding.service';
 import { EntityPrefix } from '../human-id/human-id.constants';
 import { HumanIdService } from '../human-id/human-id.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -40,7 +40,7 @@ export class MatchingLayeredService {
     private readonly vectorSearchLayer: VectorSearchLayer,
     private readonly aiVerificationLayer: AiVerificationLayer,
     private readonly prismaService: PrismaService,
-    private readonly embeddingService: EmbeddingService,
+    private readonly embeddingService: DocaiEmbeddingService,
     private readonly matchingSecurityQuestionsService: MatchingSecurityQuestionsService,
     @Inject(MATCHING_OPTIONS_TOKEN)
     private readonly matchingOptions: MatchingOptions,

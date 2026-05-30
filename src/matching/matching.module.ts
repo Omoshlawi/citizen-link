@@ -20,8 +20,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { DocumentMatchingProcessor } from './matching.processor';
-import { EmbeddingModule } from '../embedding/embedding.module';
-import { EmbeddingConfig } from '../embedding/embedding.config';
+import { DocaiModule } from '../docai/docai.module';
 import { PublicSearchService } from './public-search.service';
 @Module({})
 export class MatchingModule {
@@ -61,17 +60,7 @@ export class MatchingModule {
           },
           inject: [AiConfig],
         }),
-        EmbeddingModule.registerAsync({
-          useFactory: (config: EmbeddingConfig) => {
-            return {
-              model: config.model,
-              baseUrl: config.baseUrl,
-              apiKey: config.apiKey,
-              isOpenAi: config.isOpenAi,
-            };
-          },
-          inject: [EmbeddingConfig],
-        }),
+        DocaiModule,
       ],
       providers: [
         ...(options.providers || []),

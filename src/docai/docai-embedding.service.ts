@@ -6,12 +6,12 @@ import {
   DocumentField,
   DocumentType,
 } from '../../generated/prisma/client';
-import { DocaiService } from '../docai/docai.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DocaiService } from './docai.service';
 
 @Injectable()
-export class EmbeddingService {
-  private readonly logger = new Logger(EmbeddingService.name);
+export class DocaiEmbeddingService {
+  private readonly logger = new Logger(DocaiEmbeddingService.name);
 
   constructor(
     private readonly prismaService: PrismaService,
