@@ -547,6 +547,27 @@ docker-compose exec app pnpm prisma studio
 | `BETTER_AUTH_URL` | Base URL for Better Auth     | `http://localhost:2000` | Use `http://localhost:2000` for local access, or your domain for production                       |
 | `NODE_ENV`        | Environment mode             | `development`           | Set to `production` in production Docker setup                                                    |
 
+### AI / LLM Provider Configuration
+
+The backend uses an OpenAI-compatible client for document extraction, AI matching, and verification. Three environment variables control the provider:
+
+| Variable | Description | Default |
+|---|---|---|
+| `OPENAI_API_KEY` | API key for your LLM provider | Required |
+| `OPENAI_BASE_URL` | Full base URL **including** the `/v1` path segment. Leave unset for OpenAI native. | Unset (SDK default: `https://api.openai.com/v1`) |
+| `OPENAI_MODEL` | Model ID to use | `deepseek-chat` |
+
+> **Convention:** `OPENAI_BASE_URL` is passed verbatim to the OpenAI SDK as its `baseURL`. The SDK appends only the endpoint path (e.g. `/chat/completions`). Always include the `/v1` segment (or provider-equivalent) in the URL. For OpenAI native, leave the variable unset — the SDK default is correct.
+
+#### Supported providers
+
+| Provider | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `OPENAI_MODEL` |
+|---|---|---|---|
+| **OpenAI** (production) | `sk-…` | *(leave unset)* | `gpt-4o` |
+| **Ollama** (local dev) | `ollama` | `http://localhost:11434/v1` | `llama3.2` or any pulled model |
+| **DeepSeek** | `sk-…` | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| **Gemini** | your-gemini-key | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.0-flash-exp` |
+
 ### Docker Environment Variables
 
 When using Docker Compose, environment variables are set in the `docker-compose.yml` or `docker-compose.dev.yml` files. You can:

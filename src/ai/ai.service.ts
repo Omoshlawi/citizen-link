@@ -27,7 +27,7 @@ export class AiService implements OnModuleInit {
   onModuleInit() {
     this.openai = new OpenAI({
       apiKey: this._options.apiKey,
-      baseURL: this._options.baseURL + '/v1',
+      baseURL: this._options.baseURL ?? undefined,
     });
   }
 
