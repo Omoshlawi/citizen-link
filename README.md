@@ -1,614 +1,209 @@
-# Customer Registration Service
+# CitizenLink — NestJS Backend
 
-A NestJS-based microservice for managing customer registration with authentication, authorization, and SMS notification capabilities.
-
-## Features
-
-- 🔐 **Authentication & Authorization**: Built with Better Auth, supporting user sessions, roles, and permissions
-- 👥 **Customer Management**: Full CRUD operations for customer records
-- 📝 **Self-Registration**: Public endpoint for customers to register themselves
-- 📱 **SMS Notifications**: Automated welcome SMS notifications for new customers
-- 🔍 **Advanced Querying**: Flexible query builder with pagination, sorting, and filtering
-- 📚 **API Documentation**: Swagger/OpenAPI documentation with Scalar UI
-- 🐳 **Docker Support**: Containerized development and production environments
-- 🗄️ **Database**: PostgreSQL with Prisma ORM
+Core API service for the CitizenLink civic platform. Manages lost/found document cases, exchange workflows, custody operations, matching, payments, notifications, and AI extraction.
 
 ## Tech Stack
 
-- **Framework**: NestJS 11
-- **Language**: TypeScript
-- **Database**: PostgreSQL 16
-- **ORM**: Prisma 6
-- **Authentication**: Better Auth
+- **Framework**: NestJS 11 (TypeScript)
+- **Database**: PostgreSQL 16 via Prisma ORM
+- **Queue**: BullMQ + Redis
+- **Auth**: Better Auth v1.3 (username, admin, bearer, JWT, 2FA, phoneNumber plugins)
 - **Package Manager**: pnpm
-- **API Documentation**: Swagger/OpenAPI with Scalar
-- **Validation**: Zod
+- **Validation**: Zod + nestjs-zod
+- **AI**: OpenAI-compatible client (Ollama / OpenAI / DeepSeek / Gemini)
+- **Storage**: AWS S3 / MinIO
+- **Notifications**: Email (SMTP), SMS, Expo Push
 
 ## Prerequisites
 
-### For Docker Setup (Recommended)
+- Node.js 20+
+- pnpm
+- PostgreSQL 16
+- Redis
 
-- **Docker Desktop** (or Docker Engine + Docker Compose) version 20.10 or higher
-- **Docker Compose** version 2.0 or higher
-- At least **2GB of free disk space** for images and volumes
-- **4GB of RAM** recommended for smooth operation
+Or use Docker Compose (recommended).
 
-### For Local Development
-
-- **Node.js** 20 or higher
-- **pnpm** (package manager) - Install with `npm install -g pnpm`
-- **PostgreSQL** 16 (or use Docker for database only)
-
-## Installation
-
-1. Clone the repository:
+## Quick Start
 
 ```bash
-git clone <repository-url>
-cd customer-registration-service
-```
-
-2. Install dependencies:
-
-```bash
+# Install dependencies
 pnpm install
-```
 
-3. Set up environment variables:
-   Create a `.env` file in the root directory:
+# Copy and configure environment
+cp .env.example .env
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/customer_registration
-PORT=2000
-BETTER_AUTH_URL=http://localhost:2000
-```
+# Generate Prisma client
+npx prisma generate
 
-4. Generate Prisma Client:
+# Run migrations
+npx prisma migrate dev
 
-```bash
-pnpm prisma generate
-```
+# Seed database (creates templates, document types, settings)
+pnpm db:seed
 
-5. Run database migrations:
-
-```bash
-pnpm prisma migrate dev
-```
-
-## Running the Application
-
-### Development Mode
-
-#### Option 1: Using Docker Compose (Recommended)
-
-**Prerequisites:**
-
-- Docker Desktop (or Docker Engine + Docker Compose) installed and running
-- Docker version 20.10 or higher
-- Docker Compose version 2.0 or higher
-
-**Step-by-step instructions:**
-
-1. **Start the development environment:**
-
-   ```bash
-   docker-compose -f docker-compose.dev.yml up
-   ```
-
-   This command will:
-   - Build the development Docker image (if not already built)
-   - Start PostgreSQL database container
-   - Start the NestJS application container with hot reload enabled
-   - Mount your source code as volumes for live code changes
-
-2. **Run database migrations:**
-
-   In a new terminal, execute migrations inside the app container:
-
-   ```bash
-   docker-compose -f docker-compose.dev.yml exec app pnpm prisma migrate dev
-   ```
-
-   Or if you prefer to run migrations locally (requires local Prisma setup):
-
-   ```bash
-   pnpm prisma migrate dev
-   ```
-
-3. **Access the application:**
-   - Application: `http://localhost:2000`
-   - API Documentation: `http://localhost:2000/api-doc`
-   - Database: `localhost:5432` (credentials: postgres/postgres)
-
-**Development Docker Features:**
-
-- ✅ Hot reload enabled - code changes are automatically reflected
-- ✅ Source code mounted as volumes - edit files locally, see changes in container
-- ✅ PostgreSQL with health checks - ensures database is ready before app starts
-- ✅ Persistent database volume - data persists between container restarts
-
-**Useful Development Commands:**
-
-```bash
-# Start in detached mode (background)
-docker-compose -f docker-compose.dev.yml up -d
-
-# View logs
-docker-compose -f docker-compose.dev.yml logs -f app
-docker-compose -f docker-compose.dev.yml logs -f postgres
-
-# Stop containers
-docker-compose -f docker-compose.dev.yml down
-
-# Stop and remove volumes (⚠️ deletes database data)
-docker-compose -f docker-compose.dev.yml down -v
-
-# Rebuild images (after Dockerfile changes)
-docker-compose -f docker-compose.dev.yml build --no-cache
-
-# Execute commands in running container
-docker-compose -f docker-compose.dev.yml exec app pnpm prisma studio
-docker-compose -f docker-compose.dev.yml exec app sh
-
-# Restart a specific service
-docker-compose -f docker-compose.dev.yml restart app
-```
-
-#### Option 2: Local Development
-
-1. Start PostgreSQL database (or use Docker):
-
-```bash
-docker run -d \
-  --name customer-registration-db \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=customer_registration \
-  -p 5432:5432 \
-  postgres:16-alpine
-```
-
-2. Run database migrations:
-
-```bash
-pnpm prisma migrate dev
-```
-
-3. Start the application:
-
-```bash
+# Start development server
 pnpm start:dev
 ```
 
-The application will be available at `http://localhost:2000`
+The API is available at `http://localhost:2000`. Scalar API docs at `http://localhost:2000/api-doc`.
 
-### Production Mode
-
-#### Using Docker Compose (Recommended)
-
-**Prerequisites:**
-
-- Docker Desktop (or Docker Engine + Docker Compose) installed and running
-- Docker version 20.10 or higher
-- Docker Compose version 2.0 or higher
-
-**Step-by-step instructions:**
-
-1. **Set up environment variables (optional):**
-
-   Create a `.env` file in the root directory if you want to override default values:
-
-   ```env
-   DATABASE_URL=postgresql://postgres:postgres@postgres:5432/customer_registration
-   PORT=2000
-   BETTER_AUTH_URL=http://localhost:2000
-   NODE_ENV=production
-   ```
-
-   Note: The `docker-compose.yml` file already includes these environment variables. You can modify them directly in the compose file or use environment variable substitution.
-
-2. **Build and start the production environment:**
-
-   ```bash
-   docker-compose up -d --build
-   ```
-
-   This command will:
-   - Build the production Docker image using multi-stage build
-   - Start PostgreSQL database container
-   - Start the NestJS application container
-   - Run containers in detached mode (background)
-
-3. **Run database migrations:**
-
-   Execute migrations inside the app container:
-
-   ```bash
-   docker-compose exec app pnpm prisma migrate deploy
-   ```
-
-   Or if using Prisma migrations:
-
-   ```bash
-   docker-compose exec app pnpm prisma migrate dev
-   ```
-
-4. **Verify the application is running:**
-
-   ```bash
-   # Check container status
-   docker-compose ps
-
-   # View application logs
-   docker-compose logs -f app
-
-   # Test the API
-   curl http://localhost:2000/api-doc
-   ```
-
-5. **Access the application:**
-   - Application: `http://localhost:2000`
-   - API Documentation: `http://localhost:2000/api-doc`
-   - Database: `localhost:5432` (credentials: postgres/postgres)
-
-**Production Docker Features:**
-
-- ✅ Multi-stage build for optimized image size
-- ✅ Production dependencies only (smaller image)
-- ✅ Automatic restart on failure
-- ✅ Health checks for database
-- ✅ Persistent database volume
-- ✅ Isolated network for services
-
-**Useful Production Commands:**
+## Docker (Recommended)
 
 ```bash
-# Start containers
-docker-compose up -d
+# Start dev environment (PostgreSQL + Redis + Mailpit + app with hot reload)
+docker-compose -f docker-compose.dev.yml up
 
-# Stop containers
-docker-compose down
+# Run migrations inside the container
+docker-compose -f docker-compose.dev.yml exec app npx prisma migrate dev
 
-# Stop and remove volumes (⚠️ deletes database data)
-docker-compose down -v
-
-# View logs
-docker-compose logs -f app
-docker-compose logs -f postgres
-
-# View logs for last 100 lines
-docker-compose logs --tail=100 app
-
-# Rebuild images
-docker-compose build --no-cache
-
-# Restart services
-docker-compose restart
-
-# Restart specific service
-docker-compose restart app
-
-# Execute commands in container
-docker-compose exec app sh
-docker-compose exec app pnpm prisma studio
-
-# Update and restart (after code changes)
+# Start production environment
 docker-compose up -d --build
-
-# View resource usage
-docker stats
-
-# Inspect container
-docker inspect customer-registration-app
+docker-compose exec app npx prisma migrate deploy
 ```
 
-#### Manual Build (Without Docker)
+**Service URLs (dev):**
+- API: `http://localhost:2000`
+- Mailpit UI: `http://localhost:8025`
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+
+## Commands
 
 ```bash
-pnpm build
-pnpm start:prod
+pnpm start:dev          # Dev server with hot reload
+pnpm build              # Production build
+pnpm start:prod         # Start production build
+pnpm test               # Unit tests
+pnpm test:e2e           # E2E tests
+pnpm lint               # ESLint
+pnpm format             # Prettier
+pnpm db:seed            # Seed DB (templates, settings, document types)
+npx prisma migrate dev  # Create + apply migration
+npx prisma studio       # Open Prisma Studio at localhost:5555
+pnpm auth:gen           # Regenerate Better Auth types
 ```
 
-## API Documentation
+## Environment Variables
 
-Once the application is running, access the API documentation at:
+| Variable | Description | Default |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | Required |
+| `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
+| `PORT` | Server port | `2000` |
+| `BETTER_AUTH_URL` | Base URL for Better Auth | `http://localhost:2000` |
+| `FRONTEND_URL` | Web dashboard URL (used in auth emails) | `http://localhost:8000` |
+| `OPENAI_API_KEY` | API key for LLM provider | Required |
+| `OPENAI_BASE_URL` | LLM base URL (include `/v1`; omit for OpenAI native) | SDK default |
+| `OPENAI_MODEL` | LLM model ID | `deepseek-chat` |
+| `CHATBOT_SERVICE_URL` | CitizenLink AI service URL | Required |
+| `CHATBOT_SERVICE_INTERNAL_SECRET` | Shared secret with AI service (min 16 chars) | Required |
+| `DOCAI_SERVICE_URL` | CitizenLink DocAI service URL | Optional |
+| `DOCAI_SERVICE_INTERNAL_SECRET` | Shared secret for DocAI requests | Optional |
+| `DOCAI_CALLBACK_SECRET` | Secret validating incoming DocAI webhooks | Optional |
+| `AWS_ACCESS_KEY_ID` | S3/MinIO access key | Required |
+| `AWS_SECRET_ACCESS_KEY` | S3/MinIO secret key | Required |
+| `AWS_S3_BUCKET` | S3 bucket name | Required |
+| `AWS_S3_ENDPOINT` | S3 endpoint (MinIO URL for local dev) | AWS default |
+| `SMTP_HOST` | SMTP host | Required |
+| `SMTP_PORT` | SMTP port | `1025` |
+| `SMTP_USER` | SMTP username | Optional |
+| `SMTP_PASS` | SMTP password | Optional |
+| `SMTP_FROM` | From address | Required |
+| `DARAJA_CONSUMER_KEY` | M-Pesa Daraja consumer key | Required |
+| `DARAJA_CONSUMER_SECRET` | M-Pesa Daraja consumer secret | Required |
+| `DARAJA_PASSKEY` | M-Pesa STK push passkey | Required |
+| `DARAJA_SHORTCODE` | M-Pesa shortcode | Required |
 
-- **Swagger UI**: `http://localhost:2000/api-doc`
-- **OpenAPI JSON**: `http://localhost:2000/api-json`
+### LLM Provider Examples
 
-The API is prefixed with `/api`, so all endpoints are available under `http://localhost:2000/api/*`
+```bash
+# Ollama (local dev)
+OPENAI_BASE_URL=http://localhost:11434/v1
+OPENAI_API_KEY=ollama
+OPENAI_MODEL=llama3.2
 
-## Database Schema
+# OpenAI
+OPENAI_BASE_URL=               # leave unset
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
 
-The application uses the following main models:
+# DeepSeek
+OPENAI_BASE_URL=https://api.deepseek.com/v1
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=deepseek-chat
 
-- **User**: Authentication and user management
-- **Customer**: Customer registration data with support for staff-created and self-registered customers
-- **SMSNotification**: SMS notification tracking
-- **Session**: User session management
-- **Account**: OAuth and authentication accounts
+# Gemini
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+OPENAI_API_KEY=AIza...
+OPENAI_MODEL=gemini-2.0-flash
+```
 
-See `prisma/schema.prisma` for the complete schema definition.
+## Module Overview
 
-## Available Scripts
+See `CLAUDE.md` in the repo root for full architecture documentation.
 
-- `pnpm start` - Start the application
-- `pnpm start:dev` - Start in development mode with watch
-- `pnpm start:debug` - Start in debug mode
-- `pnpm start:prod` - Start in production mode
-- `pnpm build` - Build the application
-- `pnpm test` - Run unit tests
-- `pnpm test:watch` - Run tests in watch mode
-- `pnpm test:cov` - Run tests with coverage
-- `pnpm test:e2e` - Run end-to-end tests
-- `pnpm lint` - Lint the codebase
-- `pnpm format` - Format code with Prettier
-- `pnpm db` - Prisma CLI shortcut
-- `pnpm auth:gen` - Generate Better Auth types
+Key modules: `auth/`, `document-cases/`, `document-exchange/`, `document-custody/`, `matching/`, `extraction/`, `claim/`, `wallet/`, `disbursement/`, `notifications/`, `payment/`, `daraja/`, `roles/`, `stations/`, `region/`, `chat-bot/`, `docai/`
 
-## API Endpoints
+## API
 
-### Authentication
+All routes are prefixed with `/api`. Auth routes at `/api/auth/*`.
 
-All authentication endpoints are managed by Better Auth and available under `/api/auth/*`
-
-### Customer Management
-
-- `GET /api/customer` - List customers (requires `customer:list` permission)
-- `GET /api/customer/:id` - Get customer by ID (requires `customer:list` permission)
-- `POST /api/customer` - Create customer (requires `customer:create` permission)
-- `PUT /api/customer/:id` - Update customer (requires `customer:update` permission)
-- `DELETE /api/customer/:id` - Delete customer (requires `customer:delete` permission)
-- `PATCH /api/customer/:id/restore` - Restore deleted customer (requires `customer:restore` permission)
-- `POST /api/customer/self-register` - Self-register customer (public endpoint)
+Interactive API docs (Scalar UI): `http://localhost:2000/api-doc`
 
 ## Project Structure
 
 ```
 src/
-├── auth/              # Authentication and authorization module
-├── config/            # Application configuration
-├── customer/          # Customer management module
-├── notification/      # SMS notification service
-├── prisma/            # Prisma service and module
-├── query-builder/     # Query builder utilities
-├── app.module.ts      # Root application module
-└── main.ts            # Application entry point
+├── app.module.ts          # Root module
+├── main.ts                # Bootstrap
+├── auth/                  # Better Auth configuration and plugins
+├── region/                # @Global() regional config (currency, locale, timezone, phone)
+├── document-cases/        # Lost/found case management
+├── document-exchange/     # Exchange lifecycle, code issuance, courier delivery
+├── document-custody/      # Physical custody operations
+├── document-types/        # Document type CRUD
+├── document-images/       # Case image management
+├── matching/              # Multi-strategy matching (vector + text + AI)
+├── extraction/            # AI extraction pipeline (BullMQ 3-queue)
+├── claim/                 # Claim processing
+├── wallet/                # Wallet read + user withdrawals
+├── disbursement/          # System B2C disbursements to finders
+├── invoice/               # Invoice management
+├── payment/               # M-Pesa STK push
+├── daraja/                # M-Pesa/Daraja integration
+├── mauzo/                 # Payment webhook handler
+├── notifications/         # Multi-channel notification system
+├── chat-bot/              # AI chatbot proxy
+├── docai/                 # Google/custom Document AI webhook handler
+├── roles/                 # RBAC — roles, resources, actions
+├── stations/              # Pickup station management
+├── staff-operation-scope/ # Staff → station operation permission grants
+├── station-operation-types/ # Per-station operation type config
+├── document-operation-types/ # Global custody operation type registry
+├── status-transitions/    # Status transition management
+├── address/               # Address management
+├── address-hierarchy/     # Administrative hierarchy
+├── address-locales/       # Address locale config
+├── push-token/            # Expo push token management
+├── human-id/              # Human-readable ID generation
+├── s3/                    # AWS S3/MinIO integration
+├── queue/                 # BullMQ + Bull Board dashboard
+├── prompts/               # AI prompt template management
+├── common/                # Query builder, settings, templates, PDF
+└── prisma/                # Prisma service
 ```
 
-## Docker
+## Docker Files
 
-### Docker Files Overview
-
-- **`Dockerfile`**: Production multi-stage build for optimized images
-- **`Dockerfile.dev`**: Development image with all dependencies
-- **`docker-compose.yml`**: Production environment configuration
-- **`docker-compose.dev.yml`**: Development environment configuration
-
-### Development Environment
-
-The `docker-compose.dev.yml` file sets up a development environment with:
-
-- **Hot reload enabled**: Code changes automatically trigger application restart
-- **Source code mounted as volumes**: Edit files locally, changes reflect in container
-- **PostgreSQL database with health checks**: Ensures database is ready before app starts
-- **Development dependencies**: Includes all dev tools and dependencies
-- **Separate volumes**: Uses `postgres_data_dev` to avoid conflicts with production
-
-**Container Names:**
-
-- `customer-registration-app-dev`: Application container
-- `customer-registration-db-dev`: Database container
-
-### Production Environment
-
-The `Dockerfile` uses a multi-stage build for optimized production images:
-
-- **Builder stage**: Installs all dependencies, generates Prisma Client, builds application
-- **Production stage**: Only includes production dependencies and built artifacts
-- **Optimized size**: Smaller final image for faster deployments
-- **Security**: Minimal attack surface with only production dependencies
-
-**Container Names:**
-
-- `customer-registration-app`: Application container
-- `customer-registration-db`: Database container
-
-### Docker Networking
-
-Both compose files create an isolated `app-network` bridge network where:
-
-- Services can communicate using service names (e.g., `postgres` hostname)
-- Ports are exposed to host machine for external access
-- Internal communication is isolated from other Docker networks
-
-### Database Persistence
-
-- **Development**: Data stored in `postgres_data_dev` volume
-- **Production**: Data stored in `postgres_data` volume
-- Volumes persist data between container restarts and removals
-- To reset database: `docker-compose down -v` (⚠️ deletes all data)
-
-### Troubleshooting
-
-#### Port Already in Use
-
-If you get an error that port 2000 or 5432 is already in use:
-
-```bash
-# Check what's using the port
-lsof -i :2000
-lsof -i :5432
-
-# Stop conflicting containers
-docker ps
-docker stop <container-id>
-
-# Or change ports in docker-compose.yml
-# Edit ports section: "3000:2000" instead of "2000:2000"
-```
-
-#### Database Connection Issues
-
-```bash
-# Check if database is healthy
-docker-compose ps
-
-# View database logs
-docker-compose logs postgres
-
-# Test database connection
-docker-compose exec postgres psql -U postgres -d customer_registration
-
-# Restart database
-docker-compose restart postgres
-```
-
-#### Application Won't Start
-
-```bash
-# Check application logs
-docker-compose logs app
-
-# Check if migrations are needed
-docker-compose exec app pnpm prisma migrate status
-
-# Rebuild containers
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-#### Hot Reload Not Working (Development)
-
-```bash
-# Ensure volumes are properly mounted
-docker-compose -f docker-compose.dev.yml config
-
-# Restart the app container
-docker-compose -f docker-compose.dev.yml restart app
-
-# Check file permissions
-docker-compose -f docker-compose.dev.yml exec app ls -la /app
-```
-
-#### Clean Start (Reset Everything)
-
-```bash
-# Stop and remove all containers, networks, and volumes
-docker-compose down -v
-
-# Remove images (optional)
-docker-compose down --rmi all
-
-# Remove unused Docker resources
-docker system prune -a
-
-# Start fresh
-docker-compose up -d --build
-```
-
-#### View Container Resource Usage
-
-```bash
-# Real-time stats
-docker stats
-
-# Inspect specific container
-docker inspect customer-registration-app
-
-# Check container logs
-docker logs customer-registration-app -f
-```
-
-#### Database Migrations in Docker
-
-```bash
-# Development: Run migrations
-docker-compose -f docker-compose.dev.yml exec app pnpm prisma migrate dev
-
-# Production: Deploy migrations
-docker-compose exec app pnpm prisma migrate deploy
-
-# Generate Prisma Client
-docker-compose exec app pnpm prisma generate
-
-# Open Prisma Studio
-docker-compose exec app pnpm prisma studio
-# Then access at http://localhost:5555 (if port is exposed)
-```
-
-## Environment Variables
-
-| Variable          | Description                  | Default                 | Docker Notes                                                                                      |
-| ----------------- | ---------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`    | PostgreSQL connection string | Required                | In Docker, use service name: `postgresql://postgres:postgres@postgres:5432/customer_registration` |
-| `PORT`            | Application port             | `2000`                  | Must match the port mapping in docker-compose.yml                                                 |
-| `BETTER_AUTH_URL` | Base URL for Better Auth     | `http://localhost:2000` | Use `http://localhost:2000` for local access, or your domain for production                       |
-| `NODE_ENV`        | Environment mode             | `development`           | Set to `production` in production Docker setup                                                    |
-
-### AI / LLM Provider Configuration
-
-The backend uses an OpenAI-compatible client for document extraction, AI matching, and verification. Three environment variables control the provider:
-
-| Variable | Description | Default |
-|---|---|---|
-| `OPENAI_API_KEY` | API key for your LLM provider | Required |
-| `OPENAI_BASE_URL` | Full base URL **including** the `/v1` path segment. Leave unset for OpenAI native. | Unset (SDK default: `https://api.openai.com/v1`) |
-| `OPENAI_MODEL` | Model ID to use | `deepseek-chat` |
-
-> **Convention:** `OPENAI_BASE_URL` is passed verbatim to the OpenAI SDK as its `baseURL`. The SDK appends only the endpoint path (e.g. `/chat/completions`). Always include the `/v1` segment (or provider-equivalent) in the URL. For OpenAI native, leave the variable unset — the SDK default is correct.
-
-#### Supported providers
-
-| Provider | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `OPENAI_MODEL` |
-|---|---|---|---|
-| **OpenAI** (production) | `sk-…` | *(leave unset)* | `gpt-4o` |
-| **Ollama** (local dev) | `ollama` | `http://localhost:11434/v1` | `llama3.2` or any pulled model |
-| **DeepSeek** | `sk-…` | `https://api.deepseek.com/v1` | `deepseek-chat` |
-| **Gemini** | your-gemini-key | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.0-flash-exp` |
-
-### Docker Environment Variables
-
-When using Docker Compose, environment variables are set in the `docker-compose.yml` or `docker-compose.dev.yml` files. You can:
-
-1. **Modify directly in compose files**: Edit the `environment` section
-2. **Use .env file**: Create a `.env` file in the project root (Docker Compose automatically loads it)
-3. **Override at runtime**:
-   ```bash
-   DATABASE_URL=postgresql://... docker-compose up
-   ```
-
-### Important Notes for Docker
-
-- **Database Host**: In Docker, use the service name (`postgres`) as the hostname, not `localhost`
-- **Port Mapping**: The `PORT` environment variable should match the internal container port (2000), while the host port can be different
-- **Network Isolation**: Services communicate using Docker service names within the `app-network`
+- `Dockerfile` — Production multi-stage build
+- `Dockerfile.dev` — Development image
+- `docker-compose.yml` — Production stack
+- `docker-compose.dev.yml` — Dev stack (PostgreSQL + Redis + Mailpit + hot reload)
 
 ## Testing
 
-Run unit tests:
-
 ```bash
-pnpm test
+pnpm test           # Unit tests
+pnpm test:cov       # Tests with coverage report
+pnpm test:e2e       # End-to-end tests
 ```
-
-Run tests with coverage:
-
-```bash
-pnpm test:cov
-```
-
-Run end-to-end tests:
-
-```bash
-pnpm test:e2e
-```
-
-## License
-
-UNLICENSED
-
-## Author
-
-See package.json for author information.
