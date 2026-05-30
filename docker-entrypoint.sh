@@ -32,6 +32,7 @@ if npx ts-node scripts/seed-address-hierarchy.ts \
   && npx ts-node scripts/seed-address-locales.ts \
   && npx ts-node scripts/seed-stations.ts \
   && npx ts-node scripts/seed-transition-statuses.ts \
+  && npx ts-node scripts/seed-document-operations.ts \
   && npx ts-node scripts/seed-templates.ts \
   && npx ts-node scripts/seed-system-settings.ts \
   && npx ts-node scripts/seed-document-types.ts \
