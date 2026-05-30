@@ -101,6 +101,9 @@ services:
         condition: service_healthy
     ports:
       - '2000:2000'
+     # Allows the container to reach docai service and chatbot service running on the host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .env
     environment:
@@ -136,9 +139,14 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL}
       - OPENAI_MODEL=${OPENAI_MODEL}
-      # CitizenLink AI Service (deployed independently on its own server)
+      # CitizenLink Chatbot Service (deployed independently)
       - AI_SERVICE_URL=${AI_SERVICE_URL}
       - AI_SERVICE_INTERNAL_SECRET=${AI_SERVICE_INTERNAL_SECRET}
+      # CitizenLink Docai (deployed independently)
+      - DOCAI_SERVICE_URL=${DOCAI_SERVICE_URL}
+      - DOCAI_SERVICE_INTERNAL_SECRET=${DOCAI_SERVICE_INTERNAL_SECRET}
+      - DOCAI_CALLBACK_SECRET=${DOCAI_CALLBACK_SECRET}
+      - DOCAI_WEBHOOK_URL=${DOCAI_WEBHOOK_URL}
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:2000/api || exit 1']
       interval: 20s
